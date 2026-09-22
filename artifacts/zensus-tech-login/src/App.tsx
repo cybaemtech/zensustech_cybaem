@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Check, Eye, EyeOff, KeyRound, LockKeyhole, Mail, ShieldCheck, ArrowRight, CircleHelp } from 'lucide-react';
+import { Check, Eye, EyeOff, LockKeyhole, ShieldCheck, ArrowRight, CircleHelp } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -66,38 +66,38 @@ function Home() {
 
   return (
     <main className="login-shell flex min-h-[100dvh] flex-col lg:flex-row">
-      <section className="brand-rail flex min-h-[24rem] flex-1 flex-col justify-between px-6 py-7 text-white sm:px-10 lg:min-h-[100dvh] lg:max-w-[47%] lg:px-[clamp(2.5rem,6vw,7.5rem)] lg:py-10" aria-label="ZensusTech platform overview">
+      <section className="brand-rail flex min-h-[24rem] flex-1 flex-col justify-start px-6 py-7 text-white sm:px-10 lg:min-h-[100dvh] lg:max-w-[47%] lg:px-[clamp(2.5rem,6vw,7.5rem)] lg:py-10" aria-label="ZensusTech platform overview">
         <div className="orb orb-a" aria-hidden="true" />
         <div className="orb orb-b" aria-hidden="true" />
         <div className="entrance relative z-10 flex items-center justify-between">
           <img
             src="/ZensusTech_Logo.PNG"
             alt="ZensusTech"
-            className="h-[4.15rem] w-[4.15rem] rounded-[1.05rem] object-contain shadow-[0_12px_30px_rgba(0,0,0,.22)]"
+            className="brand-logo h-[9rem] w-[9rem] rounded-[1.5rem] object-contain shadow-[0_16px_38px_rgba(0,0,0,.26)]"
             data-testid="img-brand-logo"
           />
           <span className="mono-label hidden text-[.62rem] text-cyan-100/70 sm:block">ZT / 04.26</span>
         </div>
 
-        <div className="relative z-10 max-w-[34rem] pb-5 pt-10 sm:pt-16 lg:pb-16 lg:pt-8">
-          <div className="entrance entrance-delay-1 mb-7 flex items-center gap-3 text-[.67rem] font-semibold text-cyan-100/75">
+        <div className="brand-copy relative z-10 mt-[clamp(2.5rem,8vh,6rem)] max-w-[34rem] pb-5 pt-10 sm:pt-16 lg:pb-5 lg:pt-0">
+          <div className="brand-kicker entrance entrance-delay-1 mb-7 flex items-center gap-3 text-[.67rem] font-semibold text-cyan-100/75">
             <span className="status-dot" aria-hidden="true" />
             <span className="mono-label">ZenAI Ops / secure access</span>
           </div>
-          <h1 className="entrance entrance-delay-2 max-w-[12ch] font-['Space_Grotesk'] text-[clamp(2.5rem,5vw,5.25rem)] font-semibold leading-[.97] tracking-[-.065em] text-[#f1f7fc]">
+          <h1 className="brand-headline entrance entrance-delay-2 max-w-[12ch] font-['Space_Grotesk'] text-[clamp(2.5rem,5vw,5.25rem)] font-semibold leading-[.97] tracking-[-.065em] text-[#f1f7fc]">
             Clarity for complex cloud operations.
           </h1>
-          <p className="entrance entrance-delay-3 mt-7 max-w-[31rem] text-[clamp(.96rem,1.3vw,1.08rem)] leading-7 text-slate-300/75">
+          <p className="brand-description entrance entrance-delay-3 mt-7 max-w-[31rem] text-[clamp(.96rem,1.3vw,1.08rem)] leading-7 text-slate-300/75">
             One secure command center for the teams keeping modern infrastructure steady, observable, and ready for what is next.
           </p>
-          <div className="entrance entrance-delay-4 mt-10 flex items-center gap-3 border-t border-white/10 pt-5 text-xs text-slate-300/60">
+          <div className="brand-meta entrance entrance-delay-4 mt-10 flex items-center gap-3 border-t border-white/10 pt-5 text-xs text-slate-300/60">
             <ShieldCheck className="h-4 w-4 text-cyan-300/90" strokeWidth={1.8} aria-hidden="true" />
             <span>Identity-first access · Azure managed services</span>
           </div>
         </div>
       </section>
 
-      <section className="flex flex-1 flex-col justify-between bg-[#f4f7fa] px-6 py-7 sm:px-10 lg:max-w-[53%] lg:px-[clamp(2.5rem,8vw,10rem)] lg:py-10" aria-label="Sign in">
+      <section className="flex flex-1 flex-col justify-start bg-[#f4f7fa] px-6 py-7 sm:px-10 lg:max-w-[53%] lg:px-[clamp(2.5rem,8vw,10rem)] lg:py-10" aria-label="Sign in">
         <header className="entrance flex items-center justify-end">
           <div className="flex items-center gap-2 text-[.68rem] font-semibold text-[#65788c]">
             <LockKeyhole className="h-3.5 w-3.5 text-[#159bcf]" strokeWidth={2} aria-hidden="true" />
@@ -105,7 +105,7 @@ function Home() {
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-[27rem] py-12 lg:py-4">
+        <div className="mx-auto mt-[clamp(3rem,8vh,5.5rem)] w-full max-w-[27rem] py-12 lg:py-4">
           {isSuccess ? (
             <div className="entrance rounded-[1.2rem] border border-[#cbe4e3] bg-white p-7 shadow-[0_20px_60px_rgba(26,59,91,.1)] sm:p-9" data-testid="status-login-success" role="status" aria-live="polite">
               <div className="success-mark mb-6 flex h-14 w-14 items-center justify-center rounded-2xl">
@@ -141,7 +141,6 @@ function Home() {
                 <div>
                   <label htmlFor="email" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Work email</label>
                   <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-[1.05rem] w-[1.05rem] -translate-y-1/2 text-[#8aa0b5]" strokeWidth={1.8} aria-hidden="true" />
                     <input
                       id="email"
                       name="email"
@@ -152,7 +151,7 @@ function Home() {
                       placeholder="you@company.com"
                       aria-invalid={Boolean(errors.email)}
                       aria-describedby={errors.email ? 'email-error' : undefined}
-                      className={`auth-input pl-11 ${errors.email ? 'has-error' : ''}`}
+                      className={`auth-input ${errors.email ? 'has-error' : ''}`}
                       data-testid="input-email"
                     />
                   </div>
@@ -172,7 +171,6 @@ function Home() {
                     </button>
                   </div>
                   <div className="relative">
-                    <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 h-[1.05rem] w-[1.05rem] -translate-y-1/2 text-[#8aa0b5]" strokeWidth={1.8} aria-hidden="true" />
                     <input
                       id="password"
                       name="password"
@@ -183,7 +181,7 @@ function Home() {
                       placeholder="Enter your password"
                       aria-invalid={Boolean(errors.password)}
                       aria-describedby={errors.password ? 'password-error' : undefined}
-                      className={`auth-input pl-11 pr-12 ${errors.password ? 'has-error' : ''}`}
+                      className={`auth-input pr-12 ${errors.password ? 'has-error' : ''}`}
                       data-testid="input-password"
                     />
                     <button
@@ -243,7 +241,7 @@ function Home() {
           )}
         </div>
 
-        <footer className="entrance flex items-center justify-between gap-4 text-[.68rem] text-[#91a0ae]">
+        <footer className="entrance mt-auto flex items-center justify-between gap-4 text-[.68rem] text-[#91a0ae]">
           <span>© 2026 ZensusTech</span>
           <span className="mono-label hidden text-[.6rem] sm:inline">Build / secure by design</span>
         </footer>

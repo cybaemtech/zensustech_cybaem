@@ -120,6 +120,15 @@
   50% { opacity: 1; transform: scale(1); }
 }
 
+@media (min-width: 1024px) {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 .login-shell {
   position: relative;
   min-height: 100dvh;
@@ -208,7 +217,7 @@
   border: 1px solid #d4dde7;
   border-radius: .65rem;
   background: rgba(255, 255, 255, .75);
-  padding: 0 .9rem;
+  padding: 0 1rem;
   color: #162a44;
   outline: none;
   transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
@@ -308,6 +317,70 @@
   background: #e5f8f4;
   color: #087a70;
   box-shadow: 0 0 0 8px rgba(40, 190, 166, .08);
+}
+
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .login-shell {
+    height: 100svh;
+    min-height: 0;
+  }
+
+  .brand-rail {
+    min-height: 17.5rem;
+    flex: 0 0 17.5rem;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .brand-logo {
+    height: 5.5rem;
+    width: 5.5rem;
+    border-radius: 1rem;
+  }
+
+  .brand-copy {
+    padding-bottom: 0;
+    padding-top: .75rem;
+  }
+
+  .brand-kicker {
+    margin-bottom: .8rem;
+  }
+
+  .brand-headline {
+    max-width: 15ch;
+    font-size: clamp(1.85rem, 8vw, 2.35rem);
+  }
+
+  .brand-description,
+  .brand-meta {
+    display: none;
+  }
+
+  .login-shell > section:last-child {
+    min-height: 0;
+    overflow: hidden;
+    padding: 1rem 1.5rem 1.25rem;
+  }
+
+  .login-shell > section:last-child > div:nth-child(2) {
+    padding-bottom: 0;
+    padding-top: 1.25rem;
+  }
+
+  .login-shell > section:last-child .mb-9 {
+    margin-bottom: 1.35rem;
+  }
+
+  .login-shell > section:last-child .mt-9 {
+    margin-top: 1.35rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
