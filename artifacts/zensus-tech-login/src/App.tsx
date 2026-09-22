@@ -97,15 +97,15 @@ function Home() {
         </div>
       </section>
 
-      <section className="flex flex-1 flex-col justify-start bg-[#f4f7fa] px-6 py-7 sm:px-10 lg:max-w-[53%] lg:px-[clamp(2.5rem,8vw,10rem)] lg:py-10" aria-label="Sign in">
-        <header className="entrance flex items-center justify-end">
+      <section className="auth-panel flex flex-1 flex-col justify-start bg-[#f4f7fa] px-6 py-7 sm:px-10 lg:max-w-[53%] lg:px-[clamp(2.5rem,8vw,10rem)] lg:py-10" aria-label="Sign in">
+        <header className="auth-header entrance flex items-center justify-end">
           <div className="flex items-center gap-2 text-[.68rem] font-semibold text-[#65788c]">
             <LockKeyhole className="h-3.5 w-3.5 text-[#159bcf]" strokeWidth={2} aria-hidden="true" />
             <span className="mono-label">Encrypted session</span>
           </div>
         </header>
 
-        <div className="mx-auto mt-[clamp(3rem,8vh,5.5rem)] w-full max-w-[27rem] py-12 lg:py-4">
+        <div className="auth-content mx-auto mt-[clamp(3rem,8vh,5.5rem)] w-full max-w-[27rem] py-12 lg:py-4">
           {isSuccess ? (
             <div className="entrance rounded-[1.2rem] border border-[#cbe4e3] bg-white p-7 shadow-[0_20px_60px_rgba(26,59,91,.1)] sm:p-9" data-testid="status-login-success" role="status" aria-live="polite">
               <div className="success-mark mb-6 flex h-14 w-14 items-center justify-center rounded-2xl">
@@ -131,13 +131,13 @@ function Home() {
             </div>
           ) : (
             <div className="entrance entrance-delay-1">
-              <div className="mb-9">
+              <div className="auth-intro mb-9">
                 <p className="mono-label text-[.67rem] font-medium text-[#0d73aa]">Welcome to ZenAI Ops</p>
                 <h2 className="mt-3 font-['Space_Grotesk'] text-[clamp(2rem,4vw,2.8rem)] font-semibold tracking-[-.06em] text-[#162a44]">Sign in to your account.</h2>
                 <p className="mt-3 text-[.94rem] text-[#718397]">Your operational intelligence, all in one place.</p>
               </div>
 
-              <form onSubmit={handleSubmit} noValidate className="space-y-5" aria-label="Login form">
+              <form onSubmit={handleSubmit} noValidate className="auth-form space-y-5" aria-label="Login form">
                 <div>
                   <label htmlFor="email" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Work email</label>
                   <div className="relative">
@@ -233,7 +233,7 @@ function Home() {
                 </button>
               </form>
 
-              <div className="mt-9 flex items-center gap-3 border-t border-[#dce5ed] pt-5 text-[.7rem] leading-5 text-[#8090a0]">
+              <div className="auth-security mt-9 flex items-center gap-3 border-t border-[#dce5ed] pt-5 text-[.7rem] leading-5 text-[#8090a0]">
                 <ShieldCheck className="h-4 w-4 shrink-0 text-[#159bcf]" strokeWidth={1.8} aria-hidden="true" />
                 <span>Protected by ZensusTech identity controls and encrypted session handling.</span>
               </div>
@@ -241,7 +241,7 @@ function Home() {
           )}
         </div>
 
-        <footer className="entrance mt-auto flex items-center justify-between gap-4 text-[.68rem] text-[#91a0ae]">
+        <footer className="login-footer entrance mt-auto flex items-center justify-between gap-4 text-[.68rem] text-[#91a0ae]">
           <span>© 2026 ZensusTech</span>
           <span className="mono-label hidden text-[.6rem] sm:inline">Build / secure by design</span>
         </footer>
