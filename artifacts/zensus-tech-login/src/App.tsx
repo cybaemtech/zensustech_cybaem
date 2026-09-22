@@ -9,10 +9,13 @@ import NotFound from '@/pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 
 const queryClient = new QueryClient();
+const DEMO_EMAIL = 'admin@zentech.com';
+const DEMO_PASSWORD = 'admin 123';
 
 type FieldErrors = {
   email?: string;
   password?: string;
+  credentials?: string;
 };
 
 function Home() {
@@ -23,7 +26,13 @@ function Home() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
   const [forgotMessage, setForgotMessage] = useState(false);
+  const [tenantId, setTenantId] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [showClientSecret, setShowClientSecret] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
 
   const validate = () => {
     const nextErrors: FieldErrors = {};
@@ -37,6 +46,13 @@ function Home() {
     } else if (password.length < 8) {
       nextErrors.password = 'Your password must be at least 8 characters.';
     }
+    if (
+      !nextErrors.email &&
+      !nextErrors.password &&
+      (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD)
+    ) {
+      nextErrors.credentials = 'The admin email or password is not correct.';
+    }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -48,20 +64,36 @@ function Home() {
     setIsSubmitting(true);
     window.setTimeout(() => {
       setIsSubmitting(false);
-      setIsSuccess(true);
+      setShowVerification(true);
     }, 850);
   };
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
     if (errors.email) setErrors((current) => ({ ...current, email: undefined }));
-    if (isSuccess) setIsSuccess(false);
+    if (errors.credentials) setErrors((current) => ({ ...current, credentials: undefined }));
   };
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
     if (errors.password) setErrors((current) => ({ ...current, password: undefined }));
-    if (isSuccess) setIsSuccess(false);
+    if (errors.credentials) setErrors((current) => ({ ...current, credentials: undefined }));
+  };
+
+  const handleVerificationSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!tenantId.trim() || !clientId.trim() || !clientSecret.trim()) {
+      setVerificationError('Enter all three Azure connection values to continue.');
+      return;
+    }
+
+    setVerificationError('');
+    setIsSubmitting(true);
+    window.setTimeout(() => {
+      setIsSubmitting(false);
+      setShowVerification(false);
+      setIsSuccess(true);
+    }, 850);
   };
 
   return (
@@ -128,6 +160,120 @@ function Home() {
               >
                 Return to sign in <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
+            </div>
+          ) : showVerification ? (
+            <div className="verification-screen entrance entrance-delay-1">
+              <div className="auth-intro mb-9">
+                <p className="mono-label text-[.67rem] font-medium text-[#0d73aa]">Step 2 of 2 · Azure verification</p>
+                <h2 className="mt-3 font-['Space_Grotesk'] text-[clamp(2rem,4vw,2.8rem)] font-semibold tracking-[-.06em] text-[#162a44]">Connect your tenant.</h2>
+                <p className="mt-3 text-[.94rem] text-[#718397]">Verify the Azure connection for your ZenAI Ops workspace.</p>
+              </div>
+
+              <form onSubmit={handleVerificationSubmit} noValidate className="auth-form space-y-5" aria-label="Azure verification form">
+                <div>
+                  <label htmlFor="tenant-id" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Tenant ID</label>
+                  <input
+                    id="tenant-id"
+                    name="tenantId"
+                    type="text"
+                    autoComplete="off"
+                    value={tenantId}
+                    onChange={(event) => {
+                      setTenantId(event.target.value);
+                      setVerificationError('');
+                    }}
+                    placeholder="Enter tenant ID"
+                    className="auth-input"
+                    data-testid="input-tenant-id"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="client-id" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Client ID</label>
+                  <input
+                    id="client-id"
+                    name="clientId"
+                    type="text"
+                    autoComplete="off"
+                    value={clientId}
+                    onChange={(event) => {
+                      setClientId(event.target.value);
+                      setVerificationError('');
+                    }}
+                    placeholder="Enter client ID"
+                    className="auth-input"
+                    data-testid="input-client-id"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="client-secret" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Client secret</label>
+                  <div className="relative">
+                    <input
+                      id="client-secret"
+                      name="clientSecret"
+                      type={showClientSecret ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      spellCheck={false}
+                      value={clientSecret}
+                      onChange={(event) => {
+                        setClientSecret(event.target.value);
+                        setVerificationError('');
+                      }}
+                      placeholder="Enter client secret"
+                      className="auth-input pr-12"
+                      data-testid="input-client-secret"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowClientSecret((visible) => !visible)}
+                      className="password-toggle absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg"
+                      aria-label={showClientSecret ? 'Hide client secret' : 'Show client secret'}
+                      aria-pressed={showClientSecret}
+                      data-testid="button-toggle-client-secret"
+                    >
+                      {showClientSecret ? <EyeOff className="h-[1.05rem] w-[1.05rem]" strokeWidth={1.8} /> : <Eye className="h-[1.05rem] w-[1.05rem]" strokeWidth={1.8} />}
+                    </button>
+                  </div>
+                </div>
+
+                {verificationError && (
+                  <div className="flex items-start gap-2.5 rounded-lg border border-[#f1d1d1] bg-[#fff6f6] px-3.5 py-3 text-xs leading-5 text-[#9f4b4b]" role="alert" aria-live="polite" data-testid="text-verification-error">
+                    <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>{verificationError}</span>
+                  </div>
+                )}
+
+                <button type="submit" disabled={isSubmitting} className="auth-submit flex w-full items-center justify-center gap-2.5 px-5 text-sm font-semibold disabled:cursor-wait disabled:opacity-75" data-testid="button-verify-azure">
+                  {isSubmitting ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />
+                      Verifying connection
+                    </>
+                  ) : (
+                    <>
+                      Verify and continue <ArrowRight className="h-4 w-4" strokeWidth={2.2} aria-hidden="true" />
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowVerification(false);
+                    setVerificationError('');
+                  }}
+                  className="ghost-action mx-auto flex items-center gap-2 text-sm font-semibold"
+                  data-testid="button-back-to-login"
+                >
+                  Back to sign in
+                </button>
+              </form>
+
+              <div className="auth-security mt-9 flex items-center gap-3 border-t border-[#dce5ed] pt-5 text-[.7rem] leading-5 text-[#8090a0]">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-[#159bcf]" strokeWidth={1.8} aria-hidden="true" />
+                <span>Demo verification only. Values stay in this browser and are not sent to Azure.</span>
+              </div>
             </div>
           ) : (
             <div className="entrance entrance-delay-1">
@@ -216,6 +362,13 @@ function Home() {
                   <div className="flex items-start gap-2.5 rounded-lg border border-[#c9e1ee] bg-[#eef8fc] px-3.5 py-3 text-xs leading-5 text-[#31647b]" role="status" aria-live="polite" data-testid="status-forgot-password">
                     <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-[#168ebf]" aria-hidden="true" />
                     <span>Password recovery is not connected yet. Contact your workspace administrator for access.</span>
+                  </div>
+                )}
+
+                {errors.credentials && (
+                  <div className="flex items-start gap-2.5 rounded-lg border border-[#f1d1d1] bg-[#fff6f6] px-3.5 py-3 text-xs leading-5 text-[#9f4b4b]" role="alert" aria-live="polite" data-testid="text-credentials-error">
+                    <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>{errors.credentials}</span>
                   </div>
                 )}
 
