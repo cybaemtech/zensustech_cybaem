@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "ZensusTech Login"
+description = "A polished ZensusTech sign-in experience with responsive layout, brand-led visuals, form validation, and subtle motion for secure access to the platform."
+version = "1.0.0"
+id = "artifacts/zensus-tech-login"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26185
+
+[services.development]
+run = "pnpm --filter @workspace/zensus-tech-login run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/zensus-tech-login", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/zensus-tech-login/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26185"
+BASE_PATH = "/"
