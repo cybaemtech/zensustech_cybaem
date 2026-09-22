@@ -241,7 +241,7 @@ function Home() {
           )}
         </div>
 
-        <footer className="login-footer entrance mt-4 flex items-center justify-between gap-4 text-[.68rem] text-[#91a0ae]">
+        <footer className="login-footer entrance mt-auto flex items-center justify-between gap-4 text-[.68rem] text-[#91a0ae]">
           <span>© 2026 ZensusTech</span>
           <span className="mono-label hidden text-[.6rem] sm:inline">Build / secure by design</span>
         </footer>

@@ -385,6 +385,7 @@
 
 @media (min-width: 768px) and (max-height: 760px) {
   .brand-rail {
+    justify-content: space-between;
     padding-bottom: 1.5rem;
     padding-top: 1.5rem;
   }
@@ -395,7 +396,7 @@
   }
 
   .brand-copy {
-    margin-top: clamp(1.5rem, 4vh, 2.75rem);
+    margin-top: 0;
   }
 
   .brand-kicker {
