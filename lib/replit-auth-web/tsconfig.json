@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true,
+    "declaration": true,
+    "jsx": "preserve",
+    "lib": ["esnext", "dom", "dom.iterable"]
+  },
+  "references": [
+    {
+      "path": "../api-client-react"
+    }
+  ]
+}
