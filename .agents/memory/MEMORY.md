@@ -1,0 +1,1 @@
+- [Frontend demo authentication](demo-auth-flow.md) — keep ZensusTech login and Azure verification local unless real auth is explicitly requested.
