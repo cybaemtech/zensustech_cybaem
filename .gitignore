@@ -47,3 +47,12 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Local credentials and generated API/runtime data
+.env
+.env.*
+!.env.example
+sessions.json
+**/data/*.json
+__pycache__/
+*.py[cod]
