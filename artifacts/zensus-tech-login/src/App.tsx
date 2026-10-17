@@ -142,38 +142,29 @@ function Home() {
       sessionStorage.setItem('mgmt_token', liveConnectData.mgmt_token);
       sessionStorage.setItem('graph_token', liveConnectData.graph_token);
 
-      const response = await fetch('/api/verify-azure', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tenantId: tenantId.trim(),
-          clientId: clientId.trim(),
-          clientSecret: clientSecret.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setAzureDetails({
-          tenantId: data.tenantId,
-          clientId: data.clientId,
+      let orgDetails = null;
+      try {
+        const orgRes = await fetch(`${LIVE_API_BASE}/tenant/organization`, {
+          headers: { 'X-Graph-Token': liveConnectData.graph_token },
         });
-        sessionStorage.setItem('azure_tenant_id', data.tenantId);
-        sessionStorage.setItem('azure_client_id', data.clientId);
-        sessionStorage.removeItem('azure_client_secret');
-        if (data.organization) {
-          sessionStorage.setItem('azure_org_details', JSON.stringify(data.organization));
+        if (orgRes.ok) {
+          const orgData = await orgRes.json();
+          orgDetails = orgData?.organization || null;
         }
-        setShowVerification(false);
-        setIsSuccess(true);
-      } else {
-        setVerificationError(
-          data.message || 'Azure verification failed. Please verify your credentials.',
-        );
+      } catch {}
+
+      setAzureDetails({
+        tenantId: tenantId.trim(),
+        clientId: clientId.trim(),
+      });
+      sessionStorage.setItem('azure_tenant_id', tenantId.trim());
+      sessionStorage.setItem('azure_client_id', clientId.trim());
+      sessionStorage.removeItem('azure_client_secret');
+      if (orgDetails) {
+        sessionStorage.setItem('azure_org_details', JSON.stringify(orgDetails));
       }
+      setShowVerification(false);
+      setIsSuccess(true);
     } catch (err: any) {
       setVerificationError(
         err.message ? `Connection error: ${err.message}` : 'Failed to reach verification endpoint.',

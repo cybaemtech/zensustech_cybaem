@@ -142,6 +142,25 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(api_router, prefix="/backend-api" + settings.API_V1_STR)
 
 
+@app.post("/api/verify-azure", include_in_schema=False)
+async def verify_azure_compat(payload: dict):
+    from app.services.azure.auth_service import AzureAuthService
+    auth_service = AzureAuthService()
+    try:
+        t_id = payload.get("tenantId", "")
+        c_id = payload.get("clientId", "")
+        c_sec = payload.get("clientSecret", "")
+        await auth_service.get_access_token(t_id, c_id, c_sec, "https://graph.microsoft.com/.default")
+        return {
+            "success": True,
+            "message": "Successfully verified with Azure Active Directory.",
+            "tenantId": t_id,
+            "clientId": c_id,
+        }
+    except Exception as e:
+        return {"success": False, "message": f"Azure authentication failed: {str(e)}"}
+
+
 @app.get(f"{settings.API_V1_STR}/docs", include_in_schema=False)
 async def swagger_docs() -> HTMLResponse:
     response = get_swagger_ui_html(
