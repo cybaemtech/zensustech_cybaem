@@ -16,13 +16,13 @@ const toINR = (usd: number) => usd * USD_TO_INR;
 
 const fmtINR = (usd: number): string => {
   const val = toINR(usd);
-  if (val >= 10000000) return `\u20b9${(val / 10000000).toFixed(2)} Cr`;
-  if (val >= 100000)   return `\u20b9${(val / 100000).toFixed(2)} L`;
-  return `\u20b9${val.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+  if (val >= 100000)   return `₹${(val / 100000).toFixed(2)} L`;
+  return `₹${val.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 };
 
 const fmtINRFull = (usd: number) =>
-  `\u20b9${toINR(usd).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  `₹${toINR(usd).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 interface Sub { id: string; name: string; state: string; subscriptionId: string; }
 interface ServiceCost { name: string; cost: number; costINR: number; color: string; }
@@ -217,7 +217,7 @@ export default function CostDashboard() {
           <span className="absolute inset-0 animate-spin rounded-full border-4 border-cyan-500/20 border-t-cyan-500" />
           <IndianRupee className="absolute inset-0 m-auto h-6 w-6 text-cyan-500" />
         </div>
-        <p className="text-sm font-semibold text-slate-600">Fetching Azure Cost Data in \u20b9 INR\u2026</p>
+        <p className="text-sm font-semibold text-slate-600">Fetching Azure Cost Data in ₹ INR\u2026</p>
         <p className="text-xs text-slate-400">Connecting to Azure Cost Management API</p>
       </div>
     </div>
@@ -225,7 +225,7 @@ export default function CostDashboard() {
 
   /* ── Main render ── */
   return (
-    <div className="min-h-screen bg-[#f4f7fa] font-sans" style={{ zoom: '0.82' }}>
+    <div className="min-h-screen bg-[#f4f7fa] font-sans flex flex-col">
 
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-slate-200/60 bg-white/90 px-6 py-3.5 backdrop-blur-xl sm:px-10">
@@ -238,7 +238,7 @@ export default function CostDashboard() {
             <div>
               <h1 className="text-lg font-bold tracking-tight text-slate-800">Azure FinOps — Cost Analytics</h1>
               <p className="text-[0.7rem] font-medium text-slate-500">
-                All values in <span className="font-bold text-emerald-600">Indian Rupees (\u20b9 INR)</span> &nbsp;&middot;&nbsp; 1 USD = \u20b9{USD_TO_INR.toFixed(2)}
+                All values in <span className="font-bold text-emerald-600">Indian Rupees (₹ INR)</span> &nbsp;&middot;&nbsp; 1 USD = ₹{USD_TO_INR.toFixed(2)}
               </p>
             </div>
           </div>
@@ -342,7 +342,7 @@ export default function CostDashboard() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-800">7-Day Daily Spend Trend</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Daily cost in \u20b9 INR</p>
+                <p className="text-xs text-slate-400 mt-0.5">Daily cost in ₹ INR</p>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-400">
                 {isLive ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <AlertCircle className="h-3.5 w-3.5 text-amber-400" />}
@@ -355,10 +355,10 @@ export default function CostDashboard() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dx={-4}
-                    tickFormatter={(v) => v >= 100000 ? `\u20b9${(v / 100000).toFixed(0)}L` : `\u20b9${(v / 1000).toFixed(0)}K`} />
+                    tickFormatter={(v) => v >= 100000 ? `₹${(v / 100000).toFixed(0)}L` : `₹${(v / 1000).toFixed(0)}K`} />
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.12)', fontSize: '12px' }}
-                    formatter={(val: number) => [`\u20b9${val.toLocaleString('en-IN')}`, 'Daily Spend']}
+                    formatter={(val: number) => [`₹${val.toLocaleString('en-IN')}`, 'Daily Spend']}
                   />
                   <Line type="monotone" dataKey="inr" stroke="#0ea5e9" strokeWidth={2.5}
                     dot={{ r: 4, fill: '#0ea5e9', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
@@ -371,18 +371,18 @@ export default function CostDashboard() {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-5">
               <h3 className="text-base font-bold text-slate-800">Spend by Azure Service</h3>
-              <p className="text-xs text-slate-400 mt-0.5">MTD cost allocation in \u20b9 INR</p>
+              <p className="text-xs text-slate-400 mt-0.5">MTD cost allocation in ₹ INR</p>
             </div>
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={services} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                   <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }}
-                    tickFormatter={(v) => v >= 100000 ? `\u20b9${(v / 100000).toFixed(0)}L` : `\u20b9${(v / 1000).toFixed(0)}K`} />
+                    tickFormatter={(v) => v >= 100000 ? `₹${(v / 100000).toFixed(0)}L` : `₹${(v / 1000).toFixed(0)}K`} />
                   <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#475569' }} width={120} />
                   <Tooltip cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.12)', fontSize: '12px' }}
-                    formatter={(val: number) => [`\u20b9${val.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, 'Cost']}
+                    formatter={(val: number) => [`₹${val.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, 'Cost']}
                   />
                   <Bar dataKey="costINR" radius={[0, 5, 5, 0]} barSize={18}>
                     {services.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -435,7 +435,7 @@ export default function CostDashboard() {
               <div className="p-5">
                 <p className="text-xs text-slate-400 font-semibold mb-1">MTD Cost (USD)</p>
                 <p className="text-2xl font-black text-slate-800">${selectedService.cost.toLocaleString(undefined,{minimumFractionDigits:2})}</p>
-                <p className="text-[0.7rem] text-slate-400 mt-0.5">1 USD = \u20b9{USD_TO_INR}</p>
+                <p className="text-[0.7rem] text-slate-400 mt-0.5">1 USD = ₹{USD_TO_INR}</p>
               </div>
               <div className="p-5">
                 <p className="text-xs text-slate-400 font-semibold mb-1">% of Total Spend</p>
@@ -462,7 +462,7 @@ export default function CostDashboard() {
             <div className="flex items-center gap-2">
               <Table2 className="h-4 w-4 text-slate-400" />
               <span className="text-sm font-bold text-slate-800">Daily Spend Breakdown</span>
-              <span className="text-[0.7rem] text-slate-400">— scroll through all {trend.length} days in \u20b9 INR</span>
+              <span className="text-[0.7rem] text-slate-400">— scroll through all {trend.length} days in ₹ INR</span>
             </div>
             {showDailyTable
               ? <ChevronUp className="h-4 w-4 text-slate-400" />
@@ -474,7 +474,7 @@ export default function CostDashboard() {
                 <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wider text-slate-400 z-10">
                   <tr>
                     <th className="border-b border-slate-100 px-6 py-3 font-semibold">Date</th>
-                    <th className="border-b border-slate-100 px-6 py-3 font-semibold text-right">Cost (\u20b9 INR)</th>
+                    <th className="border-b border-slate-100 px-6 py-3 font-semibold text-right">Cost (₹ INR)</th>
                     <th className="border-b border-slate-100 px-6 py-3 font-semibold text-right">Cost (USD)</th>
                     <th className="border-b border-slate-100 px-6 py-3 font-semibold text-right">Bar</th>
                   </tr>
@@ -524,7 +524,7 @@ export default function CostDashboard() {
                   <th className="border-b border-slate-100 px-6 py-3.5 font-semibold">Subscription Name</th>
                   <th className="border-b border-slate-100 px-6 py-3.5 font-semibold">Subscription ID</th>
                   <th className="border-b border-slate-100 px-6 py-3.5 font-semibold">Status</th>
-                  <th className="border-b border-slate-100 px-6 py-3.5 font-semibold text-right">MTD Cost (\u20b9 INR)</th>
+                  <th className="border-b border-slate-100 px-6 py-3.5 font-semibold text-right">MTD Cost (₹ INR)</th>
                   <th className="border-b border-slate-100 px-4 py-3.5"></th>
                 </tr>
               </thead>
@@ -543,7 +543,7 @@ export default function CostDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-3.5 text-right font-bold text-slate-800">
-                        {i === 0 ? fmtINR(totalUSD) : '\u20b9 0'}
+                        {i === 0 ? fmtINR(totalUSD) : '₹ 0'}
                       </td>
                       <td className="px-4 py-3.5 text-slate-400">
                         {expandedSub === sub.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -555,7 +555,7 @@ export default function CostDashboard() {
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
                               <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">MTD Spend (INR)</p>
-                              <p className="text-xl font-black text-slate-800">{i === 0 ? fmtINR(totalUSD) : '\u20b9 0'}</p>
+                              <p className="text-xl font-black text-slate-800">{i === 0 ? fmtINR(totalUSD) : '₹ 0'}</p>
                             </div>
                             <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
                               <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">MTD Spend (USD)</p>
@@ -579,7 +579,7 @@ export default function CostDashboard() {
             </table>
           </div>
           <div className="border-t border-slate-100 px-6 py-3 flex items-center justify-between bg-slate-50/30">
-            <span className="text-xs text-slate-400">1 USD = \u20b9{USD_TO_INR.toFixed(2)} INR \u00b7 Rates are indicative</span>
+            <span className="text-xs text-slate-400">1 USD = ₹{USD_TO_INR.toFixed(2)} INR \u00b7 Rates are indicative</span>
             <button onClick={onRefresh} disabled={refreshing}
               className="text-xs font-bold text-[#0ea5e9] hover:text-[#0284c7] flex items-center gap-1.5 transition-colors">
               <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} /> Refresh Now

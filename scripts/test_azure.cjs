@@ -1,8 +1,11 @@
 const fs = require('fs');
 
+const path = require('path');
+
 async function testAll() {
   try {
-    const creds = JSON.parse(fs.readFileSync('d:/ZensusTech-Login/artifacts/zensus-tech-login/data/sessions.json', 'utf8'));
+    const credsPath = path.resolve(__dirname, '../data/sessions.json');
+    const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
     const session = Object.values(creds)[0];
     const { tenant_id, client_id, client_secret } = session;
     console.log('Testing with tenant:', tenant_id, 'client:', client_id);

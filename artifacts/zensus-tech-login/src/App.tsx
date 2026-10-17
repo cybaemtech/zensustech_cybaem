@@ -96,46 +96,11 @@ function Home() {
     setForgotMessage(false);
     if (!validate()) return;
     setIsSubmitting(true);
-    window.setTimeout(async () => {
+    window.setTimeout(() => {
       setIsSubmitting(false);
-      // Start login-phase permission check animation
-      const initialChecks: ConnectionCheck[] = [
-        { title: 'API Authentication', description: 'Checking Secret', status: 'process' },
-        { title: 'Permission Check', description: 'Checking permission', status: 'wait' },
-        ...AZURE_PERMISSION_CHECKS.map(([permission, title]): ConnectionCheck => ({
-          title,
-          description: `Checking ${permission}`,
-          status: 'wait',
-        })),
-      ];
-      setLoginChecks(initialChecks);
-      setShowLoginCheck(true);
-
-      // Step 1 – API Authentication
-      await new Promise((resolve) => window.setTimeout(resolve, 500));
-      setLoginChecks((checks) => checks.map((c, i) => i === 0 ? { ...c, status: 'finish' } : c));
-
-      // Step 2 – Permission Check row becomes active
-      await new Promise((resolve) => window.setTimeout(resolve, 300));
-      setLoginChecks((checks) => checks.map((c, i) => i === 1 ? { ...c, status: 'process' } : c));
-
-      // Animate each permission row
-      for (let idx = 0; idx < AZURE_PERMISSION_CHECKS.length; idx++) {
-        setLoginChecks((checks) => checks.map((c, i) => i === idx + 2 ? { ...c, status: 'process' } : c));
-        await new Promise((resolve) => window.setTimeout(resolve, 120));
-        setLoginChecks((checks) => checks.map((c, i) => i === idx + 2 ? { ...c, status: 'finish' } : c));
-      }
-
-      // Finish Permission Check row
-      await new Promise((resolve) => window.setTimeout(resolve, 250));
-      setLoginChecks((checks) => checks.map((c, i) => i === 1 ? { ...c, status: 'finish', description: 'All permissions verified' } : c));
-
-      // Advance to Azure verification screen
-      await new Promise((resolve) => window.setTimeout(resolve, 600));
-      setShowLoginCheck(false);
-      setLoginChecks([]);
+      // Go directly to Azure verification screen — skip the intermediate login check animation
       setShowVerification(true);
-    }, 850);
+    }, 600);
   };
 
   const handleEmailChange = (value: string) => {
@@ -366,8 +331,8 @@ function Home() {
   };
 
   return (
-    <main className="login-shell flex min-h-[100dvh] flex-col lg:h-[100dvh] lg:min-h-0 lg:flex-row">
-      <section className="brand-rail flex min-h-[24rem] flex-1 flex-col justify-start px-6 py-7 text-white sm:px-10 lg:min-h-[100dvh] lg:max-w-[47%] lg:px-[clamp(2.5rem,6vw,7.5rem)] lg:py-10" aria-label="ZensusTech platform overview">
+    <main className="login-shell flex min-h-screen h-screen flex-col lg:h-screen lg:min-h-0 lg:flex-row">
+      <section className="brand-rail flex min-h-[24rem] flex-1 flex-col justify-start px-6 py-7 text-white sm:px-10 lg:min-h-full lg:h-full lg:max-w-[47%] lg:px-[clamp(2.5rem,6vw,7.5rem)] lg:py-10" aria-label="ZensusTech platform overview">
         <div className="orb orb-a" aria-hidden="true" />
         <div className="orb orb-b" aria-hidden="true" />
         <div className="entrance relative z-10 flex items-center justify-between">
@@ -398,7 +363,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="auth-panel flex flex-1 flex-col justify-start bg-[#f4f7fa] px-6 py-7 sm:px-10 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:max-w-[53%] lg:px-[clamp(2.5rem,8vw,10rem)] lg:py-10" aria-label="Sign in">
+      <section className="auth-panel flex flex-1 flex-col justify-start bg-[#f4f7fa] px-6 py-7 sm:px-10 lg:min-h-0 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:max-w-[53%] lg:px-[clamp(2.5rem,8vw,10rem)] lg:py-10" aria-label="Sign in">
         <header className="auth-header entrance flex items-center justify-end">
           <div className="flex items-center gap-2 text-[.68rem] font-semibold text-[#65788c]">
             <LockKeyhole className="h-3.5 w-3.5 text-[#159bcf]" strokeWidth={2} aria-hidden="true" />
@@ -450,7 +415,7 @@ function Home() {
                 <p className="mt-2 text-[.94rem] text-[#718397]">Validating permissions for your ZenAI Ops workspace.</p>
               </div>
               <section className="rounded-xl border border-[#dce5ed] bg-white p-4" aria-label="Login permission checks">
-                <p className="mono-label mb-3 text-[.62rem] font-semibold tracking-[.12em] text-[#718397]">VERIFYING PERMISSIONS</p>
+                <p className="mono-label mb-3 text-[.62rem] font-semibold tracking-[.12em] text-[#718397]">CHECKING ACCESS</p>
                 <div className="space-y-2 overflow-y-auto overscroll-contain pr-1" style={{ maxHeight: 'min(55vh, 22rem)' }}>
                   {loginChecks.map((check, index) => (
                     <div key={`login-check-${index}`} className="flex items-start gap-3 rounded-lg bg-[#f7f9fb] px-3 py-2.5">
@@ -762,10 +727,7 @@ function Home() {
           )}
         </div>
 
-        <footer className="login-footer entrance mt-auto flex items-center justify-between gap-4 text-[.68rem] text-[#91a0ae]">
-          <span>© 2026 ZensusTech</span>
-          <span className="mono-label hidden text-[.6rem] sm:inline">Build / secure by design</span>
-        </footer>
+
       </section>
     </main>
   );

@@ -17,9 +17,8 @@ if (Number.isNaN(port) || port <= 0) {
 const basePath = process.env.BASE_PATH || '/';
 
 const DATA_DIRS = [
-  path.resolve(import.meta.dirname, 'data'),
   path.resolve(import.meta.dirname, '../../data'),
-  ];
+];
 
 for (const d of DATA_DIRS) {
   try { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); } catch {}
@@ -1009,7 +1008,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/backend-api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://127.0.0.1:8010',
         changeOrigin: true,
         rewrite: (requestPath: string) => requestPath.replace(/^\/backend-api/, ''),
       },

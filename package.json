@@ -3,15 +3,12 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev": "pnpm --filter @workspace/zensus-tech-login run dev",
-    "dev:login": "pnpm --filter @workspace/zensus-tech-login run dev",
-    "dev:enhanced": "npm --prefix Zensustech-feature-enhanced-dashboard/frontend run dev",
-    "dev:backend": "powershell -NoExit -Command \"cd Zensustech-feature-enhanced-dashboard/backend; .venv/Scripts/Activate.ps1; fastapi dev app/main.py\"",
-    "start:enhanced": "powershell -ExecutionPolicy Bypass -File Zensustech-feature-enhanced-dashboard/start.ps1",
+    "dev": "node scripts/dev.mjs",
+    "dev:frontend": "pnpm --filter @workspace/zensus-tech-login run dev",
+    "dev:backend": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8010 --reload",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "dev:api": "python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8010"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
   "dependencies": {

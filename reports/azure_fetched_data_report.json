@@ -1,0 +1,431 @@
+{
+  "reportMetadata": {
+    "reportTitle": "ZensusTech Azure Tenant & Environment Live Audit Report",
+    "softwareName": "ZensusTech Cloud Governance & Monitoring Platform",
+    "generatedAt": "2026-10-17T06:27:16.868Z",
+    "dataSource": "Microsoft Azure (Graph API v1.0 & Azure Resource Manager)",
+    "tenantId": "9414ece9-9039-40b7-a6a7-7ecbe7409245",
+    "connectionStatus": "Connected & Verified"
+  },
+  "organizationOverview": {
+    "id": "9414ece9-9039-40b7-a6a7-7ecbe7409245",
+    "displayName": "ZensusTech",
+    "country": "IN",
+    "city": "Pune",
+    "state": "MH",
+    "verifiedDomains": [
+      {
+        "name": "ZensusTech.onmicrosoft.com",
+        "isDefault": false,
+        "type": "Managed"
+      },
+      {
+        "name": "zensustech.com",
+        "isDefault": true,
+        "type": "Managed"
+      }
+    ]
+  },
+  "inventorySummary": {
+    "totalUsers": 14,
+    "totalGroups": 9,
+    "totalDevices": 6,
+    "totalApplications": 5,
+    "totalSubscriptions": 0,
+    "totalDirectoryRolesConfigured": 16
+  },
+  "licenseUsageAndSkus": [
+    {
+      "skuPartNumber": "FLOW_FREE",
+      "skuId": "f30db892-07e9-47e9-837c-80727f46fd3d",
+      "unitsPurchased": 10000,
+      "unitsConsumed": 1,
+      "unitsRemaining": 9999
+    },
+    {
+      "skuPartNumber": "POWER_BI_STANDARD",
+      "skuId": "a403ebcc-fae0-4ca2-8c8c-7a907fd6c235",
+      "unitsPurchased": 1000000,
+      "unitsConsumed": 2,
+      "unitsRemaining": 999998
+    },
+    {
+      "skuPartNumber": "O365_BUSINESS_ESSENTIALS",
+      "skuId": "3b555118-da6a-4418-894f-7df1e2096870",
+      "unitsPurchased": 4,
+      "unitsConsumed": 4,
+      "unitsRemaining": 0
+    }
+  ],
+  "directoryUsersSample": [
+    {
+      "id": "4963ff19-c681-4a7e-a044-facb085add51",
+      "displayName": "Chaithra",
+      "userPrincipalName": "Chaithra@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2026-05-05T05:43:01Z"
+    },
+    {
+      "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
+      "displayName": "cybaem",
+      "userPrincipalName": "cybaem@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2026-09-30T04:49:12Z"
+    },
+    {
+      "id": "c7496808-c608-4f22-ba16-33eee3aa2bf6",
+      "displayName": "Microsoft",
+      "userPrincipalName": "Microsoft@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2026-02-07T06:24:22Z"
+    },
+    {
+      "id": "7efa7da0-c474-4d00-8e8a-65617ce80ee0",
+      "displayName": "Prasad",
+      "userPrincipalName": "Prasad@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2026-06-05T15:20:57Z"
+    },
+    {
+      "id": "ec313750-a9fd-488e-835c-cafccc1ed4f1",
+      "displayName": "Sahil  Bhosale",
+      "userPrincipalName": "Sahil.Bhosale@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2026-06-11T04:44:47Z"
+    },
+    {
+      "id": "8ba42d4f-8052-492e-b52b-c3d738b5e1b3",
+      "displayName": "Sai",
+      "userPrincipalName": "Sai@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2026-05-01T06:54:51Z"
+    },
+    {
+      "id": "69e26f64-00bc-4fcf-8c01-ccc44abf86b8",
+      "displayName": "Sales",
+      "userPrincipalName": "Sales@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2025-12-24T15:11:42Z"
+    },
+    {
+      "id": "4b801ca3-f02e-45a5-8fc6-37ec8cf33291",
+      "displayName": "Sandhya Patwardhan",
+      "userPrincipalName": "Sandy@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2025-11-12T08:21:26Z"
+    },
+    {
+      "id": "82b71096-6855-42d2-80c5-47ef3a358366",
+      "displayName": "Shahnawaz Khan",
+      "userPrincipalName": "Shahnawaz@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2025-12-09T07:16:33Z"
+    },
+    {
+      "id": "4ba4b1f1-ade9-4871-9210-103cd37db8a8",
+      "displayName": "TestingApp",
+      "userPrincipalName": "TestingApp@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2026-01-24T05:43:30Z"
+    },
+    {
+      "id": "4a81d54f-0dcb-4345-b4de-4d09ffcdf3c6",
+      "displayName": "Vinay",
+      "userPrincipalName": "Vinay@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2026-05-01T06:56:54Z"
+    },
+    {
+      "id": "5873f0fc-be8f-4f0d-b923-ef08cd1ec141",
+      "displayName": "Vinayak Salunkhe",
+      "userPrincipalName": "Vinayak.Salunkhe@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2025-11-12T08:17:37Z"
+    },
+    {
+      "id": "482443d7-2c08-4ae6-860a-3b034726aa93",
+      "displayName": "Vinayak  Salunkhe",
+      "userPrincipalName": "VinayakSalunkhe@ZensusTech.onmicrosoft.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2025-11-12T08:03:56Z"
+    },
+    {
+      "id": "f1ff729d-441c-44af-bbc8-32344178a897",
+      "displayName": "Vinil",
+      "userPrincipalName": "Vinil@zensustech.com",
+      "userType": "Member",
+      "accountEnabled": true,
+      "createdDateTime": "2025-11-12T08:23:18Z"
+    }
+  ],
+  "directoryGroupsSample": [
+    {
+      "id": "06aa20f3-7505-4060-b8d5-e6027dde23a2",
+      "displayName": "AdminAgents",
+      "securityEnabled": true,
+      "mailEnabled": false
+    },
+    {
+      "id": "418e1516-ca42-4376-a901-613552051900",
+      "displayName": "All Company",
+      "securityEnabled": false,
+      "mailEnabled": true
+    },
+    {
+      "id": "4f9a2668-87fd-4773-8d90-4b87b44645b7",
+      "displayName": "PartnerCenter_MPNAdmin",
+      "securityEnabled": true,
+      "mailEnabled": false
+    },
+    {
+      "id": "5e0d6f2b-0b98-4e89-8227-9c81b8f2a13e",
+      "displayName": "ZensusTech",
+      "securityEnabled": false,
+      "mailEnabled": true
+    },
+    {
+      "id": "641a6d71-0120-4e12-8d75-c815f8582b9f",
+      "displayName": "Info",
+      "securityEnabled": false,
+      "mailEnabled": true
+    },
+    {
+      "id": "8fc77058-52a1-4e8b-82c7-eaaa1044ed61",
+      "displayName": "ZensustechCarriers",
+      "securityEnabled": false,
+      "mailEnabled": true
+    },
+    {
+      "id": "e18056ae-740e-40bf-af62-f5372f73ccee",
+      "displayName": "SalesAgents",
+      "securityEnabled": true,
+      "mailEnabled": false
+    },
+    {
+      "id": "f8cbf8cb-0319-4583-bd54-2eebedd7a6a9",
+      "displayName": "ZensusTech-Sales",
+      "securityEnabled": false,
+      "mailEnabled": true
+    },
+    {
+      "id": "fbae5410-3561-44b6-af72-e9a6d8a45633",
+      "displayName": "HelpdeskAgents",
+      "securityEnabled": true,
+      "mailEnabled": false
+    }
+  ],
+  "devicesSample": [
+    {
+      "id": "6c57df5e-48f3-4b5b-b5ef-1172830bd04a",
+      "displayName": "Vinay-Magam",
+      "operatingSystem": "Windows",
+      "operatingSystemVersion": "10.0.26200.8246",
+      "isCompliant": null
+    },
+    {
+      "id": "89fe3b36-9db6-4b12-9f34-5529254d28b7",
+      "displayName": "iPhone 13",
+      "operatingSystem": "iOS",
+      "operatingSystemVersion": "27.0.1",
+      "isCompliant": null
+    },
+    {
+      "id": "90ddf58c-7684-4b39-9a75-ec71625f577f",
+      "displayName": "SBee",
+      "operatingSystem": "Windows",
+      "operatingSystemVersion": "10.0.26200.8457",
+      "isCompliant": null
+    },
+    {
+      "id": "9faf7e6f-d6bd-4948-ac60-69c3ef51b8bb",
+      "displayName": "Sidhant04",
+      "operatingSystem": "Windows",
+      "operatingSystemVersion": "10.0.19045.6456",
+      "isCompliant": null
+    },
+    {
+      "id": "b874a9bf-1c90-4f84-b93c-948830cc1745",
+      "displayName": "Wolf",
+      "operatingSystem": "Windows",
+      "operatingSystemVersion": "10.0.22631.6199",
+      "isCompliant": null
+    },
+    {
+      "id": "c8fef8ae-3c7a-4b45-a2a2-1b77f1ba3a6e",
+      "displayName": "iPad (6th generation)",
+      "operatingSystem": "iOS",
+      "operatingSystemVersion": "17.7.10",
+      "isCompliant": null
+    }
+  ],
+  "applicationsSample": [
+    {
+      "id": "01789464-f980-45b2-a5a5-b2c7234ef3bb",
+      "appId": "533f73d6-8de8-479f-b118-2bbd83f1e4bd",
+      "displayName": "Test-App-Registration",
+      "signInAudience": "AzureADandPersonalMicrosoftAccount",
+      "createdDateTime": "2026-01-26T11:56:49Z"
+    },
+    {
+      "id": "591fbce4-c3ee-46f3-8bc8-a80eef09fefd",
+      "appId": "e019e2cc-0854-4700-87bb-43ed34e20e17",
+      "displayName": "Zensustech",
+      "signInAudience": "AzureADandPersonalMicrosoftAccount",
+      "createdDateTime": "2026-01-23T05:53:30Z"
+    },
+    {
+      "id": "7223f8c7-6be8-4f87-8a4a-a0b989a2d6b5",
+      "appId": "31d16397-9b29-4d39-9d2b-5e29446f57aa",
+      "displayName": "ZensusTechAI-Ops",
+      "signInAudience": "AzureADMultipleOrgs",
+      "createdDateTime": "2026-02-07T05:24:41Z"
+    },
+    {
+      "id": "798c0484-09b1-42c9-8114-62559bf1e2c2",
+      "appId": "3bd333d8-94ea-4630-a492-7c06062b9822",
+      "displayName": "ZensusTech Login App",
+      "signInAudience": "AzureADMyOrg",
+      "createdDateTime": "2026-09-30T05:34:07Z"
+    },
+    {
+      "id": "aed81f16-9597-4ffd-9676-6e7c942b4256",
+      "appId": "0ffa2118-1e76-4537-b0d4-0ad853240893",
+      "displayName": "CybaemTech-0365",
+      "signInAudience": "AzureADandPersonalMicrosoftAccount",
+      "createdDateTime": "2026-10-01T04:54:34Z"
+    }
+  ],
+  "privilegedDirectoryRoles": [
+    {
+      "roleName": "Global Administrator",
+      "description": "Can manage all aspects of Microsoft Entra ID and Microsoft services that use Microsoft Entra identities.",
+      "memberCount": 4,
+      "members": [
+        "Vinayak  Salunkhe",
+        "Vinayak Salunkhe",
+        "Vinil",
+        "Shahnawaz Khan"
+      ]
+    },
+    {
+      "roleName": "Global Reader",
+      "description": "Can read everything that a Global Administrator can, but not update anything.",
+      "memberCount": 1,
+      "members": [
+        "cybaem"
+      ]
+    },
+    {
+      "roleName": "Security Administrator",
+      "description": "Security Administrator allows ability to read and manage security configuration and reports.",
+      "memberCount": 1,
+      "members": [
+        "Vinil"
+      ]
+    },
+    {
+      "roleName": "Directory Readers",
+      "description": "Can read basic directory information. Commonly used to grant directory read access to applications and guests.",
+      "memberCount": 1,
+      "members": [
+        "Microsoft.Azure.SyncFabric"
+      ]
+    }
+  ],
+  "recentAuditActivity": [
+    {
+      "id": "SSGM_4fee60d1-cadf-4638-8bd5-68663992296d_9414ece9-9039-40b7-a6a7-7ecbe7409245_134366684072823420",
+      "activityDateTime": "2026-10-16T23:53:27.282342Z",
+      "activityDisplayName": "GroupLifecyclePolicies_Get",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "System"
+    },
+    {
+      "id": "SSGM_e3355c08-2bfb-484c-b9cf-53c507332e24_9414ece9-9039-40b7-a6a7-7ecbe7409245_134365984106119930",
+      "activityDateTime": "2026-10-16T04:26:50.611993Z",
+      "activityDisplayName": "Settings_GetSettingsAsync",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    },
+    {
+      "id": "Authentication Methods_c44d82a1-47d0-42d3-ab91-901e841cbdf1_FG3HF_31512287",
+      "activityDateTime": "2026-10-16T04:26:37.1969721Z",
+      "activityDisplayName": "Get passkey creation options",
+      "category": "UserManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    },
+    {
+      "id": "SSGM_d0f73088-db86-4f3e-8ff1-f3e1ba0718e7_9414ece9-9039-40b7-a6a7-7ecbe7409245_134365983648551400",
+      "activityDateTime": "2026-10-16T04:26:04.85514Z",
+      "activityDisplayName": "Settings_GetSettingsAsync",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    },
+    {
+      "id": "SSGM_24904d2e-96dc-4133-8b94-66d2b701d81d_9414ece9-9039-40b7-a6a7-7ecbe7409245_134365983268026820",
+      "activityDateTime": "2026-10-16T04:25:26.802682Z",
+      "activityDisplayName": "Approval_GetAll",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    },
+    {
+      "id": "SSGM_dbd53a07-d774-4599-af3f-433d3c4e1fea_9414ece9-9039-40b7-a6a7-7ecbe7409245_134365983260160280",
+      "activityDateTime": "2026-10-16T04:25:26.016028Z",
+      "activityDisplayName": "Settings_GetSettingsAsync",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    },
+    {
+      "id": "SSGM_47e1b196-12cd-4400-85cb-984b2ec4aa39_9414ece9-9039-40b7-a6a7-7ecbe7409245_134365983257599390",
+      "activityDateTime": "2026-10-16T04:25:25.759939Z",
+      "activityDisplayName": "Approval_GetAll",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    },
+    {
+      "id": "SSGM_efe5b524-dbf9-471b-b00e-12188038f17e_9414ece9-9039-40b7-a6a7-7ecbe7409245_134365983255266030",
+      "activityDateTime": "2026-10-16T04:25:25.526603Z",
+      "activityDisplayName": "Settings_GetSettingsAsync",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    },
+    {
+      "id": "SSGM_2c9d29f6-6dbd-41ff-b5c9-5750db040f02_9414ece9-9039-40b7-a6a7-7ecbe7409245_134365983246822580",
+      "activityDateTime": "2026-10-16T04:25:24.682258Z",
+      "activityDisplayName": "Settings_GetSettingsAsync",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    },
+    {
+      "id": "SSGM_dd54ade3-386d-4382-b64a-2d6b9a0cf329_9414ece9-9039-40b7-a6a7-7ecbe7409245_134365983127776940",
+      "activityDateTime": "2026-10-16T04:25:12.777694Z",
+      "activityDisplayName": "Settings_GetSettingsAsync",
+      "category": "GroupManagement",
+      "result": "success",
+      "initiatedBy": "Vinayak.Salunkhe@zensustech.com"
+    }
+  ],
+  "azureSubscriptions": []
+}

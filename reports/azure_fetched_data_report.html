@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Azure Tenant Live Data Audit Report - ZensusTech</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      line-height: 1.5;
+      padding: 32px 16px;
+    }
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 36px 40px;
+      position: relative;
+    }
+    .badge-status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #10b981;
+      color: #ffffff;
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .header p {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      padding: 16px 40px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 13px;
+      color: #64748b;
+    }
+    .meta-bar strong { color: #1e293b; }
+    .content { padding: 36px 40px; }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 32px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title:first-of-type { margin-top: 0; }
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .card-val {
+      font-size: 26px;
+      font-weight: 800;
+      color: #2563eb;
+    }
+    .card-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+    th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+    tr:hover td { background: #f8fafc; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tag-green { background: #dcfce7; color: #15803d; }
+    .tag-red { background: #fee2e2; color: #b91c1c; }
+    .tag-blue { background: #dbeafe; color: #1d4ed8; }
+    .footer {
+      padding: 20px 40px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .btn-print {
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    @media print {
+      body { padding: 0; background: #fff; }
+      .container { border: none; box-shadow: none; }
+      .btn-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="badge-status">● Live Connected & Verified</div>
+    <h1>Azure Tenant Data Fetch Audit Report</h1>
+    <p>Live snapshot retrieved via Microsoft Graph API v1.0 & Azure Resource Manager by ZensusTech Platform</p>
+  </div>
+
+  <div class="meta-bar">
+    <div><strong>Tenant:</strong> ZensusTech (Pune, IN)</div>
+    <div><strong>Tenant ID:</strong> <code>9414ece9-9039-40b7-a6a7-7ecbe7409245</code></div>
+    <div><strong>Generated:</strong> 17/10/2026, 11:57:16 am</div>
+  </div>
+
+  <div class="content">
+    <div class="section-title">📊 1. Live Tenant Inventory Volume</div>
+    <div class="grid-cards">
+      <div class="card">
+        <div class="card-val">14</div>
+        <div class="card-label">Active Users</div>
+      </div>
+      <div class="card">
+        <div class="card-val">9</div>
+        <div class="card-label">Directory Groups</div>
+      </div>
+      <div class="card">
+        <div class="card-val">6</div>
+        <div class="card-label">Enrolled Devices</div>
+      </div>
+      <div class="card">
+        <div class="card-val">5</div>
+        <div class="card-label">Registered Apps</div>
+      </div>
+      <div class="card">
+        <div class="card-val">16</div>
+        <div class="card-label">Security Roles</div>
+      </div>
+    </div>
+
+    <div class="section-title">🌐 2. Verified Domains & Tenant Details</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Domain Name</th>
+          <th>Type</th>
+          <th>Is Default</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td><strong>ZensusTech.onmicrosoft.com</strong></td>
+          <td><span class="tag tag-blue">Managed</span></td>
+          <td><span class="tag">Secondary</span></td>
+        </tr>
+        
+        <tr>
+          <td><strong>zensustech.com</strong></td>
+          <td><span class="tag tag-blue">Managed</span></td>
+          <td><span class="tag tag-green">Default Domain</span></td>
+        </tr>
+        
+      </tbody>
+    </table>
+
+    <div class="section-title">💳 3. Microsoft 365 License Allocation & SKU Consumption</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Product / SKU Name</th>
+          <th>Units Purchased</th>
+          <th>Consumed Units</th>
+          <th>Remaining Units</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td><strong>FLOW_FREE</strong></td>
+          <td>10,000</td>
+          <td><span class="tag tag-blue">1</span></td>
+          <td>9,999</td>
+        </tr>
+        
+        <tr>
+          <td><strong>POWER_BI_STANDARD</strong></td>
+          <td>10,00,000</td>
+          <td><span class="tag tag-blue">2</span></td>
+          <td>9,99,998</td>
+        </tr>
+        
+        <tr>
+          <td><strong>O365_BUSINESS_ESSENTIALS</strong></td>
+          <td>4</td>
+          <td><span class="tag tag-blue">4</span></td>
+          <td>0</td>
+        </tr>
+        
+      </tbody>
+    </table>
+
+    <div class="section-title">🛡️ 4. Privileged Administrative Roles (RBAC)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Role Name</th>
+          <th>Assigned Members Count</th>
+          <th>Assigned Users / Identities</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td><strong>Global Administrator</strong></td>
+          <td><span class="tag tag-red">4 admin(s)</span></td>
+          <td>Vinayak  Salunkhe, Vinayak Salunkhe, Vinil, Shahnawaz Khan</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Global Reader</strong></td>
+          <td><span class="tag tag-red">1 admin(s)</span></td>
+          <td>cybaem</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Security Administrator</strong></td>
+          <td><span class="tag tag-red">1 admin(s)</span></td>
+          <td>Vinil</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Directory Readers</strong></td>
+          <td><span class="tag tag-red">1 admin(s)</span></td>
+          <td>Microsoft.Azure.SyncFabric</td>
+        </tr>
+        
+      </tbody>
+    </table>
+
+    <div class="section-title">👥 5. Live Directory Users Sample (Azure AD / Entra ID)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Display Name</th>
+          <th>User Principal Name (Email)</th>
+          <th>Status</th>
+          <th>User Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td><strong>Chaithra</strong></td>
+          <td><code>Chaithra@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>cybaem</strong></td>
+          <td><code>cybaem@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Microsoft</strong></td>
+          <td><code>Microsoft@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Prasad</strong></td>
+          <td><code>Prasad@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Sahil  Bhosale</strong></td>
+          <td><code>Sahil.Bhosale@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Sai</strong></td>
+          <td><code>Sai@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Sales</strong></td>
+          <td><code>Sales@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Sandhya Patwardhan</strong></td>
+          <td><code>Sandy@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Shahnawaz Khan</strong></td>
+          <td><code>Shahnawaz@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+        <tr>
+          <td><strong>TestingApp</strong></td>
+          <td><code>TestingApp@zensustech.com</code></td>
+          <td><span class="tag tag-green">Active</span></td>
+          <td>Member</td>
+        </tr>
+        
+      </tbody>
+    </table>
+
+    <div class="section-title">📱 6. Registered Applications & Integrations</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Application Name</th>
+          <th>Application (Client) ID</th>
+          <th>Sign-in Audience</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td><strong>Test-App-Registration</strong></td>
+          <td><code>533f73d6-8de8-479f-b118-2bbd83f1e4bd</code></td>
+          <td>AzureADandPersonalMicrosoftAccount</td>
+        </tr>
+        
+        <tr>
+          <td><strong>Zensustech</strong></td>
+          <td><code>e019e2cc-0854-4700-87bb-43ed34e20e17</code></td>
+          <td>AzureADandPersonalMicrosoftAccount</td>
+        </tr>
+        
+        <tr>
+          <td><strong>ZensusTechAI-Ops</strong></td>
+          <td><code>31d16397-9b29-4d39-9d2b-5e29446f57aa</code></td>
+          <td>AzureADMultipleOrgs</td>
+        </tr>
+        
+        <tr>
+          <td><strong>ZensusTech Login App</strong></td>
+          <td><code>3bd333d8-94ea-4630-a492-7c06062b9822</code></td>
+          <td>AzureADMyOrg</td>
+        </tr>
+        
+        <tr>
+          <td><strong>CybaemTech-0365</strong></td>
+          <td><code>0ffa2118-1e76-4537-b0d4-0ad853240893</code></td>
+          <td>AzureADandPersonalMicrosoftAccount</td>
+        </tr>
+        
+      </tbody>
+    </table>
+
+    <div class="section-title">📝 7. Recent Azure Directory Audit Log</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Action</th>
+          <th>Category</th>
+          <th>Result</th>
+          <th>Initiated By</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td>2026-10-16T23:53:27.282342Z</td>
+          <td><strong>GroupLifecyclePolicies_Get</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>System</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:26:50.611993Z</td>
+          <td><strong>Settings_GetSettingsAsync</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:26:37.1969721Z</td>
+          <td><strong>Get passkey creation options</strong></td>
+          <td>UserManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:26:04.85514Z</td>
+          <td><strong>Settings_GetSettingsAsync</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:25:26.802682Z</td>
+          <td><strong>Approval_GetAll</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:25:26.016028Z</td>
+          <td><strong>Settings_GetSettingsAsync</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:25:25.759939Z</td>
+          <td><strong>Approval_GetAll</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:25:25.526603Z</td>
+          <td><strong>Settings_GetSettingsAsync</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:25:24.682258Z</td>
+          <td><strong>Settings_GetSettingsAsync</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+        <tr>
+          <td>2026-10-16T04:25:12.777694Z</td>
+          <td><strong>Settings_GetSettingsAsync</strong></td>
+          <td>GroupManagement</td>
+          <td><span class="tag tag-green">success</span></td>
+          <td><code>Vinayak.Salunkhe@zensustech.com</code></td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <div>Generated by ZensusTech Cloud Governance Platform</div>
+    <button class="btn-print" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+</div>
+
+</body>
+</html>

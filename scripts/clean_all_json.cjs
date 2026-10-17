@@ -1,4 +1,4 @@
-const fs = require('fs');
+ const fs = require('fs');
 
 const filePath = 'd:/ZensusTech-Login/artifacts/zensus-tech-login/vite.config.ts';
 let code = fs.readFileSync(filePath, 'utf8');

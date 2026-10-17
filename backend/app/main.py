@@ -38,11 +38,75 @@ DOCS_CSS = """
   .swagger-ui .opblock .opblock-summary { padding: 7px 12px; }
   .swagger-ui .opblock .opblock-summary-path { color: #193b5a; font-size: 13px; }
   .swagger-ui .opblock .opblock-summary-description { color: #526579; }
+  .swagger-ui .opblock .opblock-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .swagger-ui .opblock .opblock-summary-description { flex: 1 1 auto; }
+  .swagger-ui .plan-access { display: inline-flex; align-items: center; gap: 9px; margin-left: auto; padding: 4px 9px; border: 1px solid #e1e8f0; border-radius: 7px; background: #fff; color: #526579; font-size: 11px; white-space: nowrap; }
+  .swagger-ui .plan-access-label { color: #193b5a; font-weight: 700; }
+  .swagger-ui .plan-option { display: inline-flex; align-items: center; gap: 3px; }
+  .swagger-ui .plan-option input { margin: 0; accent-color: #08765f; }
+  @media (max-width: 640px) { .swagger-ui .plan-access { width: 100%; margin: 4px 0 0; justify-content: flex-start; } }
   .swagger-ui .btn, .swagger-ui select { border-radius: 7px; }
   .swagger-ui .btn.authorize { border-color: #11836b; color: #08765f; }
   .swagger-ui .btn.execute { background: #08765f; border-color: #08765f; }
   .swagger-ui section.models { margin: 28px 0; border: 1px solid #e1e8f0; border-radius: 10px; background: #fff; }
   @media (max-width: 640px) { .swagger-ui .wrapper { padding-left: 14px; padding-right: 14px; } .swagger-ui .info .title { font-size: 27px; } }
+"""
+
+# Tiers are cumulative: endpoints included in Basic are also included in
+# Standard and Premium. Keys are the HTTP method and the route suffix.
+DOCS_PLAN_ACCESS = {
+    "GET /subscriptions": 1,
+    "GET /subscriptions/{subscription_id}/metadata": 1,
+    "GET /users": 1,
+    "GET /tenant/users": 1,
+    "GET /tenant/organization": 1,
+    "GET /license_and_usage_details": 1,
+    "POST /connect": 1,
+    "GET /tenant/applications": 2,
+    "GET /tenant/audit-logs": 2,
+    "GET /security/tenant-posture": 2,
+    "GET /api/security/subs-posture": 2,
+    "POST /governance/stats": 2,
+    "POST /governance/risk-distribution": 2,
+    "POST /governance/users": 2,
+    "POST /governance/user-activity-trend": 2,
+    "POST /governance/role-counts": 2,
+    "POST /governance/inactivity-analysis": 2,
+    "POST /governance/external-users": 2,
+    "POST /governance/ssl-certificates": 3,
+    "GET /secure/score": 3,
+    "GET /identity/governance": 3,
+    "GET /security-audit-report": 3,
+}
+
+DOCS_PLAN_SCRIPT = """
+<script>
+(() => {
+  const access = PLAN_ACCESS;
+  const plans = ['Basic', 'Standard', 'Premium'];
+  const normalize = value => (value || '').replace(/\\/$/, '');
+  const render = () => document.querySelectorAll('.swagger-ui .opblock').forEach(block => {
+    const method = block.querySelector('.opblock-summary-method')?.textContent?.trim().toUpperCase();
+    const path = normalize(block.querySelector('.opblock-summary-path')?.getAttribute('data-path') || block.querySelector('.opblock-summary-path')?.textContent?.trim());
+    if (!method || !path || block.querySelector('.plan-access')) return;
+    const match = Object.entries(access).sort((left, right) => right[0].length - left[0].length).find(([key]) => {
+      const [allowedMethod, suffix] = key.split(' ', 2);
+      return method === allowedMethod && (path === suffix || path.endsWith(suffix));
+    });
+    if (!match) return;
+    const maxTier = match[1];
+    const badge = document.createElement('span');
+    badge.className = 'plan-access';
+    badge.setAttribute('aria-label', 'Plans that include this API');
+    badge.innerHTML = '<span class="plan-access-label">Plans</span>' + plans.map((plan, index) =>
+      '<label class="plan-option"><input type="checkbox" disabled ' + (index < maxTier ? 'checked ' : '') + 'aria-label="' + plan + '"><span>' + plan + '</span></label>'
+    ).join('');
+    block.querySelector('.opblock-summary')?.appendChild(badge);
+  });
+  new MutationObserver(render).observe(document.documentElement, { childList: true, subtree: true });
+  render();
+})();
+</script>
 """
 
 app = FastAPI(
@@ -87,7 +151,12 @@ async def swagger_docs() -> HTMLResponse:
             "defaultModelsExpandDepth": 1,
         },
     )
-    html = response.body.decode("utf-8").replace("</head>", f"<style>{DOCS_CSS}</style></head>")
+    import json
+
+    plan_script = DOCS_PLAN_SCRIPT.replace("PLAN_ACCESS", json.dumps(DOCS_PLAN_ACCESS))
+    html = response.body.decode("utf-8").replace(
+        "</head>", f"<style>{DOCS_CSS}</style></head>"
+    ).replace("</body>", f"{plan_script}</body>")
     return HTMLResponse(content=html)
 
 
