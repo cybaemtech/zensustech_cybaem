@@ -1,4 +1,4 @@
-export const LIVE_API_BASE = '/backend-api/api/v1';
+export const LIVE_API_BASE = '/api/v1';
 
 export function getLiveApiHeaders(): Headers {
   const headers = new Headers();

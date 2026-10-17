@@ -132,9 +132,14 @@ app.add_middleware(
 )
 app.add_middleware(LoggingMiddleware)
 
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 # The governance router defines its own /governance prefix. api.main includes it
 # once, so its public paths stay aligned with the frontend's /api/v1/governance/* calls.
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router, prefix="/backend-api" + settings.API_V1_STR)
 
 
 @app.get(f"{settings.API_V1_STR}/docs", include_in_schema=False)
@@ -160,11 +165,40 @@ async def swagger_docs() -> HTMLResponse:
     return HTMLResponse(content=html)
 
 
-@app.get("/", include_in_schema=False)
-async def root() -> dict[str, str]:
-    return {"message": "ZensusTech API is running", "docs": f"{settings.API_V1_STR}/docs"}
-
-
 @app.get(f"{settings.API_V1_STR}/health", include_in_schema=False)
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+
+if os.path.isdir(STATIC_DIR):
+    assets_dir = os.path.join(STATIC_DIR, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/", include_in_schema=False)
+    async def serve_index():
+        index_file = os.path.join(STATIC_DIR, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        return {"message": "ZensusTech API is running", "docs": f"{settings.API_V1_STR}/docs"}
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path.startswith("backend-api/"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Not Found")
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        index_file = os.path.join(STATIC_DIR, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Not Found")
+else:
+    @app.get("/", include_in_schema=False)
+    async def root() -> dict[str, str]:
+        return {"message": "ZensusTech API is running", "docs": f"{settings.API_V1_STR}/docs"}
+
