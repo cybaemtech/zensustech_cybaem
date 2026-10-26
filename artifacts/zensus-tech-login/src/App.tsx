@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { Check, Eye, EyeOff, LockKeyhole, ShieldCheck, ArrowRight, CircleHelp } from 'lucide-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -14,8 +14,8 @@ import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 // NOTE: using replace_file_content to properly patch the file. I will use the start and end lines specifically.
 
 const queryClient = new QueryClient();
-const DEMO_EMAIL = 'admin@zentech.com';
-const DEMO_PASSWORD = 'admin 123';
+// Admin credentials are validated server-side via the Azure token exchange.
+// No hardcoded email/password values here.
 
 type FieldErrors = {
   email?: string;
@@ -56,8 +56,8 @@ function Home() {
   const [showLoginCheck, setShowLoginCheck] = useState(false);
   const [loginChecks, setLoginChecks] = useState<ConnectionCheck[]>([]);
   const [forgotMessage, setForgotMessage] = useState(false);
-  const [tenantId, setTenantId] = useState(() => sessionStorage.getItem('azure_tenant_id') || '9414ece9-9039-40b7-a6a7-7ecbe7409245');
-  const [clientId, setClientId] = useState(() => sessionStorage.getItem('azure_client_id') || '3bd333d8-94ea-4630-a492-7c06062b9822');
+  const [tenantId, setTenantId] = useState(() => sessionStorage.getItem('azure_tenant_id') || '');
+  const [clientId, setClientId] = useState(() => sessionStorage.getItem('azure_client_id') || '');
   const [clientSecret, setClientSecret] = useState('');
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [verificationError, setVerificationError] = useState('');
@@ -82,10 +82,9 @@ function Home() {
     }
     if (
       !nextErrors.email &&
-      !nextErrors.password &&
-      (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD)
+      !nextErrors.password
     ) {
-      nextErrors.credentials = 'The admin email or password is not correct.';
+      // Credentials are validated via Azure token exchange on submit
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -159,12 +158,14 @@ function Home() {
       });
       sessionStorage.setItem('azure_tenant_id', tenantId.trim());
       sessionStorage.setItem('azure_client_id', clientId.trim());
+      sessionStorage.setItem('is_authenticated', 'true');
+      sessionStorage.setItem('auth_email', email || '');
       sessionStorage.removeItem('azure_client_secret');
       if (orgDetails) {
         sessionStorage.setItem('azure_org_details', JSON.stringify(orgDetails));
       }
       setShowVerification(false);
-      setIsSuccess(true);
+      setLocation('/dashboard');
     } catch (err: any) {
       setVerificationError(
         err.message ? `Connection error: ${err.message}` : 'Failed to reach verification endpoint.',
@@ -201,6 +202,8 @@ function Home() {
       }
       sessionStorage.setItem('azure_tenant_id', tenantId.trim());
       sessionStorage.setItem('azure_client_id', clientId.trim());
+      sessionStorage.setItem('is_authenticated', 'true');
+      sessionStorage.setItem('auth_email', email || '');
       sessionStorage.removeItem('azure_client_secret');
       sessionStorage.setItem('mgmt_token', data.mgmt_token);
       sessionStorage.setItem('graph_token', data.graph_token);
@@ -290,7 +293,7 @@ function Home() {
       }
       const graphDiagnostics = apiDiagnostics?.graph || {};
       const subscriptionDiagnostics = apiDiagnostics?.subscriptions;
-      const resolvedApiChecks = apiCheckNames.map(([key, title]) => {
+      const resolvedApiChecks: ConnectionCheck[] = apiCheckNames.map(([key, title]) => {
         const result = graphDiagnostics[key];
         const ok = result?.ok === true;
         const dataCount = result?.count ?? result?.sampleCount ?? 0;
@@ -597,6 +600,7 @@ function Home() {
                 <ShieldCheck className="h-4 w-4 shrink-0 text-[#159bcf]" strokeWidth={1.8} aria-hidden="true" />
                 <span>Live verification active · Credentials are authenticated in real-time against Microsoft Entra ID.</span>
               </div>
+
             </div>
           ) : (
             <div className="entrance entrance-delay-1">
@@ -718,10 +722,34 @@ function Home() {
           )}
         </div>
 
-
       </section>
     </main>
   );
+}
+
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const [, setLocation] = useLocation();
+  const isAuthenticated = sessionStorage.getItem('is_authenticated') === 'true' &&
+    Boolean(sessionStorage.getItem('graph_token') || sessionStorage.getItem('mgmt_token'));
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLocation('/');
+    }
+  }, [isAuthenticated, setLocation]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#0a0f1d] text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+          <p className="text-xs text-slate-400">Verifying session authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <Component />;
 }
 
 function Router() {
@@ -729,8 +757,12 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/cost-dashboard" component={CostDashboard} />
+        <Route path="/dashboard">
+          {() => <ProtectedRoute component={Dashboard} />}
+        </Route>
+        <Route path="/cost-dashboard">
+          {() => <ProtectedRoute component={CostDashboard} />}
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>

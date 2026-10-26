@@ -2,3 +2,6 @@ fastapi>=0.114.2,<1.0.0
 httpx>=0.25.1,<1.0.0
 pydantic>=2.7.0
 uvicorn[standard]>=0.30.0
+psycopg[binary]>=3.2.0
+pymysql>=1.2.0
+python-tds>=1.17.0

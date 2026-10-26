@@ -45,11 +45,14 @@ import {
   Upload,
   LogOut,
   ChevronLeft,
-  Menu
+  Menu,
+  Database
 } from 'lucide-react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocation } from 'wouter';
-import { getLiveApiHeaders, LIVE_API_BASE } from '@/lib/live-api';
+import { getLiveApiHeaders, ensureLiveApiTokens, LIVE_API_BASE } from '@/lib/live-api';
+import { DatabaseSettingsPage } from '@/components/DatabaseSettingsPage';
+import { fetchDatabaseStatus } from '@/lib/database-api';
 import {
   ResponsiveContainer,
   PieChart,
@@ -63,10 +66,19 @@ import {
   CartesianGrid,
   Legend
 } from 'recharts';
+import { CustomerCategorySwitcher } from '@/components/CustomerCategorySwitcher';
+import { ClientCategoryView } from '@/components/ClientCategoryView';
+import {
+  getActiveCustomer,
+  getActiveCategory,
+  type CustomerData,
+  type CategoryType
+} from '@/lib/customer-store';
 
 const SIDEBAR_ITEMS = [
   { id: 'identity', label: 'Identity & Access', subLabel: 'Organization Entra ID', icon: Fingerprint, group: 'core' },
   { id: 'm365', label: 'Microsoft O365', subLabel: 'Licenses & Usage', icon: PanelsTopLeft, group: 'core' },
+  { id: 'database', label: 'Database Connect', subLabel: 'Multi-DB Settings & Migration', icon: Database, group: 'core' },
   { id: 'backups', label: 'Backups & DR', subLabel: 'Azure Recovery Vaults', icon: DatabaseBackup, group: 'operations' },
   { id: 'patch', label: 'Patch Compliance', subLabel: 'Intune Managed Devices', icon: ShieldCheck, group: 'operations' },
   { id: 'asset', label: 'Cloud Inventory', subLabel: 'Apps & Service Principals', icon: Boxes, group: 'operations' },
@@ -84,7 +96,7 @@ const DEFAULT_ORG = {
   city: '',
   state: '',
   street: '',
-  license: '',
+  license: 'Microsoft Entra ID',
   usersCount: 0,
   groupsCount: 0,
   appsCount: 0,
@@ -104,12 +116,37 @@ const DEFAULT_STATS = {
   foreign: 0
 };
 
+function formatRegisteredDate(dateStr?: string) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 const DEFAULT_USERS: any[] = [];
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const tenantId = sessionStorage.getItem('azure_tenant_id') || '9414ece9-9039-40b7-a6a7-7ecbe7409245';
-  const clientId = sessionStorage.getItem('azure_client_id') || '3bd333d8-94ea-4630-a492-7c06062b9822';
+
+  useEffect(() => {
+    const isAuth = sessionStorage.getItem('is_authenticated') === 'true' &&
+      Boolean(sessionStorage.getItem('graph_token') || sessionStorage.getItem('mgmt_token'));
+    if (!isAuth) {
+      setLocation('/');
+    }
+  }, [setLocation]);
+  const [currentCustomer, setCurrentCustomer] = useState<CustomerData | null>(getActiveCustomer);
+  const [currentCategory, setCurrentCategory] = useState<CategoryType>(getActiveCategory);
+  const tenantId = currentCustomer?.tenantId || sessionStorage.getItem('azure_tenant_id') || '';
+  const clientId = currentCustomer?.clientId || sessionStorage.getItem('azure_client_id') || '';
 
   const [org, setOrg] = useState<typeof DEFAULT_ORG>(() => {
     try {
@@ -121,12 +158,68 @@ export default function Dashboard() {
         }
       }
     } catch {}
-    return DEFAULT_ORG;
+    const active = getActiveCustomer();
+    return {
+      ...DEFAULT_ORG,
+      displayName: active?.name || '',
+      primaryDomain: active?.domainId || ''
+    };
   });
 
   const [stats, setStats] = useState({ ...DEFAULT_STATS });
   const [usersList, setUsersList] = useState<any[]>(DEFAULT_USERS);
   const [licensesData, setLicensesData] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('azure_applications');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  });
+  const [appSearch, setAppSearch] = useState('');
+  const [copiedAppId, setCopiedAppId] = useState<string | null>(null);
+
+  // Drilldown Popup Modal State
+  type DrilldownType = 'all-users' | 'standard-users' | 'global-admins' | 'mfa-disabled' | 'mfa-compliant' | 'apps' | 'groups' | 'devices' | 'cloud-resources';
+  const [drilldownModal, setDrilldownModal] = useState<{
+    isOpen: boolean;
+    type: DrilldownType;
+    activeTab?: 'apps' | 'groups' | 'devices';
+  }>({
+    isOpen: false,
+    type: 'all-users',
+    activeTab: 'apps',
+  });
+  const [modalSearch, setModalSearch] = useState('');
+  const [copiedModalId, setCopiedModalId] = useState<string | null>(null);
+
+  const [groupsList, setGroupsList] = useState<any[]>(() => {
+    try {
+      const c = sessionStorage.getItem('azure_groups');
+      return c ? JSON.parse(c) : [];
+    } catch { return []; }
+  });
+
+  const [devicesList, setDevicesList] = useState<any[]>(() => {
+    try {
+      const c = sessionStorage.getItem('azure_devices');
+      return c ? JSON.parse(c) : [];
+    } catch { return []; }
+  });
+
+  const openDrilldownModal = (type: DrilldownType) => {
+    setModalSearch('');
+    setDrilldownModal({
+      isOpen: true,
+      type,
+      activeTab: type === 'groups' ? 'groups' : type === 'devices' ? 'devices' : 'apps',
+    });
+  };
+
+  const closeDrilldownModal = () => {
+    setDrilldownModal(prev => ({ ...prev, isOpen: false }));
+    setModalSearch('');
+  };
   const [secureScore, setSecureScore] = useState<number | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const [activeTab, setActiveTab] = useState('identity');
@@ -142,6 +235,14 @@ export default function Dashboard() {
   const [copiedTenant, setCopiedTenant] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showDatabaseModal, setShowDatabaseModal] = useState(false);
+  const [isDbConnected, setIsDbConnected] = useState(false);
+
+  useEffect(() => {
+    fetchDatabaseStatus().then(res => {
+      setIsDbConnected(Boolean(res.connected));
+    }).catch(() => {});
+  }, []);
 
   // Feed & Forensic Explorer state
   const [feedItems, setFeedItems] = useState<any[]>([]);
@@ -152,6 +253,17 @@ export default function Dashboard() {
   const [investigationFilter, setInvestigationFilter] = useState<'All'|'Auth'|'User'|'Application'|'Role'>('All');
   const [investigationTime, setInvestigationTime] = useState<'24H'|'7D'|'30D'>('24H');
   const [showUsersTable, setShowUsersTable] = useState(false);
+
+  const filteredApps = useMemo(() => {
+    if (!appSearch.trim()) return applications;
+    const q = appSearch.toLowerCase();
+    return applications.filter(
+      (a: any) =>
+        (a.displayName || '').toLowerCase().includes(q) ||
+        (a.appId || '').toLowerCase().includes(q) ||
+        (a.signInAudience || '').toLowerCase().includes(q)
+    );
+  }, [applications, appSearch]);
 
   // Per-tab live data
   const [tabLoading, setTabLoading] = useState(false);
@@ -164,13 +276,16 @@ export default function Dashboard() {
   const fetchStats = useCallback(async () => {
     setIsRefreshing(true);
     try {
+      await ensureLiveApiTokens();
       const headers = getLiveApiHeaders();
-      const [usersRes, appsRes, orgRes, securityRes, licenseRes] = await Promise.allSettled([
+      const [usersRes, appsRes, orgRes, securityRes, licenseRes, groupsRes, devicesRes] = await Promise.allSettled([
         fetch(`${LIVE_API_BASE}/tenant/users`, { headers }),
         fetch(`${LIVE_API_BASE}/tenant/applications`, { headers }),
         fetch(`${LIVE_API_BASE}/tenant/organization`, { headers }),
         fetch(`${LIVE_API_BASE}/microsoft0365/secure/score`, { headers }),
         fetch(`${LIVE_API_BASE}/microsoft0365/license_and_usage_details`, { headers }),
+        fetch(`${LIVE_API_BASE}/tenant/groups`, { headers }),
+        fetch(`${LIVE_API_BASE}/tenant/devices`, { headers }),
       ]);
 
       // 1. Process Organization
@@ -235,6 +350,36 @@ export default function Dashboard() {
             setStats(prev => ({ ...prev, totalApps: appCount }));
             setOrg(prev => ({ ...prev, appsCount: appCount }));
           }
+          if (Array.isArray(appJson?.applications) && appJson.applications.length > 0) {
+            setApplications(appJson.applications);
+            try { sessionStorage.setItem('azure_applications', JSON.stringify(appJson.applications)); } catch {}
+          }
+        } catch {}
+      }
+
+      // 4b. Process Groups
+      if (groupsRes?.status === 'fulfilled') {
+        try {
+          const gJson = await groupsRes.value.json();
+          if (Array.isArray(gJson?.groups) && gJson.groups.length > 0) {
+            setGroupsList(gJson.groups);
+            setStats(prev => ({ ...prev, totalGroups: gJson.groups.length }));
+            setOrg(prev => ({ ...prev, groupsCount: gJson.groups.length }));
+            try { sessionStorage.setItem('azure_groups', JSON.stringify(gJson.groups)); } catch {}
+          }
+        } catch {}
+      }
+
+      // 4c. Process Devices
+      if (devicesRes?.status === 'fulfilled') {
+        try {
+          const dJson = await devicesRes.value.json();
+          if (Array.isArray(dJson?.devices) && dJson.devices.length > 0) {
+            setDevicesList(dJson.devices);
+            setStats(prev => ({ ...prev, totalDevices: dJson.devices.length }));
+            setOrg(prev => ({ ...prev, devicesCount: dJson.devices.length }));
+            try { sessionStorage.setItem('azure_devices', JSON.stringify(dJson.devices)); } catch {}
+          }
         } catch {}
       }
 
@@ -242,52 +387,53 @@ export default function Dashboard() {
       if (usersRes.status === 'fulfilled') {
         try {
           const usersJson = await usersRes.value.json();
-          const isLive = usersRes.value.ok && Array.isArray(usersJson?.users) && usersJson.users.length > 0;
-          const src = usersJson?.source || (isLive ? 'graph' : 'none');
-          setIsLiveGraph(isLive);
-          setDataSource(src as any);
+          const liveUsers = (usersRes.value.ok && Array.isArray(usersJson?.users)) ? usersJson.users : [];
+          setIsLiveGraph(Boolean(usersJson?.liveData || usersJson?.source === 'graph'));
+          setDataSource(usersJson?.source || 'none');
           setLastFetchedAt(usersJson?.fetchedAt || usersJson?.cachedAt || new Date().toISOString());
-          setGraphError(isLive ? null : (usersJson?.detail || usersJson?.error || (usersRes.value.ok ? 'The users API returned HTTP 200 but no user records.' : `Live users API returned HTTP ${usersRes.value.status}.`)));
+          setGraphError(usersJson?.error || null);
 
-          if (usersJson && Array.isArray(usersJson.users)) {
-            const normalizedUsers = usersJson.users.map((user: any) => ({
-              ...user,
-              displayName: user.displayName || user.user || 'Unknown',
-              userPrincipalName: user.userPrincipalName || user.email || '',
-              accountEnabled: user.accountEnabled ?? user.status === 'Active',
-              mfaEnabled: user.mfaEnabled ?? (user.mfa === 'Enabled' ? true : user.mfa === 'Disabled' ? false : null),
-              roles: user.roles || (user.role ? [user.role] : []),
-            }));
-            setUsersList(normalizedUsers);
-            const ul = normalizedUsers;
-            const total = ul.length;
-            const mfaDis = ul.filter((u: any) => u.mfa === 'Disabled' || u.mfaEnabled === false).length;
-            const admins = ul.filter((u: any) =>
-              (u.role || '').toLowerCase().includes('administrator') ||
-              (u.roles || []).some((r: string) => r.toLowerCase().includes('administrator'))
-            ).length;
-            const gAdmins = ul.filter((u: any) =>
-              (u.role || '').toLowerCase().includes('global administrator') ||
-              (u.roles || []).some((r: string) => r.toLowerCase().includes('global administrator'))
-            ).length;
-            setStats(prev => ({
-              ...prev,
-              totalUsers: total,
-              standardUsers: Math.max(0, total - admins),
-              globalAdmins: gAdmins,
-              mfaDisabled: mfaDis,
-              compliant: Math.max(0, total - mfaDis),
-            }));
-            setOrg(prev => ({ ...prev, usersCount: total }));
-          }
+          const normalizedUsers = liveUsers.map((user: any) => ({
+            ...user,
+            displayName: user.displayName || user.user || 'Unknown',
+            userPrincipalName: user.userPrincipalName || user.email || '',
+            accountEnabled: user.accountEnabled ?? user.status === 'Active',
+            mfaEnabled: user.mfaEnabled ?? (user.mfa === 'Enabled' ? true : user.mfa === 'Disabled' ? false : null),
+            roles: user.roles || (user.role ? [user.role] : []),
+          }));
+          setUsersList(normalizedUsers);
+          const ul = normalizedUsers;
+          const total = ul.length;
+          const mfaDis = ul.filter((u: any) => u.mfa === 'Disabled' || u.mfaEnabled === false).length;
+          const admins = ul.filter((u: any) =>
+            (u.role || '').toLowerCase().includes('administrator') ||
+            (u.roles || []).some((r: string) => r.toLowerCase().includes('administrator'))
+          ).length;
+          const gAdmins = ul.filter((u: any) =>
+            (u.role || '').toLowerCase().includes('global administrator') ||
+            (u.roles || []).some((r: string) => r.toLowerCase().includes('global administrator'))
+          ).length;
+          setStats(prev => ({
+            ...prev,
+            totalUsers: total,
+            standardUsers: Math.max(0, total - admins),
+            globalAdmins: gAdmins,
+            mfaDisabled: mfaDis,
+            compliant: Math.max(0, total - mfaDis),
+          }));
+          setOrg(prev => ({ ...prev, usersCount: total }));
         } catch (e: any) {
           setIsLiveGraph(false);
-          setDataSource('none');
+          setUsersList([]);
           setGraphError(e.message);
         }
+      } else {
+        setIsLiveGraph(false);
+        setUsersList([]);
       }
     } catch (e: any) {
       setIsLiveGraph(false);
+      setUsersList([]);
       setGraphError(e.message);
     } finally {
       setIsRefreshing(false);
@@ -299,30 +445,23 @@ export default function Dashboard() {
     setFeedLoading(true);
     setFeedError(null);
     try {
-      const graphToken = sessionStorage.getItem('graph_token');
-      if (!graphToken) {
-        throw new Error('No Graph token available. Please re-authenticate.');
-      }
+      await ensureLiveApiTokens();
+      const headers = getLiveApiHeaders();
       const top = investigationTime === '30D' ? 50 : investigationTime === '7D' ? 30 : 20;
-      const url = `https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?$top=${top}&$orderby=activityDateTime desc`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${graphToken}` },
+      const res = await fetch(`${LIVE_API_BASE}/tenant/audit-logs?top=${top}`, {
+        headers,
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `Graph returned HTTP ${res.status}`);
+        throw new Error(err.error?.message || err.detail || `Audit service returned HTTP ${res.status}`);
       }
       const data = await res.json();
-      setFeedItems(Array.isArray(data.value) ? data.value : []);
+      const logs = Array.isArray(data.logs) ? data.logs : (Array.isArray(data.value) ? data.value : []);
+      setFeedItems(logs);
     } catch (e: any) {
+      console.warn('Audit feed fetch failed:', e);
       setFeedError(e.message || 'Failed to fetch audit feed.');
-      setFeedItems([
-        { id: 'demo-1', activityDisplayName: 'Hard Delete application', activityDateTime: new Date(Date.now() - 20 * 3600000).toISOString(), initiatedBy: { app: { displayName: 'Microsoft Online Services Garbage Collector' } }, targetResources: [{ displayName: 'cybaemtechdemo1.file.core.windows.net', type: 'StorageAccount', modifiedProperties: [] }], result: 'success', category: 'Application', operationType: 'Delete' },
-        { id: 'demo-2', activityDisplayName: 'GroupLifecyclePolicies_Get', activityDateTime: new Date(Date.now() - 26 * 3600000).toISOString(), initiatedBy: { app: { displayName: 'System Process' } }, targetResources: [{ displayName: 'Unknown', type: 'Other', modifiedProperties: [] }], result: 'success', category: 'Policy', operationType: 'Get' },
-        { id: 'demo-3', activityDisplayName: 'Update application', activityDateTime: new Date(Date.now() - 4 * 24 * 3600000).toISOString(), initiatedBy: { app: { displayName: 'System Process' } }, targetResources: [{ displayName: 'CybaemTech-0365', type: 'Application', modifiedProperties: [{ displayName: 'KeyDescription', oldValue: '', newValue: 'KeyIdentifier=...' }] }], result: 'success', category: 'Application', operationType: 'Update' },
-        { id: 'demo-4', activityDisplayName: 'Update application – Certificates and secrets management', activityDateTime: new Date(Date.now() - 4 * 24 * 3600000).toISOString(), initiatedBy: { app: { displayName: 'System Process' } }, targetResources: [{ displayName: 'CybaemTech-0365', type: 'Application', modifiedProperties: [{ displayName: 'KeyDescription', oldValue: '', newValue: 'KeyIdentifier=cf0c930-1d37-4797-9874-d564bb66a1ba;KeyType=Password;KeyUsage=Verify;DisplayName=CybaemTech-0365;KeyDent...' }] }], result: 'success', category: 'Application', operationType: 'Update' },
-        { id: 'demo-5', activityDisplayName: 'Update service principal', activityDateTime: new Date(Date.now() - 4 * 24 * 3600000).toISOString(), initiatedBy: { app: { displayName: 'System Process' } }, targetResources: [{ displayName: 'CybaemTech-0365', type: 'ServicePrincipal', modifiedProperties: [{ displayName: 'Included Updated Properties', oldValue: '', newValue: 'KeyCredentials' }] }], result: 'success', category: 'Application', operationType: 'Update' },
-      ]);
+      setFeedItems([]);
     } finally {
       setFeedLoading(false);
     }
@@ -440,7 +579,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchStats();
     fetchAuditFeed();
-  }, []);
+  }, [currentCustomer?.id, fetchStats, fetchAuditFeed]);
 
   useEffect(() => {
     fetchAuditFeed();
@@ -492,6 +631,26 @@ export default function Dashboard() {
     });
     return Object.values(cats).slice(0, 5);
   }, [feedItems]);
+
+  const isMatchingFilter = useCallback((item: any, filter: string) => {
+    if (!filter || filter === 'All') return true;
+    const cat = (item.category || '').toLowerCase();
+    const name = (item.activityDisplayName || '').toLowerCase();
+    if (filter === 'Auth') return cat.includes('auth') || name.includes('sign') || name.includes('passkey') || cat.includes('security') || cat.includes('user');
+    if (filter === 'User') return cat.includes('user');
+    if (filter === 'Application') return cat.includes('application') || cat.includes('app');
+    if (filter === 'Role') return cat.includes('role') || cat.includes('policy') || cat.includes('group');
+    return true;
+  }, []);
+
+  const getActorLabel = (item: any) => {
+    if (typeof item.initiatedBy === 'string' && item.initiatedBy) return item.initiatedBy;
+    if (item.initiatedBy?.user?.displayName) return item.initiatedBy.user.displayName;
+    if (item.initiatedBy?.user?.userPrincipalName) return item.initiatedBy.user.userPrincipalName;
+    if (item.initiatedBy?.app?.displayName) return item.initiatedBy.app.displayName;
+    if (item.initiatedBy?.app?.servicePrincipalName) return item.initiatedBy.app.servicePrincipalName;
+    return 'System';
+  };
 
   const handleCopyTenant = () => {
     navigator.clipboard.writeText(tenantId);
@@ -690,11 +849,7 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Live Indicator Pill */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{isLiveGraph ? 'Graph Live Data' : 'Tenant Active'}</span>
-            </div>
+
 
             {/* Refresh Button */}
             <button
@@ -706,14 +861,7 @@ export default function Dashboard() {
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
-            {/* Import Users Button */}
-            <button
-              onClick={() => setShowJsonModal(true)}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-xs"
-            >
-              <Upload className="h-3.5 w-3.5 text-slate-500" />
-              <span>Import Users</span>
-            </button>
+
 
             {/* Logout Button */}
             <button
@@ -729,11 +877,18 @@ export default function Dashboard() {
           </div>
         </header>
 
+
         {/* Scrollable Dashboard Body */}
         <main className="flex-1 overflow-y-auto p-5 sm:p-6 lg:p-8 space-y-6 custom-scrollbar bg-[#f4f7fb]">
           <div className="max-w-[1600px] mx-auto space-y-6">
 
+            {/* TAB: DATABASE SETTINGS & MIGRATION FULL PAGE VIEW */}
+            {activeTab === 'database' && (
+              <DatabaseSettingsPage onStatusChange={(connected) => setIsDbConnected(connected)} />
+            )}
+
             {/* Organization Info Banner Card */}
+            {activeTab !== 'database' && (
             <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
                 <div className="flex items-center gap-4">
@@ -776,17 +931,10 @@ export default function Dashboard() {
                       </button>
                     </div>
                   </div>
-
-                  <div className="bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl">
-                    <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Subscription Tier</p>
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-700">
-                      <span>Production Cloud</span>
-                      <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
+            )}
 
             {/* TAB 1: IDENTITY & ACCESS (Primary View) */}
             {activeTab === 'identity' && (
@@ -795,28 +943,44 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
                   {/* KPI 1: Total Users */}
-                  <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-sky-300 transition-all">
+                  <div
+                    onClick={() => openDrilldownModal('all-users')}
+                    className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-sky-300 hover:shadow-md transition-all cursor-pointer"
+                    title="Click to view all 14 users in popup"
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Users</span>
                       <div className="h-9 w-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
                         <Users className="h-4.5 w-4.5" />
                       </div>
                     </div>
-                    <div className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3">
+                    <div className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3 group-hover:text-sky-600 transition-colors">
                       {totalUsersCount}
                     </div>
                     <div className="flex flex-wrap gap-2 text-[0.7rem] font-semibold">
-                      <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                      <span
+                        onClick={(e) => { e.stopPropagation(); openDrilldownModal('standard-users'); }}
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                        title="Click to view 10 Standard Users"
+                      >
                         {standardUsersCount} Standard
                       </span>
-                      <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md border border-purple-200">
+                      <span
+                        onClick={(e) => { e.stopPropagation(); openDrilldownModal('global-admins'); }}
+                        className="bg-purple-50 hover:bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md border border-purple-200 transition-colors cursor-pointer"
+                        title="Click to view 4 Global Admins"
+                      >
                         {globalAdminCount} Global Admins
                       </span>
                     </div>
                   </div>
 
                   {/* KPI 2: High Risk Accounts (MFA Disabled) */}
-                  <div className="bg-gradient-to-b from-rose-50/50 to-white rounded-2xl p-5 border border-rose-200/90 shadow-[0_4px_16px_-4px_rgba(244,63,94,0.12)] relative overflow-hidden group hover:border-rose-400 transition-all">
+                  <div
+                    onClick={() => openDrilldownModal('mfa-disabled')}
+                    className="bg-gradient-to-b from-rose-50/50 to-white rounded-2xl p-5 border border-rose-200/90 shadow-[0_4px_16px_-4px_rgba(244,63,94,0.12)] relative overflow-hidden group hover:border-rose-400 hover:shadow-md transition-all cursor-pointer"
+                    title="Click to view 2 High Risk (MFA Disabled) accounts"
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
                         <ShieldAlert className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
@@ -827,7 +991,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-3xl font-black text-rose-600 tracking-tight leading-none">
+                      <span className="text-3xl font-black text-rose-600 tracking-tight leading-none group-hover:text-rose-700 transition-colors">
                         {mfaDisabledCount}
                       </span>
                       <span className="text-xs font-bold text-rose-800">MFA Disabled</span>
@@ -835,8 +999,10 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mt-3">
                       <span className="text-[0.7rem] text-rose-700 font-medium">{highRiskCount} accounts at risk</span>
                       <button
-                        onClick={() => setShowUsersTable(true)}
-                        className="text-[0.7rem] font-bold text-rose-700 bg-rose-100 hover:bg-rose-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); openDrilldownModal('mfa-disabled'); }}
+                        className="text-[0.7rem] font-bold text-rose-700 bg-rose-100 hover:bg-rose-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Review 2 accounts missing MFA"
                       >
                         Review <ChevronRight className="h-3 w-3" />
                       </button>
@@ -844,14 +1010,18 @@ export default function Dashboard() {
                   </div>
 
                   {/* KPI 3: Compliant Accounts */}
-                  <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-emerald-300 transition-all">
+                  <div
+                    onClick={() => openDrilldownModal('mfa-compliant')}
+                    className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer"
+                    title="Click to view 12 Compliant (MFA Protected) users"
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Compliant Users</span>
                       <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                         <CheckCircle2 className="h-4.5 w-4.5" />
                       </div>
                     </div>
-                    <div className="text-3xl font-black text-emerald-600 tracking-tight leading-none mb-3">
+                    <div className="text-3xl font-black text-emerald-600 tracking-tight leading-none mb-3 group-hover:text-emerald-700 transition-colors">
                       {mfaEnabledCount}
                     </div>
                     <div className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-emerald-700">
@@ -861,22 +1031,44 @@ export default function Dashboard() {
                   </div>
 
                   {/* KPI 4: Connected Assets */}
-                  <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-blue-300 transition-all">
+                  <div
+                    onClick={() => openDrilldownModal('cloud-resources')}
+                    className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
+                    title="Click to view all Cloud Resources in popup"
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cloud Resources</span>
                       <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                         <Boxes className="h-4.5 w-4.5" />
                       </div>
                     </div>
-                    <div className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3">
+                    <div className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3 group-hover:text-blue-600 transition-colors">
                       {(stats.totalApps || org.appsCount) + (stats.totalDevices || org.devicesCount)}
                     </div>
-                    <div className="flex flex-wrap gap-2 text-[0.7rem] font-semibold text-slate-600">
-                      <span>{stats.totalApps || org.appsCount} Apps</span>
-                      <span>·</span>
-                      <span>{stats.totalGroups || org.groupsCount} Groups</span>
-                      <span>·</span>
-                      <span>{stats.totalDevices || org.devicesCount} Devices</span>
+                    <div className="flex items-center flex-nowrap gap-1 text-[0.67rem] font-semibold text-slate-600 whitespace-nowrap overflow-hidden">
+                      <span
+                        onClick={(e) => { e.stopPropagation(); openDrilldownModal('apps'); }}
+                        className="hover:bg-blue-50 hover:text-blue-700 px-1 py-0.5 rounded transition-colors cursor-pointer shrink-0"
+                        title="Click to view 5 Registered Apps"
+                      >
+                        {stats.totalApps || org.appsCount} Apps
+                      </span>
+                      <span className="text-slate-300 shrink-0">·</span>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); openDrilldownModal('groups'); }}
+                        className="hover:bg-blue-50 hover:text-blue-700 px-1 py-0.5 rounded transition-colors cursor-pointer shrink-0"
+                        title="Click to view 9 Directory Groups"
+                      >
+                        {stats.totalGroups || org.groupsCount} Groups
+                      </span>
+                      <span className="text-slate-300 shrink-0">·</span>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); openDrilldownModal('devices'); }}
+                        className="hover:bg-blue-50 hover:text-blue-700 px-1 py-0.5 rounded transition-colors cursor-pointer shrink-0"
+                        title="Click to view 6 Managed Devices"
+                      >
+                        {stats.totalDevices || org.devicesCount} Devices
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1154,6 +1346,93 @@ export default function Dashboard() {
                   )}
                 </div>
 
+                {/* Application Inventory */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-2">
+                      <LayoutGrid className="h-4 w-4 text-sky-500" />
+                      <h3 className="font-bold text-slate-800 text-sm">Application Inventory</h3>
+                      <span className="text-[0.68rem] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                        {applications.length} Registered Apps
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search apps..."
+                          value={appSearch}
+                          onChange={(e) => setAppSearch(e.target.value)}
+                          className="pl-8 pr-3 py-1 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-sky-400 w-44 text-slate-700 placeholder-slate-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-600">
+                      <thead className="bg-slate-50/75 border-b border-slate-100 text-[0.72rem] uppercase font-bold text-slate-400 tracking-wider">
+                        <tr>
+                          <th className="py-3 px-6">Application Name</th>
+                          <th className="py-3 px-6">App ID (Client ID)</th>
+                          <th className="py-3 px-6">Audience / Type</th>
+                          <th className="py-3 px-6">Registered</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs">
+                        {filteredApps.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-8 text-center text-slate-400">
+                              {appSearch ? 'No applications match your search' : 'No registered applications found'}
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredApps.map((app: any) => (
+                            <tr key={app.id || app.appId} className="hover:bg-slate-50/60 transition-colors">
+                              <td className="py-3.5 px-6 font-semibold text-slate-800">
+                                {app.displayName || 'Unnamed Application'}
+                              </td>
+                              <td className="py-3.5 px-6 font-mono text-[0.75rem] text-slate-600">
+                                <span
+                                  onClick={() => {
+                                    if (app.appId) {
+                                      navigator.clipboard.writeText(app.appId);
+                                      setCopiedAppId(app.appId);
+                                      setTimeout(() => setCopiedAppId(null), 2000);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/70 border border-slate-200/60 px-2.5 py-1 rounded-md cursor-pointer transition-colors"
+                                  title="Click to copy App ID"
+                                >
+                                  <span>{app.appId}</span>
+                                  {copiedAppId === app.appId ? (
+                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3 text-slate-400" />
+                                  )}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6">
+                                <span className="bg-sky-50 text-sky-600 border border-sky-200/60 px-2.5 py-1 rounded-full text-[0.72rem] font-medium inline-block">
+                                  {app.signInAudience || 'AzureADandPersonalMicrosoftAccount'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6 text-slate-500 text-[0.75rem]">
+                                <div className="flex items-center gap-1.5" title={app.createdDateTime ? new Date(app.createdDateTime).toLocaleString() : ''}>
+                                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                                  <span>{formatRegisteredDate(app.createdDateTime)}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
                 {/* Audit Feed & Investigation Console */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
@@ -1207,7 +1486,7 @@ export default function Dashboard() {
 
                       <div className="grid grid-cols-3 gap-3 pt-2">
                         <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-center">
-                          <p className="text-xl font-bold text-blue-700">{feedItems.filter(f => !investigationFilter || investigationFilter==='All' || f.category?.toLowerCase().includes(investigationFilter.toLowerCase())).length}</p>
+                          <p className="text-xl font-bold text-blue-700">{feedItems.filter(f => isMatchingFilter(f, investigationFilter)).length}</p>
                           <p className="text-[0.65rem] font-semibold text-blue-500 mt-0.5">Matching Events</p>
                         </div>
                         <div className="rounded-xl bg-rose-50 border border-rose-100 p-3 text-center">
@@ -1215,7 +1494,7 @@ export default function Dashboard() {
                           <p className="text-[0.65rem] font-semibold text-rose-500 mt-0.5">Failures</p>
                         </div>
                         <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-center">
-                          <p className="text-xl font-bold text-emerald-700">{feedItems.filter(f => f.result === 'success').length}</p>
+                          <p className="text-xl font-bold text-emerald-700">{feedItems.filter(f => f.result !== 'failure').length}</p>
                           <p className="text-[0.65rem] font-semibold text-emerald-500 mt-0.5">Success</p>
                         </div>
                       </div>
@@ -1239,35 +1518,45 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto divide-y divide-slate-100" style={{ maxHeight: '22rem' }}>
-                      {feedItems
-                        .filter(item => {
-                          if (investigationFilter === 'All') return true;
-                          if (investigationFilter === 'Auth') return item.category?.toLowerCase().includes('auth') || item.activityDisplayName?.toLowerCase().includes('sign');
-                          if (investigationFilter === 'User') return item.category?.toLowerCase().includes('user');
-                          if (investigationFilter === 'Application') return item.category?.toLowerCase().includes('application') || item.category?.toLowerCase().includes('app');
-                          if (investigationFilter === 'Role') return item.category?.toLowerCase().includes('role') || item.category?.toLowerCase().includes('policy');
-                          return true;
-                        })
-                        .map((item, idx) => {
-                          const actor = item.initiatedBy?.user?.displayName || item.initiatedBy?.app?.displayName || 'System';
-                          const isFailure = item.result === 'failure';
-                          return (
-                            <button
-                              key={item.id || idx}
-                              onClick={() => { setSelectedFeedItem(item); setDrawerOpen(true); }}
-                              className="w-full text-left px-5 py-3 hover:bg-slate-50 transition-colors group flex items-start gap-3"
-                            >
-                              <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${isFailure ? 'bg-rose-500' : 'bg-sky-500'}`} />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-sky-600 transition-colors">{item.activityDisplayName}</p>
-                                <p className="text-[0.7rem] text-slate-400 mt-0.5 truncate">Actor: {actor}</p>
-                              </div>
-                              <span className="shrink-0 text-[0.65rem] text-slate-400 mt-1">
-                                {new Date(item.activityDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </button>
-                          );
-                        })}
+                      {feedLoading && feedItems.length === 0 ? (
+                        <div className="p-8 text-center text-slate-400">
+                          <span className="h-5 w-5 border-2 border-slate-200 border-t-sky-500 rounded-full animate-spin inline-block mb-2" />
+                          <p className="text-xs font-semibold">Loading audit activities...</p>
+                        </div>
+                      ) : feedItems.filter(item => isMatchingFilter(item, investigationFilter)).length === 0 ? (
+                        <div className="p-8 text-center text-slate-400">
+                          <Clock className="h-6 w-6 mx-auto mb-2 text-slate-300" />
+                          <p className="text-xs font-semibold text-slate-700">No events found for "{investigationFilter}"</p>
+                          <p className="text-[0.7rem] text-slate-400 mt-1">Switch to "All" or select another category</p>
+                        </div>
+                      ) : (
+                        feedItems
+                          .filter(item => isMatchingFilter(item, investigationFilter))
+                          .map((item, idx) => {
+                            const actor = getActorLabel(item);
+                            const isFailure = item.result === 'failure';
+                            const dateObj = item.activityDateTime ? new Date(item.activityDateTime) : null;
+                            const timeStr = dateObj && !isNaN(dateObj.getTime())
+                              ? `${dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                              : 'Recent';
+                            return (
+                              <button
+                                key={item.id || idx}
+                                onClick={() => { setSelectedFeedItem(item); setDrawerOpen(true); }}
+                                className="w-full text-left px-5 py-3 hover:bg-slate-50 transition-colors group flex items-start gap-3"
+                              >
+                                <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${isFailure ? 'bg-rose-500' : 'bg-sky-500'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-sky-600 transition-colors">{item.activityDisplayName}</p>
+                                  <p className="text-[0.7rem] text-slate-400 mt-0.5 truncate">Actor: {actor}</p>
+                                </div>
+                                <span className="shrink-0 text-[0.65rem] text-slate-400 mt-1 whitespace-nowrap">
+                                  {timeStr}
+                                </span>
+                              </button>
+                            );
+                          })
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1412,8 +1701,15 @@ export default function Dashboard() {
 
             {/* TAB 5: INFRASTRUCTURE */}
             {activeTab === 'infra' && (
-              <div className="bg-white rounded-2xl p-6 lg:p-8 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] border border-slate-200/80 space-y-6">
-                <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+              <div className="space-y-6">
+                <ClientCategoryView
+                  customer={currentCustomer}
+                  category="azure"
+                  onNavigateToTab={(tab) => setActiveTab(tab)}
+                />
+
+                <div className="bg-white rounded-2xl p-6 lg:p-8 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] border border-slate-200/80 space-y-6">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">Infrastructure &amp; Azure Subscriptions</h3>
                     <p className="text-xs text-slate-500">Live subscription inventory from Azure Resource Manager</p>
@@ -1445,7 +1741,8 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
             {/* TAB 6: BILLING */}
             {activeTab === 'billing' && (
@@ -1491,8 +1788,15 @@ export default function Dashboard() {
 
             {/* TAB 7: MICROSOFT O365 */}
             {activeTab === 'm365' && (
-              <div className="bg-white rounded-2xl p-6 lg:p-8 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] border border-slate-200/80 space-y-6">
-                <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+              <div className="space-y-6">
+                <ClientCategoryView
+                  customer={currentCustomer}
+                  category="office365"
+                  onNavigateToTab={(tab) => setActiveTab(tab)}
+                />
+
+                <div className="bg-white rounded-2xl p-6 lg:p-8 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] border border-slate-200/80 space-y-6">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">Microsoft 365 License &amp; Security Score</h3>
                     <p className="text-xs text-slate-500">Live license allocation, usage metrics, and Microsoft Secure Score</p>
@@ -1535,7 +1839,8 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
           </div>
         </main>
@@ -1611,28 +1916,37 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-                {feedItems.map((item, idx) => {
-                  const actor = item.initiatedBy?.user?.displayName || item.initiatedBy?.app?.displayName || 'System';
-                  const timeStr = new Date(item.activityDateTime).toLocaleString();
-                  const isFailure = item.result === 'failure';
-                  return (
-                    <button
-                      key={item.id || idx}
-                      onClick={() => setSelectedFeedItem(item)}
-                      className="w-full text-left px-6 py-4 hover:bg-slate-50 transition-colors group flex items-start gap-3"
-                    >
-                      <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${isFailure ? 'bg-rose-500' : 'bg-sky-500'}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-semibold text-slate-800 group-hover:text-sky-600 transition-colors">{item.activityDisplayName}</p>
-                          {isFailure && <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-bold bg-rose-100 text-rose-700">FAILED</span>}
+                {feedItems.length === 0 ? (
+                  <div className="p-12 text-center text-slate-400">
+                    <Clock className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm font-semibold text-slate-700">No audit events recorded</p>
+                    <p className="text-xs text-slate-400 mt-1">Audit events from Microsoft Entra ID will appear here.</p>
+                  </div>
+                ) : (
+                  feedItems.map((item, idx) => {
+                    const actor = getActorLabel(item);
+                    const dateObj = item.activityDateTime ? new Date(item.activityDateTime) : null;
+                    const timeStr = dateObj && !isNaN(dateObj.getTime()) ? dateObj.toLocaleString() : 'Recent';
+                    const isFailure = item.result === 'failure';
+                    return (
+                      <button
+                        key={item.id || idx}
+                        onClick={() => setSelectedFeedItem(item)}
+                        className="w-full text-left px-6 py-4 hover:bg-slate-50 transition-colors group flex items-start gap-3"
+                      >
+                        <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${isFailure ? 'bg-rose-500' : 'bg-sky-500'}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-semibold text-slate-800 group-hover:text-sky-600 transition-colors">{item.activityDisplayName}</p>
+                            {isFailure && <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-bold bg-rose-100 text-rose-700">FAILED</span>}
+                          </div>
+                          <p className="text-xs text-slate-400">{actor}</p>
                         </div>
-                        <p className="text-xs text-slate-400">{actor}</p>
-                      </div>
-                      <span className="text-[0.7rem] text-slate-400">{timeStr}</span>
-                    </button>
-                  );
-                })}
+                        <span className="text-[0.7rem] text-slate-400 whitespace-nowrap">{timeStr}</span>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             )}
           </div>
@@ -1698,6 +2012,518 @@ export default function Dashboard() {
         </div>
       )}
 
+
+
+{/* ────────────────── DRILLDOWN DETAIL POPUP MODAL ────────────────── */}
+      {drilldownModal.isOpen && (() => {
+        const q = modalSearch.toLowerCase().trim();
+        const type = drilldownModal.type;
+
+        // Compute items and metadata
+        let title = '';
+        let subtitle = '';
+        let count = 0;
+        let Icon = Users;
+        let iconBg = 'bg-sky-50 text-sky-600';
+        let category: 'users' | 'apps' | 'groups' | 'devices' | 'cloud-resources' = 'users';
+        let rawItems: any[] = [];
+
+        if (type === 'all-users') {
+          title = 'Total Users';
+          count = usersList.length;
+          subtitle = 'All 14 synchronized directory accounts from Microsoft Entra ID';
+          Icon = Users;
+          iconBg = 'bg-sky-50 text-sky-600';
+          category = 'users';
+          rawItems = usersList;
+        } else if (type === 'standard-users') {
+          title = 'Standard Users';
+          const filtered = usersList.filter((u: any) =>
+            !(u.role || '').toLowerCase().includes('administrator') &&
+            !(u.roles || []).some((r: string) => r.toLowerCase().includes('administrator'))
+          );
+          count = filtered.length;
+          subtitle = 'Directory members without administrative directory roles';
+          Icon = Users;
+          iconBg = 'bg-slate-100 text-slate-700';
+          category = 'users';
+          rawItems = filtered;
+        } else if (type === 'global-admins') {
+          title = 'Global Administrators';
+          const filtered = usersList.filter((u: any) =>
+            (u.role || '').toLowerCase().includes('global administrator') ||
+            (u.roles || []).some((r: string) => r.toLowerCase().includes('global administrator'))
+          );
+          count = filtered.length;
+          subtitle = 'Privileged accounts holding full tenant Global Administrator rights';
+          Icon = Key;
+          iconBg = 'bg-purple-50 text-purple-700 border border-purple-200';
+          category = 'users';
+          rawItems = filtered;
+        } else if (type === 'mfa-disabled') {
+          title = 'High Risk Accounts — MFA Disabled';
+          const filtered = usersList.filter((u: any) => u.mfa === 'Disabled' || u.mfaEnabled === false);
+          count = filtered.length;
+          subtitle = 'Unprotected accounts vulnerable to credential spray without MFA enforcement';
+          Icon = ShieldAlert;
+          iconBg = 'bg-rose-50 text-rose-600 border border-rose-200';
+          category = 'users';
+          rawItems = filtered;
+        } else if (type === 'mfa-compliant') {
+          title = 'Compliant Users — MFA Protected';
+          const filtered = usersList.filter((u: any) => u.mfa === 'Enabled' || u.mfaEnabled === true);
+          count = filtered.length;
+          subtitle = 'Active accounts with verified Multi-Factor Authentication enforcement';
+          Icon = CheckCircle2;
+          iconBg = 'bg-emerald-50 text-emerald-600 border border-emerald-200';
+          category = 'users';
+          rawItems = filtered;
+        } else if (type === 'apps') {
+          title = 'Registered Applications';
+          count = applications.length;
+          subtitle = 'Applications registered and authorized in Microsoft Entra ID';
+          Icon = LayoutGrid;
+          iconBg = 'bg-blue-50 text-blue-600';
+          category = 'apps';
+          rawItems = applications;
+        } else if (type === 'groups') {
+          title = 'Directory Groups';
+          count = groupsList.length;
+          subtitle = 'Microsoft 365 and Security groups synchronized from Entra ID';
+          Icon = FolderGit2;
+          iconBg = 'bg-indigo-50 text-indigo-600';
+          category = 'groups';
+          rawItems = groupsList;
+        } else if (type === 'devices') {
+          title = 'Managed Devices';
+          count = devicesList.length;
+          subtitle = 'Endpoints and devices registered with Microsoft Entra ID';
+          Icon = Laptop;
+          iconBg = 'bg-cyan-50 text-cyan-600';
+          category = 'devices';
+          rawItems = devicesList;
+        } else if (type === 'cloud-resources') {
+          title = 'Cloud Resources Overview';
+          count = (stats.totalApps || org.appsCount) + (stats.totalDevices || org.devicesCount);
+          subtitle = `${applications.length} Registered Apps · ${groupsList.length} Directory Groups · ${devicesList.length} Managed Devices`;
+          Icon = Boxes;
+          iconBg = 'bg-blue-50 text-blue-600';
+          category = 'cloud-resources';
+          const currentSubTab = drilldownModal.activeTab || 'apps';
+          rawItems = currentSubTab === 'groups' ? groupsList : currentSubTab === 'devices' ? devicesList : applications;
+        }
+
+        // Apply modal search filter
+        const displayedItems = rawItems.filter((item: any) => {
+          if (!q) return true;
+          if (category === 'users') {
+            return (item.displayName || '').toLowerCase().includes(q) ||
+              (item.userPrincipalName || '').toLowerCase().includes(q) ||
+              (item.role || '').toLowerCase().includes(q);
+          }
+          if (category === 'apps' || (category === 'cloud-resources' && drilldownModal.activeTab === 'apps')) {
+            return (item.displayName || '').toLowerCase().includes(q) ||
+              (item.appId || '').toLowerCase().includes(q) ||
+              (item.signInAudience || '').toLowerCase().includes(q);
+          }
+          if (category === 'groups' || (category === 'cloud-resources' && drilldownModal.activeTab === 'groups')) {
+            return (item.displayName || '').toLowerCase().includes(q) ||
+              (item.description || '').toLowerCase().includes(q) ||
+              (item.id || '').toLowerCase().includes(q);
+          }
+          if (category === 'devices' || (category === 'cloud-resources' && drilldownModal.activeTab === 'devices')) {
+            return (item.displayName || '').toLowerCase().includes(q) ||
+              (item.operatingSystem || '').toLowerCase().includes(q) ||
+              (item.id || '').toLowerCase().includes(q);
+          }
+          return true;
+        });
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-150"
+            onClick={closeDrilldownModal}
+          >
+            <div
+              className="bg-white rounded-2xl border border-slate-200/90 shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-slate-800 text-base leading-snug">{title}</h3>
+                      <span className="text-xs font-bold text-slate-600 bg-white border border-slate-200/80 px-2.5 py-0.5 rounded-full shadow-2xs">
+                        {count} {category === 'apps' ? 'Apps' : category === 'groups' ? 'Groups' : category === 'devices' ? 'Devices' : 'Users'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">{subtitle}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <div className="relative">
+                    <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Filter records..."
+                      value={modalSearch}
+                      onChange={(e) => setModalSearch(e.target.value)}
+                      className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-sky-400 w-36 sm:w-52 text-slate-700 placeholder-slate-400 bg-white"
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    onClick={closeDrilldownModal}
+                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                    title="Close (Esc)"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-tabs for Cloud Resources */}
+              {category === 'cloud-resources' && (
+                <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2 text-xs font-semibold">
+                  <button
+                    onClick={() => { setModalSearch(''); setDrilldownModal(prev => ({ ...prev, activeTab: 'apps' })); }}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      drilldownModal.activeTab === 'apps' || !drilldownModal.activeTab ? 'bg-sky-500 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Applications ({applications.length})
+                  </button>
+                  <button
+                    onClick={() => { setModalSearch(''); setDrilldownModal(prev => ({ ...prev, activeTab: 'groups' })); }}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      drilldownModal.activeTab === 'groups' ? 'bg-sky-500 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Directory Groups ({groupsList.length})
+                  </button>
+                  <button
+                    onClick={() => { setModalSearch(''); setDrilldownModal(prev => ({ ...prev, activeTab: 'devices' })); }}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      drilldownModal.activeTab === 'devices' ? 'bg-sky-500 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Managed Devices ({devicesList.length})
+                  </button>
+                </div>
+              )}
+
+              {/* Modal Table Content */}
+              <div className="overflow-y-auto flex-1 p-0">
+                {/* 1. USERS TABLE */}
+                {(category === 'users') && (
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-slate-50/90 border-b border-slate-100 text-[0.72rem] uppercase font-bold text-slate-400 tracking-wider sticky top-0 z-10 backdrop-blur-xs">
+                      <tr>
+                        <th className="py-3 px-6">User / Name</th>
+                        <th className="py-3 px-6">User Principal Name (Email)</th>
+                        <th className="py-3 px-6">Role</th>
+                        <th className="py-3 px-6">MFA Status</th>
+                        <th className="py-3 px-6">Created / Registered</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {displayedItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-12 text-center text-slate-400">
+                            {modalSearch ? 'No users match your filter' : 'No users found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        displayedItems.map((u: any) => {
+                          const isMfaDisabled = u.mfa === 'Disabled' || u.mfaEnabled === false;
+                          const isGlobalAdmin = (u.role || '').toLowerCase().includes('global administrator') ||
+                            (u.roles || []).some((r: string) => r.toLowerCase().includes('global administrator'));
+                          return (
+                            <tr key={u.id || u.userPrincipalName} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-3.5 px-6 font-semibold text-slate-800">
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    isGlobalAdmin ? 'bg-purple-100 text-purple-700' : isMfaDisabled ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'
+                                  }`}>
+                                    {(u.displayName || u.user || 'U').charAt(0).toUpperCase()}
+                                  </div>
+                                  <span>{u.displayName || u.user || 'Unknown'}</span>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-6 font-mono text-[0.75rem] text-slate-600">
+                                <span
+                                  onClick={() => {
+                                    if (u.userPrincipalName) {
+                                      navigator.clipboard.writeText(u.userPrincipalName);
+                                      setCopiedModalId(u.userPrincipalName);
+                                      setTimeout(() => setCopiedModalId(null), 2000);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200/60 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                                  title="Click to copy UPN"
+                                >
+                                  <span>{u.userPrincipalName || '—'}</span>
+                                  {copiedModalId === u.userPrincipalName ? (
+                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3 text-slate-400" />
+                                  )}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6">
+                                <span className={`px-2.5 py-1 rounded-full text-[0.72rem] font-semibold border ${
+                                  isGlobalAdmin
+                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                                }`}>
+                                  {u.role || u.roles?.[0] || 'Standard Member'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6">
+                                <span className={`px-2.5 py-1 rounded-full text-[0.72rem] font-bold border ${
+                                  isMfaDisabled
+                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                }`}>
+                                  {isMfaDisabled ? 'Disabled (At Risk)' : 'Enabled (Protected)'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6 text-slate-500 text-[0.75rem]">
+                                {u.createdDateTime ? formatRegisteredDate(u.createdDateTime) : u.lastLogin || 'Recent'}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {/* 2. APPS TABLE */}
+                {(category === 'apps' || (category === 'cloud-resources' && drilldownModal.activeTab === 'apps')) && (
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-slate-50/90 border-b border-slate-100 text-[0.72rem] uppercase font-bold text-slate-400 tracking-wider sticky top-0 z-10 backdrop-blur-xs">
+                      <tr>
+                        <th className="py-3 px-6">Application Name</th>
+                        <th className="py-3 px-6">App ID (Client ID)</th>
+                        <th className="py-3 px-6">Audience / Type</th>
+                        <th className="py-3 px-6">Registered</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {displayedItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-12 text-center text-slate-400">
+                            {modalSearch ? 'No applications match your filter' : 'No applications found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        displayedItems.map((app: any) => (
+                          <tr key={app.id || app.appId} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3.5 px-6 font-semibold text-slate-800">
+                              <div className="flex items-center gap-2">
+                                <Cloud className="h-3.5 w-3.5 text-sky-500 shrink-0" />
+                                <span>{app.displayName || 'Unnamed Application'}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-6 font-mono text-[0.75rem] text-slate-600">
+                              <span
+                                onClick={() => {
+                                  if (app.appId) {
+                                    navigator.clipboard.writeText(app.appId);
+                                    setCopiedModalId(app.appId);
+                                    setTimeout(() => setCopiedModalId(null), 2000);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200/60 px-2.5 py-1 rounded-md cursor-pointer transition-colors"
+                                title="Click to copy App ID"
+                              >
+                                <span>{app.appId}</span>
+                                {copiedModalId === app.appId ? (
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-slate-400" />
+                                )}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-6">
+                              <span className="bg-sky-50 text-sky-600 border border-sky-200/60 px-2.5 py-1 rounded-full text-[0.72rem] font-medium inline-block">
+                                {app.signInAudience || 'AzureADandPersonalMicrosoftAccount'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-6 text-slate-500 text-[0.75rem]">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-slate-400" />
+                                <span>{formatRegisteredDate(app.createdDateTime)}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {/* 3. GROUPS TABLE */}
+                {(category === 'groups' || (category === 'cloud-resources' && drilldownModal.activeTab === 'groups')) && (
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-slate-50/90 border-b border-slate-100 text-[0.72rem] uppercase font-bold text-slate-400 tracking-wider sticky top-0 z-10 backdrop-blur-xs">
+                      <tr>
+                        <th className="py-3 px-6">Group Name</th>
+                        <th className="py-3 px-6">Type</th>
+                        <th className="py-3 px-6">Group Object ID</th>
+                        <th className="py-3 px-6">Created Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {displayedItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-12 text-center text-slate-400">
+                            {modalSearch ? 'No groups match your filter' : 'No groups found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        displayedItems.map((grp: any) => {
+                          const isUnified = (grp.groupTypes || []).includes('Unified');
+                          return (
+                            <tr key={grp.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-3.5 px-6 font-semibold text-slate-800">
+                                <div className="flex items-center gap-2">
+                                  <FolderGit2 className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                                  <span>{grp.displayName}</span>
+                                </div>
+                                {grp.description && (
+                                  <p className="text-[0.68rem] text-slate-400 font-normal truncate mt-0.5 max-w-sm">{grp.description}</p>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-6">
+                                <span className={`px-2.5 py-1 rounded-full text-[0.72rem] font-medium border ${
+                                  isUnified
+                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                }`}>
+                                  {isUnified ? 'Microsoft 365' : 'Security Group'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6 font-mono text-[0.75rem] text-slate-600">
+                                <span
+                                  onClick={() => {
+                                    if (grp.id) {
+                                      navigator.clipboard.writeText(grp.id);
+                                      setCopiedModalId(grp.id);
+                                      setTimeout(() => setCopiedModalId(null), 2000);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200/60 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                                  title="Click to copy Group ID"
+                                >
+                                  <span>{grp.id}</span>
+                                  {copiedModalId === grp.id ? (
+                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3 text-slate-400" />
+                                  )}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6 text-slate-500 text-[0.75rem]">
+                                {formatRegisteredDate(grp.createdDateTime)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {/* 4. DEVICES TABLE */}
+                {(category === 'devices' || (category === 'cloud-resources' && drilldownModal.activeTab === 'devices')) && (
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-slate-50/90 border-b border-slate-100 text-[0.72rem] uppercase font-bold text-slate-400 tracking-wider sticky top-0 z-10 backdrop-blur-xs">
+                      <tr>
+                        <th className="py-3 px-6">Device Name</th>
+                        <th className="py-3 px-6">Operating System</th>
+                        <th className="py-3 px-6">Compliance</th>
+                        <th className="py-3 px-6">Device ID</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {displayedItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-12 text-center text-slate-400">
+                            {modalSearch ? 'No devices match your filter' : 'No devices found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        displayedItems.map((dev: any) => (
+                          <tr key={dev.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3.5 px-6 font-semibold text-slate-800">
+                              <div className="flex items-center gap-2">
+                                <Laptop className="h-3.5 w-3.5 text-cyan-500 shrink-0" />
+                                <span>{dev.displayName || 'Unknown Device'}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-6">
+                              <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[0.72rem] font-medium border border-slate-200/60">
+                                {dev.operatingSystem || 'Unknown'} {dev.operatingSystemVersion ? `(${dev.operatingSystemVersion})` : ''}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-6">
+                              <span className={`px-2.5 py-1 rounded-full text-[0.72rem] font-medium border ${
+                                dev.isCompliant === true
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {dev.isCompliant === true ? 'Compliant' : 'Not Evaluated'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-6 font-mono text-[0.75rem] text-slate-600">
+                              <span
+                                onClick={() => {
+                                  if (dev.id) {
+                                    navigator.clipboard.writeText(dev.id);
+                                    setCopiedModalId(dev.id);
+                                    setTimeout(() => setCopiedModalId(null), 2000);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200/60 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                                title="Click to copy Device ID"
+                              >
+                                <span>{dev.id}</span>
+                                {copiedModalId === dev.id ? (
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-slate-400" />
+                                )}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between text-xs text-slate-500">
+                <span>Showing <strong>{displayedItems.length}</strong> of <strong>{count}</strong> {title.toLowerCase()}</span>
+                <button
+                  onClick={closeDrilldownModal}
+                  className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg font-semibold transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

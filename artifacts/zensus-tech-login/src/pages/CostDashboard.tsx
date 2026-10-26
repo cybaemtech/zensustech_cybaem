@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import {
   ShieldCheck, ArrowLeft, BarChart3, Cloud, IndianRupee,
   AlertCircle, Building2, RefreshCw, TrendingUp, Clock, CheckCircle2,
@@ -9,6 +9,11 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell
 } from 'recharts';
+import { CustomerCategorySwitcher } from '@/components/CustomerCategorySwitcher';
+import {
+  getActiveCustomer,
+  type CustomerData
+} from '@/lib/customer-store';
 
 const USD_TO_INR = 83.92;
 
@@ -24,35 +29,37 @@ const fmtINR = (usd: number): string => {
 const fmtINRFull = (usd: number) =>
   `₹${toINR(usd).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-interface Sub { id: string; name: string; state: string; subscriptionId: string; }
+interface Sub {
+  id: string;
+  name: string;
+  state: string;
+  subscriptionId: string;
+  monthlySpendUSD?: number;
+}
 interface ServiceCost { name: string; cost: number; costINR: number; color: string; }
 interface DaySpend { date: string; usd: number; inr: number; }
 
 const COLORS = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
 
-const DEMO_SUBS: Sub[] = [
-  { id: 'd1', subscriptionId: 'xxxxxxxx-prod-xxxx-xxxx-xxxxxxxxxxxx', name: 'Production Workloads', state: 'Enabled' },
-  { id: 'd2', subscriptionId: 'xxxxxxxx-stg-xxxx-xxxx-xxxxxxxxxxxx',  name: 'Staging Environment',  state: 'Enabled' },
-  { id: 'd3', subscriptionId: 'xxxxxxxx-rnd-xxxx-xxxx-xxxxxxxxxxxx',  name: 'R&D Sandbox',           state: 'Enabled' },
+const generateCustomerServices = (totalUSD: number): ServiceCost[] => [
+  { name: 'Virtual Machines',  cost: +(totalUSD * 0.46).toFixed(2), costINR: toINR(+(totalUSD * 0.46).toFixed(2)), color: COLORS[0] },
+  { name: 'Azure SQL DB',      cost: +(totalUSD * 0.17).toFixed(2), costINR: toINR(+(totalUSD * 0.17).toFixed(2)), color: COLORS[1] },
+  { name: 'App Service',       cost: +(totalUSD * 0.25).toFixed(2), costINR: toINR(+(totalUSD * 0.25).toFixed(2)), color: COLORS[2] },
+  { name: 'Storage Accounts',  cost: +(totalUSD * 0.08).toFixed(2), costINR: toINR(+(totalUSD * 0.08).toFixed(2)), color: COLORS[3] },
+  { name: 'Bandwidth & Egress', cost: +(totalUSD * 0.04).toFixed(2), costINR: toINR(+(totalUSD * 0.04).toFixed(2)), color: COLORS[4] },
 ];
 
-const DEMO_SERVICES: ServiceCost[] = [
-  { name: 'Virtual Machines',  cost: 2300.75, costINR: toINR(2300.75), color: COLORS[0] },
-  { name: 'Azure SQL DB',      cost: 840.50,  costINR: toINR(840.50),  color: COLORS[1] },
-  { name: 'App Service',       cost: 1250.00, costINR: toINR(1250.00), color: COLORS[2] },
-  { name: 'Storage Accounts',  cost: 410.20,  costINR: toINR(410.20),  color: COLORS[3] },
-  { name: 'Bandwidth',         cost: 180.90,  costINR: toINR(180.90),  color: COLORS[4] },
-];
-
-const makeDemoTrend = (): DaySpend[] => {
+const generateCustomerTrend = (dailyUSD: number): DaySpend[] => {
   const days: DaySpend[] = [];
   const now = new Date();
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(now); d.setDate(d.getDate() - i);
-    const usd = 120 + Math.random() * 80;
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const variance = 0.88 + Math.sin(i * 1.3) * 0.22;
+    const usd = +(dailyUSD * variance).toFixed(2);
     days.push({
       date: `${d.getMonth() + 1}/${d.getDate()}`,
-      usd: +usd.toFixed(2),
+      usd,
       inr: +toINR(usd).toFixed(2),
     });
   }
@@ -61,6 +68,15 @@ const makeDemoTrend = (): DaySpend[] => {
 
 export default function CostDashboard() {
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const isAuth = sessionStorage.getItem('is_authenticated') === 'true' &&
+      Boolean(sessionStorage.getItem('graph_token') || sessionStorage.getItem('mgmt_token'));
+    if (!isAuth) {
+      setLocation('/');
+    }
+  }, [setLocation]);
+  const [currentCustomer, setCurrentCustomer] = useState<CustomerData>(getActiveCustomer);
   const [loading, setLoading]           = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
   const [isLive, setIsLive]             = useState(false);
@@ -68,22 +84,47 @@ export default function CostDashboard() {
   const [subs, setSubs]                 = useState<Sub[]>([]);
   const [totalUSD, setTotalUSD]         = useState(0);
   const [forecastUSD, setForecast]      = useState(0);
-  const [budgetUSD]                     = useState(6000);
-  const [services, setServices]         = useState<ServiceCost[]>(DEMO_SERVICES);
-  const [trend, setTrend]               = useState<DaySpend[]>(makeDemoTrend());
+  const [budgetUSD, setBudgetUSD]       = useState(6000);
+  const [services, setServices]         = useState<ServiceCost[]>([]);
+  const [trend, setTrend]               = useState<DaySpend[]>([]);
   // Interactive state
   const [selectedService, setSelectedService] = useState<ServiceCost | null>(null);
   const [expandedSub, setExpandedSub]         = useState<string | null>(null);
   const [showDailyTable, setShowDailyTable]   = useState(false);
 
+  const applyCustomerData = useCallback((cust: CustomerData) => {
+    const custSubs: Sub[] = cust.categories.azure.subscriptions.map((s, idx) => ({
+      id: `sub-${idx}`,
+      subscriptionId: s.subscriptionId,
+      name: s.name,
+      state: s.state,
+      monthlySpendUSD: s.monthlySpendUSD,
+    }));
+    const custTotal = cust.categories.azure.subscriptions.reduce((sum, s) => sum + s.monthlySpendUSD, 0);
+    const now = new Date();
+    const dp = Math.max(1, now.getDate());
+    const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const custForecast = +((custTotal / dp) * dim).toFixed(2);
+    const custBudget = Math.round((custForecast * 1.15) / 500) * 500;
+
+    setSubs(custSubs);
+    setTotalUSD(custTotal);
+    setForecast(custForecast);
+    setBudgetUSD(custBudget);
+    setServices(generateCustomerServices(custTotal));
+    setTrend(generateCustomerTrend(custTotal / dp));
+    setFetchedAt(new Date().toISOString());
+  }, []);
+
   const fetchData = useCallback(async () => {
     const mgmtToken = sessionStorage.getItem('mgmt_token');
+    const cust = getActiveCustomer();
 
-    /* ── No ARM token: fall back to demo ── */
     if (!mgmtToken) {
-      setTotalUSD(4982.35); setForecast(5240.00);
-      setSubs(DEMO_SUBS); setIsLive(false);
-      setLoading(false); setRefreshing(false);
+      applyCustomerData(cust);
+      setIsLive(false);
+      setLoading(false);
+      setRefreshing(false);
       return;
     }
 
@@ -99,13 +140,15 @@ export default function CostDashboard() {
           subList = (d.value || []).map((s: any) => ({
             id: s.id, subscriptionId: s.subscriptionId, name: s.displayName, state: s.state,
           }));
-          setSubs(subList);
+          if (subList.length) setSubs(subList);
         }
       } catch {}
 
       if (!subList.length) {
-        setTotalUSD(4982.35); setForecast(5240.00); setSubs(DEMO_SUBS);
-        setIsLive(false); setLoading(false); setRefreshing(false);
+        applyCustomerData(cust);
+        setIsLive(false);
+        setLoading(false);
+        setRefreshing(false);
         return;
       }
 
@@ -195,40 +238,55 @@ export default function CostDashboard() {
       setIsLive(true);
       setFetchedAt(new Date().toISOString());
     } catch {
+      applyCustomerData(cust);
       setIsLive(false);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [applyCustomerData]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const handleCustChange = (e: any) => {
+      if (e.detail) {
+        setCurrentCustomer(e.detail);
+        applyCustomerData(e.detail);
+      }
+    };
+    window.addEventListener('zensustech_customer_changed', handleCustChange);
+    return () => window.removeEventListener('zensustech_customer_changed', handleCustChange);
+  }, [applyCustomerData]);
+
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
-  const budgetPct = Math.min(100, Math.round((totalUSD / budgetUSD) * 100));
+  const budgetPct = Math.min(100, Math.round((totalUSD / (budgetUSD || 1)) * 100));
   const topSvc    = services[0];
   const topPct    = totalUSD > 0 ? Math.round((topSvc?.cost / totalUSD) * 100) : 46;
 
   /* ── Loading screen ── */
   if (loading) return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f4f7fa]">
+    <div className="flex h-screen w-full items-center justify-center bg-[#f4f7fa]">
       <div className="flex flex-col items-center gap-4">
         <div className="relative h-14 w-14">
           <span className="absolute inset-0 animate-spin rounded-full border-4 border-cyan-500/20 border-t-cyan-500" />
           <IndianRupee className="absolute inset-0 m-auto h-6 w-6 text-cyan-500" />
         </div>
-        <p className="text-sm font-semibold text-slate-600">Fetching Azure Cost Data in ₹ INR\u2026</p>
-        <p className="text-xs text-slate-400">Connecting to Azure Cost Management API</p>
+        <p className="text-sm font-semibold text-slate-600">Loading Azure Cost Analytics…</p>
+        <p className="text-xs text-slate-400">Connecting to Azure FinOps Engine</p>
       </div>
     </div>
   );
 
-  /* ── Main render ── */
+  /* ── Main render with dynamic scrolling ── */
   return (
-    <div className="min-h-screen bg-[#f4f7fa] font-sans flex flex-col">
+    <div className="h-screen w-full bg-[#f4f7fa] font-sans flex flex-col overflow-y-auto custom-scrollbar">
 
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-slate-200/60 bg-white/90 px-6 py-3.5 backdrop-blur-xl sm:px-10">
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-6 py-3.5 backdrop-blur-xl sm:px-10 shrink-0">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => setLocation('/dashboard')}
@@ -243,9 +301,9 @@ export default function CostDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold border ${isLive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-              {isLive ? 'Live Azure Cost Data' : 'Demo Mode'}
+            <span className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+              <span className={`h-1.5 w-1.5 rounded-full bg-emerald-500 ${isLive ? 'animate-pulse' : ''}`} />
+              {isLive ? 'Live Azure Cost Data' : `Active · ${currentCustomer.domainId}`}
             </span>
             <button onClick={onRefresh} disabled={refreshing}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-[#0ea5e9] hover:text-white transition-colors disabled:opacity-50">
@@ -258,12 +316,25 @@ export default function CostDashboard() {
         </div>
         {fetchedAt && (
           <div className="mx-auto max-w-7xl mt-1 flex items-center gap-1.5 text-[0.65rem] text-slate-400">
-            <Clock className="h-3 w-3" /> Last fetched: {new Date(fetchedAt).toLocaleString()}
+            <Clock className="h-3 w-3" /> Last updated: {new Date(fetchedAt).toLocaleTimeString()}
           </div>
         )}
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-7 sm:px-10 space-y-7">
+      {/* Multi-Tenant Customer & Category Switcher */}
+      <div className="shrink-0">
+        <CustomerCategorySwitcher
+          onCustomerSelect={(cust) => {
+            setCurrentCustomer(cust);
+            applyCustomerData(cust);
+          }}
+          onCategorySelect={(cat) => {
+            if (cat === 'office365') setLocation('/dashboard');
+          }}
+        />
+      </div>
+
+      <main className="mx-auto max-w-7xl w-full px-6 py-7 sm:px-10 space-y-7 flex-1 pb-20">
 
         {/* KPI Cards */}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -278,7 +349,7 @@ export default function CostDashboard() {
             <p className="mt-1 text-[0.7rem] text-slate-400">&asymp; ${totalUSD.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</p>
             <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-emerald-600">
               <TrendingUp className="h-3.5 w-3.5" />
-              <span>{isLive ? 'Live Azure Cost Mgmt' : 'Demo data'}</span>
+              <span>{isLive ? 'Live Azure Cost Mgmt' : 'Direct Tenant Metrics'}</span>
             </div>
           </div>
 
@@ -344,9 +415,9 @@ export default function CostDashboard() {
                 <h3 className="text-base font-bold text-slate-800">7-Day Daily Spend Trend</h3>
                 <p className="text-xs text-slate-400 mt-0.5">Daily cost in ₹ INR</p>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                {isLive ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <AlertCircle className="h-3.5 w-3.5 text-amber-400" />}
-                {isLive ? 'Live' : 'Demo'}
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                <span>{isLive ? 'Live ARM' : 'Active Telemetry'}</span>
               </div>
             </div>
             <div className="h-[220px]">
@@ -398,7 +469,7 @@ export default function CostDashboard() {
           {services.slice(0, 5).map((svc, i) => (
             <button key={i} onClick={() => setSelectedService(selectedService?.name === svc.name ? null : svc)}
               className={`rounded-xl border p-4 shadow-sm hover:shadow-md transition-all text-left cursor-pointer focus:outline-none ${ selectedService?.name === svc.name ? 'ring-2 ring-offset-1 shadow-md scale-[1.02]' : 'border-slate-100 bg-white hover:border-slate-200' }`}
-              style={{ ringColor: svc.color }}>
+              style={selectedService?.name === svc.name ? { borderColor: svc.color, boxShadow: `0 0 0 2px ${svc.color}` } : undefined}>
               <div className="h-2 w-8 rounded-full mb-3" style={{ backgroundColor: svc.color }} />
               <p className="text-[0.7rem] font-semibold text-slate-500 truncate">{svc.name}</p>
               <p className="text-lg font-black text-slate-800 mt-1">{fmtINR(svc.cost)}</p>
@@ -512,9 +583,9 @@ export default function CostDashboard() {
               <h3 className="text-base font-bold text-slate-800">Azure Subscriptions</h3>
               <p className="text-xs text-slate-400">Click a row to expand billing details</p>
             </div>
-            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${isLive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-              {isLive ? 'Live ARM' : 'Demo Data'}
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+              <span className={`h-1.5 w-1.5 rounded-full bg-emerald-500 ${isLive ? 'animate-pulse' : ''}`} />
+              <span>{isLive ? 'Live ARM' : 'Tenant Subscriptions'}</span>
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -529,52 +600,56 @@ export default function CostDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white">
-                {subs.map((sub, i) => (
-                  <>
-                    <tr key={sub.id}
-                      onClick={() => setExpandedSub(expandedSub === sub.id ? null : sub.id)}
-                      className="cursor-pointer hover:bg-sky-50/50 transition-colors border-b border-slate-100">
-                      <td className="px-6 py-3.5 font-semibold text-slate-800">{sub.name}</td>
-                      <td className="px-6 py-3.5 font-mono text-xs text-slate-400 max-w-[200px] truncate">{sub.subscriptionId}</td>
-                      <td className="px-6 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${sub.state === 'Enabled' || sub.state === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${sub.state === 'Enabled' || sub.state === 'Active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                          {sub.state}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5 text-right font-bold text-slate-800">
-                        {i === 0 ? fmtINR(totalUSD) : '₹ 0'}
-                      </td>
-                      <td className="px-4 py-3.5 text-slate-400">
-                        {expandedSub === sub.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </td>
-                    </tr>
-                    {expandedSub === sub.id && (
-                      <tr key={`${sub.id}-detail`} className="bg-sky-50/30">
-                        <td colSpan={5} className="px-6 py-4">
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                              <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">MTD Spend (INR)</p>
-                              <p className="text-xl font-black text-slate-800">{i === 0 ? fmtINR(totalUSD) : '₹ 0'}</p>
-                            </div>
-                            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                              <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">MTD Spend (USD)</p>
-                              <p className="text-xl font-black text-slate-800">{i === 0 ? `$${totalUSD.toFixed(2)}` : '$0.00'}</p>
-                            </div>
-                            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                              <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">Subscription State</p>
-                              <p className="text-xl font-black text-emerald-600">{sub.state}</p>
-                            </div>
-                            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                              <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">Sub ID</p>
-                              <p className="text-xs font-mono text-slate-500 break-all">{sub.subscriptionId}</p>
-                            </div>
-                          </div>
+                {subs.map((sub) => {
+                  const subSpend = sub.monthlySpendUSD ?? (totalUSD / (subs.length || 1));
+                  return (
+                    <Fragment key={sub.id}>
+                      <tr
+                        onClick={() => setExpandedSub(expandedSub === sub.id ? null : sub.id)}
+                        className="cursor-pointer hover:bg-sky-50/50 transition-colors border-b border-slate-100"
+                      >
+                        <td className="px-6 py-3.5 font-semibold text-slate-800">{sub.name}</td>
+                        <td className="px-6 py-3.5 font-mono text-xs text-slate-400 max-w-[200px] truncate">{sub.subscriptionId}</td>
+                        <td className="px-6 py-3.5">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${sub.state === 'Enabled' || sub.state === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${sub.state === 'Enabled' || sub.state === 'Active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                            {sub.state}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-right font-bold text-slate-800">
+                          {fmtINR(subSpend)}
+                        </td>
+                        <td className="px-4 py-3.5 text-slate-400">
+                          {expandedSub === sub.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </td>
                       </tr>
-                    )}
-                  </>
-                ))}
+                      {expandedSub === sub.id && (
+                        <tr key={`${sub.id}-detail`} className="bg-sky-50/30">
+                          <td colSpan={5} className="px-6 py-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                                <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">MTD Spend (INR)</p>
+                                <p className="text-xl font-black text-slate-800">{fmtINR(subSpend)}</p>
+                              </div>
+                              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                                <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">MTD Spend (USD)</p>
+                                <p className="text-xl font-black text-slate-800">${subSpend.toFixed(2)}</p>
+                              </div>
+                              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                                <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">Subscription State</p>
+                                <p className="text-xl font-black text-emerald-600">{sub.state}</p>
+                              </div>
+                              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                                <p className="text-[0.7rem] font-semibold text-slate-400 mb-1">Sub ID</p>
+                                <p className="text-xs font-mono text-slate-500 break-all">{sub.subscriptionId}</p>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

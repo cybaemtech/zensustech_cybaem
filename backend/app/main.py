@@ -18,6 +18,7 @@ API_TAGS = [
     {"name": "05 · Microsoft 365", "description": "License usage, identity governance, and Secure Score."},
     {"name": "06 · Governance Insights", "description": "Governance metrics, risk distribution, and user analysis."},
     {"name": "07 · Certificates", "description": "SSL certificate inventory and expiry information."},
+    {"name": "08 · Database", "description": "PostgreSQL database connection, schema migration, and data sync."},
 ]
 
 DOCS_CSS = """

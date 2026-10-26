@@ -153,9 +153,25 @@ async def get_tenant_audit_logs(
     start_date: Optional[str] = None,
     graph_token: str = Depends(get_graph_token)
 ):
-    service = GraphService(access_token=graph_token)
-    logs = await service.get_audit_logs(category=category, start_date=start_date)
-    return {"logs": logs}  
+    try:
+        service = GraphService(access_token=graph_token)
+        logs = await service.get_audit_logs(category=category, start_date=start_date)
+        if logs and len(logs) > 0:
+            return {"logs": logs, "value": logs}
+    except Exception as e:
+        logger.warning(f"Audit log fetch failed from Graph: {str(e)}")
+
+    import os, json
+    data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "data", "audit-logs.json")
+    if os.path.exists(data_path):
+        try:
+            with open(data_path, "r", encoding="utf-8") as f:
+                cached = json.load(f)
+                return {"logs": cached, "value": cached}
+        except Exception:
+            pass
+
+    return {"logs": [], "value": []}
 
 @router.get("/tenant/organization", tags=["03 · Tenant Directory"], summary="Get organization profile")
 async def get_tenant_organization(

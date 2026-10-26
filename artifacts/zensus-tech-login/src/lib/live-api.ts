@@ -10,3 +10,9 @@ export function getLiveApiHeaders(): Headers {
 
   return headers;
 }
+
+export async function ensureLiveApiTokens(): Promise<{ graphToken: string | null; mgmtToken: string | null }> {
+  const graphToken = sessionStorage.getItem('graph_token');
+  const mgmtToken = sessionStorage.getItem('mgmt_token');
+  return { graphToken, mgmtToken };
+}

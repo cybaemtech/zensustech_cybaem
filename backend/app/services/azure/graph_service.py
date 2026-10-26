@@ -487,7 +487,7 @@ class GraphService:
         
         # 3. Construct Query
         params = {
-            "$select": "id,activityDateTime,activityDisplayName,initiatedBy,targetResources,category",
+            "$select": "id,activityDateTime,activityDisplayName,initiatedBy,targetResources,category,result",
             "$orderby": "activityDateTime desc",
             "$top": 50
         }
