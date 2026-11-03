@@ -50,7 +50,10 @@ import {
   History,
   Award,
   TrendingUp,
-  Rocket
+  Rocket,
+  Bell,
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocation } from 'wouter';
@@ -263,6 +266,15 @@ export default function Dashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showDatabaseModal, setShowDatabaseModal] = useState(false);
   const [isDbConnected, setIsDbConnected] = useState(false);
+  const [remediationDrawerItem, setRemediationDrawerItem] = useState<{
+    badge: string;
+    title: string;
+    description: string;
+    technicalRemediation: string;
+    expectedResult: string;
+    additionalDetails?: { label: string; value: string }[];
+    usersList?: { displayName: string; userPrincipalName: string; mfaStatus: boolean }[];
+  } | null>(null);
 
   useEffect(() => {
     fetchDatabaseStatus().then(res => {
@@ -729,7 +741,8 @@ export default function Dashboard() {
         role: rb.role,
         assignedUsers: rb.count,
         mfaCheck: mfaDisabledUsers > 0 ? `❌ ${mfaDisabledUsers}` : '✅',
-        hasFailure: mfaDisabledUsers > 0
+        hasFailure: mfaDisabledUsers > 0,
+        users: roleUsers
       };
     });
   }, [usersList, roleBreakdown]);
@@ -852,6 +865,210 @@ export default function Dashboard() {
     navigator.clipboard.writeText(tenantId);
     setCopiedTenant(true);
     setTimeout(() => setCopiedTenant(false), 2000);
+  };
+
+  const handleThreatClick = (threat: string) => {
+    switch (threat) {
+      case 'Account Compromise':
+        setRemediationDrawerItem({
+          badge: 'Microsoft Entra ID',
+          title: 'Account Protection & MFA',
+          description: 'Ensure Multi-Factor Authentication is enforced for all administrators and user accounts to prevent unauthorized access.',
+          technicalRemediation: 'Navigate to Microsoft Entra Admin Center > Protection > Conditional Access and enforce MFA registration policies for all users.',
+          expectedResult: 'Reduces account takeover risk by 99.2%',
+          additionalDetails: [
+            { label: 'Risk Vector', value: 'Credential stuffing & account takeover' },
+            { label: 'Baseline Requirement', value: 'Phishing-resistant MFA (FIDO2 / Authenticator)' }
+          ]
+        });
+        break;
+      case 'Credential Phishing':
+        setRemediationDrawerItem({
+          badge: 'Defender for Office 365',
+          title: 'Anti-Phishing & Safe Links Defense',
+          description: 'Configure real-time time-of-click URL verification and automated anti-phishing protection across Exchange Online and Teams.',
+          technicalRemediation: 'Navigate to Microsoft Defender Portal (security.microsoft.com) > Email & Collaboration > Policies & Rules > Threat Policies > Anti-phishing to enable mailbox intelligence and spoof intelligence.',
+          expectedResult: 'Eliminates 98.7% of deceptive inbound credential harvest campaigns.',
+          additionalDetails: [
+            { label: 'Protection Module', value: 'Zero-hour Auto Purge (ZAP)' },
+            { label: 'Deployment Scope', value: 'All tenant inbound emails & links' }
+          ]
+        });
+        break;
+      case 'Session Hijacking':
+        setRemediationDrawerItem({
+          badge: 'Conditional Access & CAE',
+          title: 'Token Theft & Continuous Access Evaluation',
+          description: 'Revoke active bearer tokens and enforce strict IP binding with Continuous Access Evaluation to mitigate stolen session tokens.',
+          technicalRemediation: 'Navigate to Microsoft Entra Admin Center > Protection > Conditional Access > Session. Enforce Continuous Access Evaluation (CAE) and configure sign-in frequency to 8 hours for admin sessions.',
+          expectedResult: 'Neutralizes stolen cookie playback and unauthorized off-network token replay.',
+          additionalDetails: [
+            { label: 'Session Policy', value: 'Max 8-hour token lifetime' },
+            { label: 'IP Strict Binding', value: 'Active CAE checks' }
+          ]
+        });
+        break;
+      case 'Unauthorized Privilege Escalation':
+        setRemediationDrawerItem({
+          badge: 'Privileged Identity Management (PIM)',
+          title: 'Just-In-Time (JIT) Admin Activation',
+          description: 'Remove standing administrator assignments and require MFA approval workflows before privileged roles can be activated.',
+          technicalRemediation: 'Navigate to Microsoft Entra ID > Identity Governance > Privileged Identity Management > Azure AD Roles and convert Global Admins to Eligible with maximum 4-hour activation window.',
+          expectedResult: 'Eliminates permanent administrative attack surface across tenant.',
+          additionalDetails: [
+            { label: 'Activation Window', value: 'Max 4 hours per session' },
+            { label: 'Approval Rule', value: 'Multi-custody authorization required' }
+          ]
+        });
+        break;
+      case 'Malicious App Consent':
+        setRemediationDrawerItem({
+          badge: 'App Governance',
+          title: 'Third-Party OAuth Consent Hardening',
+          description: 'Restrict non-admin user permissions from consenting to unverified third-party OAuth enterprise applications requesting high-privilege Graph scopes.',
+          technicalRemediation: 'Navigate to Entra ID > Enterprise Applications > Consent and permissions > User consent settings, select "Do not allow user consent" and configure admin consent workflow.',
+          expectedResult: 'Prevents silent corporate data exfiltration via rogue SaaS integrations.',
+          additionalDetails: [
+            { label: 'User Consent', value: 'Disabled for unverified apps' },
+            { label: 'Admin Approval', value: 'Required for high-privilege scopes' }
+          ]
+        });
+        break;
+      case 'License Wastage':
+        setRemediationDrawerItem({
+          badge: 'License Optimization',
+          title: 'Automated Inactive Seat Reclamation',
+          description: 'Identify users inactive for over 90 days and reclaim unused Microsoft 365 licenses to reduce SaaS subscription costs.',
+          technicalRemediation: 'Navigate to Microsoft 365 Admin Center > Billing > Licenses, cross-reference last sign-in timestamp via Entra ID sign-in logs, and deprovision unutilized subscriptions.',
+          expectedResult: 'Recovers wasted annual licensing spend with zero operational disruption.',
+          additionalDetails: [
+            { label: 'Audited Threshold', value: '> 60 days inactive' },
+            { label: 'Optimization Target', value: '100% license efficiency' }
+          ]
+        });
+        break;
+      default:
+        setRemediationDrawerItem({
+          badge: 'Security Remediation Engine',
+          title: `${threat} Threat Remediation`,
+          description: `Security posture baseline and recommended configuration controls for ${threat}.`,
+          technicalRemediation: `Navigate to Microsoft Defender Portal > Policies & Rules > Threat Policies to inspect and configure protective controls against ${threat}.`,
+          expectedResult: 'Strengthens tenant defensive posture and mitigates attack vectors.',
+          additionalDetails: [
+            { label: 'Threat Category', value: threat },
+            { label: 'Status', value: 'Security Policy Active' }
+          ]
+        });
+        break;
+    }
+  };
+
+  const handleExecutiveSummaryClick = (item: any) => {
+    const area = item.area || '';
+    if (area.includes('License')) {
+      setRemediationDrawerItem({
+        badge: 'Cost & SaaS Governance',
+        title: 'License Optimization & SKU Allocation',
+        description: 'Continuous auditing of paid vs allocated licenses to prevent over-provisioning and dormant account billing.',
+        technicalRemediation: 'Navigate to Microsoft 365 Admin Center > Billing > Licenses. Audit unassigned licenses across Microsoft 365 Business Basic, Power BI, and Power Automate SKUs and deprovision unused pools.',
+        expectedResult: 'Immediate reduction in SaaS expenditures with optimized seat utilization.',
+        additionalDetails: [
+          { label: 'Current Result / Status', value: item.status || 'Savings Possible' },
+          { label: 'Coverage Metric', value: String(item.number || '1009997 / 1010004') }
+        ]
+      });
+    } else if (area.includes('Identity') || area.includes('Privilege')) {
+      setRemediationDrawerItem({
+        badge: 'Privileged Access Management',
+        title: 'Privileged Admin Roles & Access Control',
+        description: 'Audit and enforce least-privilege administrative assignments across Global Admin, Security Admin, and Directory Reader roles.',
+        technicalRemediation: 'Navigate to Microsoft Entra Admin Center > Identity > Roles & admins. Restrict Global Administrators to emergency break-glass accounts and assign scoped role-based privileges.',
+        expectedResult: 'Limits tenant blast radius and secures root administrative accounts against unauthorized modification.',
+        additionalDetails: [
+          { label: 'Current Status', value: item.status || '4 Admins Monitored' },
+          { label: 'Admin Ratio', value: String(item.number || '4 / 14 accounts') }
+        ]
+      });
+    } else if (area.includes('Account Protection') || area.includes('MFA')) {
+      setRemediationDrawerItem({
+        badge: 'Microsoft Entra ID',
+        title: 'Account Protection & MFA',
+        description: 'Ensure Multi-Factor Authentication is enforced for all administrators and user accounts to prevent unauthorized access.',
+        technicalRemediation: 'Navigate to Microsoft Entra Admin Center > Protection > Conditional Access and enforce MFA registration policies for all users.',
+        expectedResult: 'Reduces account takeover risk by 99.2%',
+        additionalDetails: [
+          { label: 'MFA Status', value: item.status || '86% Protected' },
+          { label: 'Coverage', value: String(item.number || '12 / 14 accounts') }
+        ]
+      });
+    } else {
+      setRemediationDrawerItem({
+        badge: 'Microsoft Defender & Secure Score',
+        title: 'Active Threat Posture & Defense Engine',
+        description: 'Tenant security controls and posture aligned with Microsoft Secure Score and cloud industry protection baselines.',
+        technicalRemediation: 'Navigate to Microsoft Defender Portal > Secure Score. Implement recommended identity and device improvement actions to increase tenant defense posture.',
+        expectedResult: 'Maintains cloud security score above the 53.4% global Microsoft 365 tenant average.',
+        additionalDetails: [
+          { label: 'Current Score', value: `${m365Score?.currentScore ?? secureScore ?? 68}/100` },
+          { label: 'Benchmark Comparison', value: `${m365Score?.avgScore ?? 53.4}% global avg` }
+        ]
+      });
+    }
+  };
+
+  const handleRoleClick = (item: any) => {
+    const usersList = (item.users || []).map((u: any) => ({
+      displayName: u.displayName || u.userPrincipalName || 'User',
+      userPrincipalName: u.userPrincipalName || '',
+      mfaStatus: u.mfa !== 'Disabled' && u.mfaEnabled !== false,
+    }));
+    setRemediationDrawerItem({
+      badge: 'Role-Based Access Control (RBAC)',
+      title: `${item.role} Role Detail & Governance`,
+      description: item.role === 'Global Administrator'
+        ? 'Highest-privilege directory role with unrestricted access to all administrative features in Microsoft Entra and Microsoft 365 services.'
+        : item.role === 'Security Administrator'
+        ? 'Privileged security role with permissions to read security information, manage security configurations, and investigate threat incidents.'
+        : item.role === 'Global Reader'
+        ? 'Read-only administrative role for viewing reports and configurations across all Microsoft 365 admin centers without modification rights.'
+        : 'Non-privileged organization members with standard mailbox, collaboration, and application access permissions.',
+      technicalRemediation: item.hasFailure
+        ? `Navigate to Microsoft Entra Admin Center > Protection > Conditional Access. Create or enforce an MFA policy requiring all users assigned to ${item.role} to register Microsoft Authenticator or FIDO2 keys.`
+        : `All accounts in ${item.role} are currently MFA compliant. Conduct quarterly access reviews in Microsoft Entra Identity Governance to prevent role accumulation.`,
+      expectedResult: item.hasFailure
+        ? 'Brings MFA compliance to 100% across assigned users and eliminates active credential risk.'
+        : 'Maintains Zero Trust compliance across administrative personnel.',
+      additionalDetails: [
+        { label: 'Assigned User Count', value: `${item.assignedUsers} users` },
+        { label: 'MFA Status', value: item.mfaCheck }
+      ],
+      usersList,
+    });
+  };
+
+  const handleLicenseClick = (lic: any) => {
+    const name = lic.product || lic.license || lic.key || 'License SKU';
+    const purchased = lic.purchased ?? lic.totalLicenses ?? 0;
+    const assigned = lic.assigned ?? lic.usedLicenses ?? 0;
+    const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
+    const savings = lic.potentialSavings || (available === 0 ? '$0 (100% Utilized)' : '$0 (Free Service)');
+    setRemediationDrawerItem({
+      badge: 'License Optimization & Cost Management',
+      title: `${name} SKU Detail`,
+      description: `License consumption, seat availability, and cost optimization telemetry for ${name}.`,
+      technicalRemediation: available > 0 && !savings.includes('Free')
+        ? `Navigate to Microsoft 365 Admin Center > Billing > Licenses. Reduce purchased license quota from ${purchased} to ${assigned} seats to eliminate unused capacity.`
+        : `Navigate to Microsoft 365 Admin Center > Billing > Licenses to manage user assignments and evaluate subscription utilization.`,
+      expectedResult: available > 0 && !savings.includes('Free')
+        ? `Saves approximately ${savings} by rightsizing monthly subscription commitments.`
+        : 'Optimal license utilization with zero dormant seat waste.',
+      additionalDetails: [
+        { label: 'Purchased Seats', value: purchased.toLocaleString() },
+        { label: 'Assigned Seats', value: assigned.toLocaleString() },
+        { label: 'Available Seats', value: available.toLocaleString() },
+        { label: 'Potential Savings', value: savings }
+      ]
+    });
   };
 
   return (
@@ -2101,17 +2318,20 @@ export default function Dashboard() {
                       </div>
                       <div className="flex flex-wrap gap-2.5 mt-5">
                         {displayThreats.map((threat) => (
-                          <span
+                          <button
                             key={threat}
-                            className="bg-[#fff7e6] border border-[#ffd591] text-[#d46b08] px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-amber-100/60 transition-colors"
+                            onClick={() => handleThreatClick(threat)}
+                            className="bg-[#fff7e6] border border-[#ffd591] text-[#d46b08] px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:bg-amber-100/80 hover:border-amber-400 hover:shadow-xs active:scale-98 transition-all flex items-center gap-1.5 group text-left"
+                            title={`Inspect ${threat} Remediation`}
                           >
-                            {threat}
-                          </span>
+                            <span>{threat}</span>
+                            <ArrowRight className="h-3 w-3 text-amber-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                          </button>
                         ))}
                       </div>
                     </div>
                     <p className="text-xs text-slate-400 mt-5">
-                      Security controls tuned for account protection and data privacy based on your {m365Score?.currentScore ?? secureScore ?? 68} score.
+                      Security controls tuned for account protection and data privacy based on your {m365Score?.currentScore ?? secureScore ?? 68} score. Click any threat policy to inspect remediation guidelines.
                     </p>
                   </div>
                 </div>
@@ -2139,9 +2359,17 @@ export default function Dashboard() {
                         {displaySummaryItems.map((item: any, idx: number) => {
                           const isGreen = item.color === 'green' || item.status?.toLowerCase().includes('healthy') || item.status?.toLowerCase().includes('optimized');
                           return (
-                            <tr key={item.area || idx} className="hover:bg-slate-50/50">
+                            <tr
+                              key={item.area || idx}
+                              onClick={() => handleExecutiveSummaryClick(item)}
+                              className="hover:bg-indigo-50/50 cursor-pointer transition-colors group"
+                              title="Click to view Security Remediation & details"
+                            >
                               <td className="py-3.5 px-4">
-                                <div className="font-bold text-slate-800">{item.area}</div>
+                                <div className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                  <span>{item.area}</span>
+                                  <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all" />
+                                </div>
                                 <div className="text-[0.68rem] text-slate-400 mt-0.5">
                                   Last updated: {m365Metadata?.updated_at ? new Date(m365Metadata.updated_at).toLocaleDateString() : '10/29/2026'}
                                 </div>
@@ -2157,7 +2385,7 @@ export default function Dashboard() {
                                 </div>
                               </td>
                               <td className="py-3.5 px-4">
-                                <span className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 font-semibold text-xs inline-block">
+                                <span className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 font-semibold text-xs inline-block group-hover:bg-blue-100 transition-colors">
                                   {item.number}
                                 </span>
                               </td>
@@ -2191,8 +2419,16 @@ export default function Dashboard() {
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-xs">
                         {adminRolesData.map((item, idx) => (
-                          <tr key={item.role || idx} className="hover:bg-slate-50/50">
-                            <td className="py-3.5 px-4 font-bold text-slate-800">{item.role}</td>
+                          <tr
+                            key={item.role || idx}
+                            onClick={() => handleRoleClick(item)}
+                            className="hover:bg-indigo-50/50 cursor-pointer transition-colors group"
+                            title={`Click to inspect ${item.role} users & policy remediation`}
+                          >
+                            <td className="py-3.5 px-4 font-bold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                              <span>{item.role}</span>
+                              <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all" />
+                            </td>
                             <td className="py-3.5 px-4 font-semibold text-slate-700">{item.assignedUsers}</td>
                             <td className="py-3.5 px-4">
                               <span
@@ -2240,8 +2476,16 @@ export default function Dashboard() {
                           const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
                           const savings = lic.potentialSavings || (available === 0 ? '$0 (100% Utilized)' : '$0 (Free Service)');
                           return (
-                            <tr key={lic.key || lic.license || lic.product || idx} className="hover:bg-slate-50/50">
-                              <td className="py-3.5 px-4 font-bold text-slate-800">{lic.product || lic.license || lic.key}</td>
+                            <tr
+                              key={lic.key || lic.license || lic.product || idx}
+                              onClick={() => handleLicenseClick(lic)}
+                              className="hover:bg-indigo-50/50 cursor-pointer transition-colors group"
+                              title={`Click to inspect ${lic.product || lic.license || lic.key} allocation`}
+                            >
+                              <td className="py-3.5 px-4 font-bold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                <span>{lic.product || lic.license || lic.key}</span>
+                                <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all" />
+                              </td>
                               <td className="py-3.5 px-4 font-semibold text-slate-700">{purchased.toLocaleString()}</td>
                               <td className="py-3.5 px-4 font-semibold text-slate-700">{assigned.toLocaleString()}</td>
                               <td className="py-3.5 px-4 font-semibold text-slate-700">{available.toLocaleString()}</td>
@@ -2275,6 +2519,124 @@ export default function Dashboard() {
           isModal={true}
           initialSelectedId={selectedFeedItem?.id || null}
         />
+      )}
+
+      {/* Security Remediation Engine Slide-Over Drawer */}
+      {remediationDrawerItem && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg bg-white shadow-2xl flex flex-col h-full overflow-hidden animate-in slide-in-from-right duration-200">
+            {/* Top Navigation Bar */}
+            <div className="px-6 py-4 border-b border-slate-100 bg-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => setRemediationDrawerItem(null)}
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors mr-0.5"
+                  title="Close Drawer"
+                >
+                  <X className="h-4.5 w-4.5" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center">
+                    <Shield className="h-4 w-4" />
+                  </div>
+                  <span className="font-bold text-slate-900 text-sm tracking-tight">Security Remediation Engine</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setRemediationDrawerItem(null)}
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Purple Hero Card */}
+            <div className="bg-[#240b49] text-white p-6 relative overflow-hidden shrink-0">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white/10 text-white text-[0.7rem] font-semibold border border-white/10 mb-3 backdrop-blur-xs">
+                <Bell className="h-3 w-3 text-purple-200" />
+                <span>{remediationDrawerItem.badge}</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">
+                {remediationDrawerItem.title}
+              </h2>
+              <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed mt-2.5 font-normal">
+                {remediationDrawerItem.description}
+              </p>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {/* Technical Remediation */}
+              <div>
+                <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs mb-2">
+                  <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  <span>Technical Remediation</span>
+                </div>
+                <div className="bg-[#f8fafc] border border-slate-200/90 rounded-xl p-4 text-xs text-slate-700 leading-relaxed font-medium">
+                  {remediationDrawerItem.technicalRemediation}
+                </div>
+              </div>
+
+              {/* Expected Result Green Box */}
+              <div className="bg-[#f6ffed] border border-[#b7eb8f] rounded-xl p-4 text-xs text-[#389e0d] font-semibold flex items-start gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-[#52c41a] shrink-0 mt-0.5" />
+                <span>Expected Result: {remediationDrawerItem.expectedResult}</span>
+              </div>
+
+              {/* Additional Context Stats */}
+              {remediationDrawerItem.additionalDetails && remediationDrawerItem.additionalDetails.length > 0 && (
+                <div className="grid grid-cols-2 gap-2.5 pt-2">
+                  {remediationDrawerItem.additionalDetails.map((det, i) => (
+                    <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <div className="text-[0.65rem] text-slate-400 font-bold uppercase tracking-wider">{det.label}</div>
+                      <div className="font-bold text-slate-800 text-xs mt-0.5 truncate" title={det.value}>{det.value}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Assigned Users list if available */}
+              {remediationDrawerItem.usersList && remediationDrawerItem.usersList.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span>Assigned Accounts</span>
+                    <span className="text-slate-400 font-normal">{remediationDrawerItem.usersList.length} total</span>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-100 border border-slate-200/80 rounded-xl p-2 bg-slate-50/50">
+                    {remediationDrawerItem.usersList.map((u, i) => (
+                      <div key={i} className="pt-1.5 pb-1.5 px-2 flex items-center justify-between text-xs first:pt-1">
+                        <div className="min-w-0 pr-2">
+                          <div className="font-bold text-slate-800 truncate">{u.displayName}</div>
+                          <div className="text-[0.68rem] text-slate-400 font-mono truncate">{u.userPrincipalName}</div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[0.65rem] font-bold shrink-0 ${
+                          u.mfaStatus
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                        }`}>
+                          {u.mfaStatus ? 'MFA Enabled' : 'MFA Required'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+              <span className="text-[0.72rem] text-slate-400 font-mono">
+                Cloud Security Engine · ZensusTech
+              </span>
+              <button
+                onClick={() => setRemediationDrawerItem(null)}
+                className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-900 transition-colors shadow-xs"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Import Real Users Modal */}
