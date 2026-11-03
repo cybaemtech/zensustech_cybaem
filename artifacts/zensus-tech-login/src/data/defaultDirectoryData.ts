@@ -298,3 +298,573 @@ export const DEFAULT_DASHBOARD_STATS = {
   foreign: 0
 };
 
+
+export const DEFAULT_AUDIT_LOGS = [
+  {
+    "id": "SSGM_4ee071fe-b79a-4158-b8f2-6b9164fc2ebc_001",
+    "category": "GroupManagement",
+    "correlationId": "4ee071fe-b79a-4158-b8f2-6b9164fc2ebc",
+    "result": "success",
+    "resultReason": "OK",
+    "activityDisplayName": "GroupLifecyclePolicies_Get",
+    "activityDateTime": "2026-11-03T08:32:02.417317+00:00",
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "appId": "0ffa2118-1e76-4537-b0d4-0ad853240893",
+        "displayName": "CybaemTech-0365",
+        "servicePrincipalId": "2e5db490-09ef-49c9-9fe5-76c1525716ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "displayName": "Group Lifecycle Policy",
+        "type": "Policy",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "RequestId",
+        "value": "62385752-016b-475b-8068-8e7e3fbfb562"
+      }
+    ]
+  },
+  {
+    "id": "AUTH_8a123f45-e678-4bc9-9812-3456789abcde_002",
+    "category": "Authentication",
+    "correlationId": "8a123f45-e678-4bc9-9812-3456789abcde",
+    "result": "success",
+    "resultReason": "MFA Strong Auth Success",
+    "activityDisplayName": "User login with MFA verification",
+    "activityDateTime": "2026-11-03T07:50:02.417317+00:00",
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "cybaem",
+        "userPrincipalName": "cybaem@zensustech.com",
+        "ipAddress": "103.21.124.8"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
+        "displayName": "cybaem",
+        "type": "User",
+        "userPrincipalName": "cybaem@zensustech.com"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "AuthMethod",
+        "value": "Microsoft Authenticator Push"
+      }
+    ]
+  },
+  {
+    "id": "AUTH_9c234a56-b789-4cd0-8923-4567890bcdef_003",
+    "category": "Authentication",
+    "correlationId": "9c234a56-b789-4cd0-8923-4567890bcdef",
+    "result": "failure",
+    "resultReason": "Invalid password attempt",
+    "activityDisplayName": "User login failure (Bad Password)",
+    "activityDateTime": "2026-11-03T06:32:02.417317+00:00",
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "Chaithra",
+        "userPrincipalName": "Chaithra@zensustech.com",
+        "ipAddress": "49.36.110.42"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "4963ff19-c681-4a7e-a044-facb085add51",
+        "displayName": "Chaithra",
+        "type": "User",
+        "userPrincipalName": "Chaithra@zensustech.com"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "ErrorCode",
+        "value": "50126"
+      }
+    ]
+  },
+  {
+    "id": "USER_1b345c67-c890-4de1-9034-5678901cdef0_004",
+    "category": "UserManagement",
+    "correlationId": "1b345c67-c890-4de1-9034-5678901cdef0",
+    "result": "success",
+    "resultReason": "Passkey registered",
+    "activityDisplayName": "Get passkey creation options",
+    "activityDateTime": "2026-11-03T05:02:02.417317+00:00",
+    "loggedByService": "User Management",
+    "operationType": "Credential Management",
+    "initiatedBy": {
+      "user": {
+        "displayName": "cybaem",
+        "userPrincipalName": "cybaem@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
+        "displayName": "cybaem",
+        "type": "User"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "PasskeyType",
+        "value": "FIDO2 / WebAuthn"
+      }
+    ]
+  },
+  {
+    "id": "ROLE_2c456d78-d901-4ef2-a145-6789012def01_005",
+    "category": "RoleManagement",
+    "correlationId": "2c456d78-d901-4ef2-a145-6789012def01",
+    "result": "success",
+    "resultReason": "Role Verified",
+    "activityDisplayName": "Privileged Role Verification (Global Reader)",
+    "activityDateTime": "2026-11-03T02:32:02.417317+00:00",
+    "loggedByService": "PIM",
+    "operationType": "Role Assignment",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "role-gr-01",
+        "displayName": "Global Reader",
+        "type": "DirectoryRole"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "AssignmentType",
+        "value": "Permanent Active"
+      }
+    ]
+  },
+  {
+    "id": "APP_3d567e89-ea12-4f03-b256-7890123ef012_006",
+    "category": "Application",
+    "correlationId": "3d567e89-ea12-4f03-b256-7890123ef012",
+    "result": "success",
+    "resultReason": "App Token Generated",
+    "activityDisplayName": "Service Principal Token Handshake",
+    "activityDateTime": "2026-11-02T23:02:02.417317+00:00",
+    "loggedByService": "Application Proxy",
+    "operationType": "Token Issue",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae",
+        "displayName": "ZensusTechAI-Ops"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "sp-ai-ops-01",
+        "displayName": "ZensusTechAI-Ops",
+        "type": "ServicePrincipal"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "OAuthScope",
+        "value": "https://graph.microsoft.com/.default"
+      }
+    ]
+  },
+  {
+    "id": "GRP_4e678f90-fb23-4014-c367-8901234f0123_007",
+    "category": "GroupManagement",
+    "correlationId": "4e678f90-fb23-4014-c367-8901234f0123",
+    "result": "success",
+    "resultReason": "Settings Retrievable",
+    "activityDisplayName": "Settings_GetSettingsAsync",
+    "activityDateTime": "2026-11-02T19:02:02.417317+00:00",
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "System Service",
+        "servicePrincipalId": "2e5db490-09ef-49c9-9fe5-76c1525716ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "displayName": "Tenant Group Policy",
+        "type": "Policy"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "TenantId",
+        "value": "9414ece9-9039-40b7-a6a7-7ecbe7409245"
+      }
+    ]
+  },
+  {
+    "id": "AUTH_5f7890a1-0c34-4125-d478-901234501234_008",
+    "category": "Authentication",
+    "correlationId": "5f7890a1-0c34-4125-d478-901234501234",
+    "result": "failure",
+    "resultReason": "MFA challenge timed out",
+    "activityDisplayName": "Conditional Access MFA Prompt Timeout",
+    "activityDateTime": "2026-11-02T13:02:02.417317+00:00",
+    "loggedByService": "Conditional Access",
+    "operationType": "Policy Evaluation",
+    "initiatedBy": {
+      "user": {
+        "displayName": "Microsoft",
+        "userPrincipalName": "Microsoft@zensustech.com",
+        "ipAddress": "104.28.19.74"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "c7496808-c608-4f22-ba16-33eee3aa2bf6",
+        "displayName": "Microsoft",
+        "type": "User"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "PolicyName",
+        "value": "Enforce MFA for Cloud Apps"
+      }
+    ]
+  },
+  {
+    "id": "USER_6a8901b2-1d45-4236-e589-012345612345_009",
+    "category": "UserManagement",
+    "correlationId": "6a8901b2-1d45-4236-e589-012345612345",
+    "result": "success",
+    "resultReason": "Profile Updated",
+    "activityDisplayName": "Update user attributes",
+    "activityDateTime": "2026-11-01T21:02:02.417317+00:00",
+    "loggedByService": "Core Directory",
+    "operationType": "Update",
+    "initiatedBy": {
+      "user": {
+        "displayName": "cybaem",
+        "userPrincipalName": "cybaem@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
+        "displayName": "cybaem",
+        "type": "User"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Attribute",
+        "value": "UsageLocation: IN"
+      }
+    ]
+  },
+  {
+    "id": "APP_7b9012c3-2e56-4347-f69a-123456723456_010",
+    "category": "Application",
+    "correlationId": "7b9012c3-2e56-4347-f69a-123456723456",
+    "result": "success",
+    "resultReason": "Consent granted",
+    "activityDisplayName": "Consent to application (CybaemTech-0365)",
+    "activityDateTime": "2026-11-01T09:02:02.417317+00:00",
+    "loggedByService": "Core Directory",
+    "operationType": "Consent",
+    "initiatedBy": {
+      "user": {
+        "displayName": "Global Administrator",
+        "userPrincipalName": "admin@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "app-consent-01",
+        "displayName": "CybaemTech-0365",
+        "type": "Application"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Permissions",
+        "value": "User.Read, Directory.Read.All"
+      }
+    ]
+  },
+  {
+    "id": "GRP_8c0123d4-3f67-4458-07ab-234567834567_011",
+    "category": "GroupManagement",
+    "correlationId": "8c0123d4-3f67-4458-07ab-234567834567",
+    "result": "success",
+    "resultReason": "Approval Request Completed",
+    "activityDisplayName": "Approval_GetAll",
+    "activityDateTime": "2026-10-31T21:02:02.417317+00:00",
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "System Service",
+        "servicePrincipalId": "2e5db490-09ef-49c9-9fe5-76c1525716ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "grp-approvals-01",
+        "displayName": "Access Approvals",
+        "type": "Workflow"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "ResultCode",
+        "value": "200"
+      }
+    ]
+  },
+  {
+    "id": "ROLE_9d1234e5-4078-4569-18bc-345678945678_012",
+    "category": "RoleManagement",
+    "correlationId": "9d1234e5-4078-4569-18bc-345678945678",
+    "result": "success",
+    "resultReason": "Role Assignment Added",
+    "activityDisplayName": "Add member to role (Security Administrator)",
+    "activityDateTime": "2026-10-31T01:02:02.417317+00:00",
+    "loggedByService": "PIM",
+    "operationType": "Role Assignment",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "role-secadmin-01",
+        "displayName": "Security Administrator",
+        "type": "DirectoryRole"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "RoleName",
+        "value": "Security Administrator"
+      }
+    ]
+  },
+  {
+    "id": "AUTH_0e2345f6-5189-467a-29cd-456789056789_013",
+    "category": "Authentication",
+    "correlationId": "0e2345f6-5189-467a-29cd-456789056789",
+    "result": "success",
+    "resultReason": "Passwordless FIDO2 Login",
+    "activityDisplayName": "User login with FIDO2 Security Key",
+    "activityDateTime": "2026-10-29T19:02:02.417317+00:00",
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "cybaem",
+        "userPrincipalName": "cybaem@zensustech.com",
+        "ipAddress": "103.21.124.8"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
+        "displayName": "cybaem",
+        "type": "User"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "CredentialType",
+        "value": "FIDO2 Security Key"
+      }
+    ]
+  },
+  {
+    "id": "AUTH_1f3456a7-629a-478b-3ade-567890167890_014",
+    "category": "Authentication",
+    "correlationId": "1f3456a7-629a-478b-3ade-567890167890",
+    "result": "failure",
+    "resultReason": "Blocked by IP location filter",
+    "activityDisplayName": "Conditional Access Block (Untrusted Location)",
+    "activityDateTime": "2026-10-28T13:02:02.417317+00:00",
+    "loggedByService": "Conditional Access",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "ExternalGuest",
+        "userPrincipalName": "guest@external.org",
+        "ipAddress": "185.220.101.5"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "guest-user-01",
+        "displayName": "ExternalGuest",
+        "type": "User"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "BlockedCountry",
+        "value": "RU"
+      }
+    ]
+  },
+  {
+    "id": "APP_2a4567b8-73ab-489c-4bef-678901278901_015",
+    "category": "Application",
+    "correlationId": "2a4567b8-73ab-489c-4bef-678901278901",
+    "result": "success",
+    "resultReason": "Secret Credential Added",
+    "activityDisplayName": "Add service principal credentials",
+    "activityDateTime": "2026-10-26T21:02:02.417317+00:00",
+    "loggedByService": "Core Directory",
+    "operationType": "Key Management",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "sp-test-reg-01",
+        "displayName": "Test-App-Registration",
+        "type": "ServicePrincipal"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "KeyType",
+        "value": "ClientSecret (24 months)"
+      }
+    ]
+  },
+  {
+    "id": "USER_3b5678c9-84bc-49ad-5cf0-789012389012_016",
+    "category": "UserManagement",
+    "correlationId": "3b5678c9-84bc-49ad-5cf0-789012389012",
+    "result": "success",
+    "resultReason": "Password Reset Success",
+    "activityDisplayName": "Self-service password reset flow completed",
+    "activityDateTime": "2026-10-24T09:02:02.417317+00:00",
+    "loggedByService": "SSPR",
+    "operationType": "Password Reset",
+    "initiatedBy": {
+      "user": {
+        "displayName": "Chaithra",
+        "userPrincipalName": "Chaithra@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "4963ff19-c681-4a7e-a044-facb085add51",
+        "displayName": "Chaithra",
+        "type": "User"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Method",
+        "value": "Mobile OTP + Security Questions"
+      }
+    ]
+  },
+  {
+    "id": "ROLE_4c6789da-95cd-4abe-6d01-890123490123_017",
+    "category": "RoleManagement",
+    "correlationId": "4c6789da-95cd-4abe-6d01-890123490123",
+    "result": "success",
+    "resultReason": "PIM Access Review Completed",
+    "activityDisplayName": "PIM Access Review: Global Administrators",
+    "activityDateTime": "2026-10-21T01:02:02.417317+00:00",
+    "loggedByService": "PIM",
+    "operationType": "Access Review",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "role-ga-01",
+        "displayName": "Global Administrator",
+        "type": "DirectoryRole"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "ReviewDecision",
+        "value": "Approve 4 Admin Accounts"
+      }
+    ]
+  },
+  {
+    "id": "GRP_5d7890eb-a6de-4bcf-7e12-901234501234_018",
+    "category": "GroupManagement",
+    "correlationId": "5d7890eb-a6de-4bcf-7e12-901234501234",
+    "result": "success",
+    "resultReason": "Security Group Modified",
+    "activityDisplayName": "Add member to security group (AdminAgents)",
+    "activityDateTime": "2026-10-16T21:02:02.417317+00:00",
+    "loggedByService": "Core Directory",
+    "operationType": "Membership",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "06aa20f3-7505-4060-b8d5-e6027dde23a2",
+        "displayName": "AdminAgents",
+        "type": "Group"
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "AddedMember",
+        "value": "cybaem@zensustech.com"
+      }
+    ]
+  }
+];

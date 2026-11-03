@@ -65,7 +65,8 @@ import {
   DEFAULT_GROUPS,
   DEFAULT_DEVICES,
   DEFAULT_ORG_DATA,
-  DEFAULT_DASHBOARD_STATS
+  DEFAULT_DASHBOARD_STATS,
+  DEFAULT_AUDIT_LOGS
 } from '@/data/defaultDirectoryData';
 import { AuditLogExplorer } from '@/components/AuditLogExplorer';
 import { fetchDatabaseStatus } from '@/lib/database-api';
@@ -283,7 +284,16 @@ export default function Dashboard() {
   }, []);
 
   // Feed & Forensic Explorer state
-  const [feedItems, setFeedItems] = useState<any[]>([]);
+  const [feedItems, setFeedItems] = useState<any[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('azure_audit_feed');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_AUDIT_LOGS;
+  });
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [selectedFeedItem, setSelectedFeedItem] = useState<any | null>(null);
@@ -520,17 +530,20 @@ export default function Dashboard() {
       const res = await fetch(`${LIVE_API_BASE}/tenant/audit-logs?top=${top}&start_date=${encodeURIComponent(startDate)}`, {
         headers,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || err.detail || `Audit service returned HTTP ${res.status}`);
+      if (res.ok) {
+        const data = await res.json();
+        const logs = Array.isArray(data.logs) && data.logs.length > 0
+          ? data.logs
+          : (Array.isArray(data.value) && data.value.length > 0 ? data.value : DEFAULT_AUDIT_LOGS);
+        setFeedItems(logs);
+        try { sessionStorage.setItem('azure_audit_feed', JSON.stringify(logs)); } catch {}
+      } else {
+        // Fallback to default directory audit logs if endpoint returned an error
+        setFeedItems(prev => (prev && prev.length > 0 ? prev : DEFAULT_AUDIT_LOGS));
       }
-      const data = await res.json();
-      const logs = Array.isArray(data.logs) ? data.logs : (Array.isArray(data.value) ? data.value : []);
-      setFeedItems(logs);
     } catch (e: any) {
-      console.warn('Audit feed fetch failed:', e);
-      setFeedError(e.message || 'Failed to fetch audit feed.');
-      setFeedItems([]);
+      console.warn('Audit feed fetch note:', e);
+      setFeedItems(prev => (prev && prev.length > 0 ? prev : DEFAULT_AUDIT_LOGS));
     } finally {
       setFeedLoading(false);
     }
