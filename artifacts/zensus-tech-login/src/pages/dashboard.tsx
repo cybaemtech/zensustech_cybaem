@@ -2265,6 +2265,117 @@ export default function Dashboard() {
             {/* TAB 7: MICROSOFT O365 */}
             {activeTab === 'm365' && (
               <div className="space-y-6">
+                {/* M365 License & Security Score Header */}
+                <div className="bg-white rounded-2xl px-6 pt-5 pb-6 border border-slate-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)]">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h2 className="text-base font-bold text-slate-800 tracking-tight">Microsoft 365 License &amp; Security Score</h2>
+                      <p className="text-xs text-slate-400 mt-0.5">Live license allocation, usage metrics, and Microsoft Secure Score</p>
+                    </div>
+                    <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Secure Score: {m365Score?.currentScore ?? secureScore ?? 68}%
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {/* License tiles from live data */}
+                    {displayLicenseData.map((lic: any, i: number) => {
+                      const purchased = lic.purchased ?? lic.totalLicenses ?? 0;
+                      const assigned = lic.assigned ?? lic.usedLicenses ?? 0;
+                      const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
+                      const pct = purchased > 0 ? Math.round((assigned / purchased) * 100) : 0;
+                      const name = lic.product || lic.license || lic.key || 'License';
+                      return (
+                        <div key={lic.key || i} className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col gap-1 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => handleLicenseClick(lic)} title={`Click to view ${name} details`}>
+                          <p className="text-[0.68rem] font-semibold text-slate-400 leading-tight truncate">{name}</p>
+                          <p className="text-xl font-black text-slate-800 tracking-tight leading-none mt-1">{assigned.toLocaleString()} / {purchased.toLocaleString()}</p>
+                          <p className="text-[0.68rem] text-slate-400">{available.toLocaleString()} available seats</p>
+                          <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
+                            <div className={`h-1 rounded-full ${pct >= 90 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-400' : 'bg-slate-300'}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Tenant Users tile */}
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col gap-1 hover:border-sky-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => { setActiveTab('identity'); }} title="View all tenant users">
+                      <p className="text-[0.68rem] font-semibold text-slate-400 leading-tight">Tenant Users</p>
+                      <p className="text-xl font-black text-slate-800 tracking-tight leading-none mt-1">{totalUsersCount}</p>
+                      <p className="text-[0.68rem] text-slate-400">{standardUsersCount} standard / {adminCount} admin</p>
+                      <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
+                        <div className="h-1 rounded-full bg-sky-500" style={{ width: `${totalUsersCount > 0 ? Math.min(100, Math.round((adminCount / totalUsersCount) * 100 * 5)) : 0}%` }} />
+                      </div>
+                    </div>
+                    {/* Admin Coverage tile */}
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col gap-1 hover:border-purple-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => handleExecutiveSummaryClick({ area: 'Identity & Privileged Roles' })} title="View admin roles & privileged access">
+                      <p className="text-[0.68rem] font-semibold text-slate-400 leading-tight">Admin Coverage</p>
+                      <p className="text-xl font-black text-slate-800 tracking-tight leading-none mt-1">{adminCount}</p>
+                      <p className="text-[0.68rem] text-slate-400">Privileged accounts</p>
+                      <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
+                        <div className="h-1 rounded-full bg-purple-500" style={{ width: `${totalUsersCount > 0 ? Math.min(100, Math.round((adminCount / totalUsersCount) * 100 * 4)) : 0}%` }} />
+                      </div>
+                    </div>
+                    {/* MFA Compliance tile */}
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col gap-1 hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => handleExecutiveSummaryClick({ area: 'Account Protection & MFA' })} title="View MFA compliance details">
+                      <p className="text-[0.68rem] font-semibold text-slate-400 leading-tight">MFA Compliance</p>
+                      <p className={`text-xl font-black tracking-tight leading-none mt-1 ${mfaDisabledCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{mfaEnabledCount}</p>
+                      <p className="text-[0.68rem] text-slate-400">{mfaDisabledCount} MFA disabled</p>
+                      <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
+                        <div className={`h-1 rounded-full ${mfaDisabledCount > 0 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${totalUsersCount > 0 ? Math.min(100, Math.round((mfaEnabledCount / totalUsersCount) * 100)) : 0}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* License Optimization & Cost Management full section (mini cards view) */}
+                <div className="bg-white rounded-2xl px-6 pt-5 pb-6 border border-slate-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)]">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-indigo-500" />
+                      <h3 className="text-sm font-bold text-slate-800">License Optimization &amp; Cost Management</h3>
+                    </div>
+                    <span className="text-[0.68rem] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">{displayLicenseData.length} SKUs</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {displayLicenseData.map((lic: any, i: number) => {
+                      const purchased = lic.purchased ?? lic.totalLicenses ?? 0;
+                      const assigned = lic.assigned ?? lic.usedLicenses ?? 0;
+                      const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
+                      const savings = lic.potentialSavings || (available === 0 ? '$0 (100% Utilized)' : '$0 (Free Service)');
+                      const pct = purchased > 0 ? Math.round((assigned / purchased) * 100) : 0;
+                      const name = lic.product || lic.license || lic.key || 'License';
+                      const isFull = pct >= 99;
+                      return (
+                        <div key={lic.key || i} onClick={() => handleLicenseClick(lic)} className="border border-slate-200/80 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer group">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold text-slate-700 truncate max-w-[70%]">{name}</span>
+                            <span className={`text-[0.65rem] font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>{pct}% used</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 mb-4 overflow-hidden">
+                            <div className={`h-1.5 rounded-full transition-all ${isFull ? 'bg-emerald-500' : 'bg-slate-300'}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">{purchased.toLocaleString()}</p>
+                              <p className="text-[0.65rem] text-slate-400">Purchased</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">{assigned.toLocaleString()}</p>
+                              <p className="text-[0.65rem] text-slate-400">Assigned</p>
+                            </div>
+                            <div>
+                              <p className={`text-sm font-bold ${available > 0 ? 'text-amber-500' : 'text-emerald-600'}`}>{available.toLocaleString()}</p>
+                              <p className="text-[0.65rem] text-slate-400">Available</p>
+                            </div>
+                          </div>
+                          <div className={`mt-3 pt-3 border-t border-slate-100 text-[0.68rem] font-bold ${savings.includes('Free') ? 'text-amber-500' : 'text-emerald-600'}`}>
+                            {savings.includes('Free') ? '⚠ ' : '✓ '}{savings}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Header Banner */}
                 <div className="bg-gradient-to-r from-[#722ed1] to-[#2f54eb] rounded-2xl p-6 sm:p-8 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
                   <div className="flex items-center gap-5">
