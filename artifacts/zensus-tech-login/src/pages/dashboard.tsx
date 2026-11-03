@@ -521,13 +521,7 @@ export default function Dashboard() {
     try {
       await ensureLiveApiTokens();
       const headers = getLiveApiHeaders();
-      const top = investigationTime === '30D' ? 50 : investigationTime === '7D' ? 30 : 20;
-      // Compute start_date ISO string based on selected time horizon
-      const now = Date.now();
-      const hoursMap: Record<string, number> = { '24H': 24, '7D': 24 * 7, '30D': 24 * 30 };
-      const hours = hoursMap[investigationTime] ?? 24 * 7;
-      const startDate = new Date(now - hours * 3600 * 1000).toISOString();
-      const res = await fetch(`${LIVE_API_BASE}/tenant/audit-logs?top=${top}&start_date=${encodeURIComponent(startDate)}`, {
+      const res = await fetch(`${LIVE_API_BASE}/tenant/audit-logs?top=100`, {
         headers,
       });
       if (res.ok) {
@@ -547,7 +541,7 @@ export default function Dashboard() {
     } finally {
       setFeedLoading(false);
     }
-  }, [investigationTime]);
+  }, []);
 
   const fetchTabData = useCallback(async (tab: string) => {
     const graphToken = sessionStorage.getItem('graph_token');

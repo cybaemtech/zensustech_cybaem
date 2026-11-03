@@ -185,6 +185,7 @@ async def get_tenant_applications(
 async def get_tenant_audit_logs(
     category: Optional[str] = None,
     start_date: Optional[str] = None,
+    top: Optional[int] = 100,
     graph_token: Optional[str] = Depends(get_optional_graph_token)
 ):
     if graph_token and graph_token not in ("dummy", "null", "undefined"):
@@ -215,18 +216,26 @@ async def get_tenant_audit_logs(
                         refreshed = []
                         for idx, item in enumerate(cached):
                             item_copy = dict(item)
-                            # Space logs cleanly within the last 1-14 days
-                            hours_ago = 0.5 + (idx * 3.5)
-                            item_copy["activityDateTime"] = (now - datetime.timedelta(hours=hours_ago)).isoformat()
+                            hrs = item_copy.get("hours_ago")
+                            if hrs is None:
+                                hrs = 0.5 + (idx * 14)
+                            item_copy["activityDateTime"] = (now - datetime.timedelta(hours=float(hrs))).isoformat()
                             refreshed.append(item_copy)
 
-                        # Filter by category if requested
+                        # Filter by start_date if requested
                         filtered = refreshed
+                        if start_date:
+                            try:
+                                filtered = [x for x in filtered if x["activityDateTime"] >= start_date]
+                            except Exception:
+                                pass
+
+                        # Filter by category if requested
                         if category and category != "All":
                             c_low = category.lower()
                             filtered = [x for x in filtered if c_low in (x.get("category") or "").lower() or c_low in (x.get("activityDisplayName") or "").lower()]
 
-                        return {"logs": filtered or refreshed, "value": filtered or refreshed}
+                        return {"logs": filtered, "value": filtered}
             except Exception as fe:
                 logger.warning(f"Error reading audit log fallback {p}: {fe}")
 

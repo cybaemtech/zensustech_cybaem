@@ -301,26 +301,25 @@ export const DEFAULT_DASHBOARD_STATS = {
 
 export const DEFAULT_AUDIT_LOGS = [
   {
-    "id": "SSGM_4ee071fe-b79a-4158-b8f2-6b9164fc2ebc_001",
+    "id": "LOG_GRO_00050_01",
     "category": "GroupManagement",
-    "correlationId": "4ee071fe-b79a-4158-b8f2-6b9164fc2ebc",
+    "correlationId": "corr-groupmanagement-5",
     "result": "success",
     "resultReason": "OK",
     "activityDisplayName": "GroupLifecyclePolicies_Get",
-    "activityDateTime": "2026-11-03T08:32:02.417317+00:00",
+    "hours_ago": 0.5,
     "loggedByService": "Self-service Group Management",
     "operationType": "Read",
     "initiatedBy": {
       "user": null,
       "app": {
-        "appId": "0ffa2118-1e76-4537-b0d4-0ad853240893",
         "displayName": "CybaemTech-0365",
-        "servicePrincipalId": "2e5db490-09ef-49c9-9fe5-76c1525716ae"
+        "appId": "0ffa2118-1e76-4537-b0d4-0ad853240893"
       }
     },
     "targetResources": [
       {
-        "id": "00000000-0000-0000-0000-000000000000",
+        "id": "res-5",
         "displayName": "Group Lifecycle Policy",
         "type": "Policy",
         "modifiedProperties": []
@@ -328,87 +327,100 @@ export const DEFAULT_AUDIT_LOGS = [
     ],
     "additionalDetails": [
       {
-        "key": "RequestId",
-        "value": "62385752-016b-475b-8068-8e7e3fbfb562"
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "OK"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-03T08:48:30.522261+00:00"
   },
   {
-    "id": "AUTH_8a123f45-e678-4bc9-9812-3456789abcde_002",
+    "id": "LOG_AUT_00120_01",
     "category": "Authentication",
-    "correlationId": "8a123f45-e678-4bc9-9812-3456789abcde",
+    "correlationId": "corr-authentication-12",
     "result": "success",
     "resultReason": "MFA Strong Auth Success",
     "activityDisplayName": "User login with MFA verification",
-    "activityDateTime": "2026-11-03T07:50:02.417317+00:00",
+    "hours_ago": 1.2,
     "loggedByService": "Core Directory",
     "operationType": "Sign-in",
     "initiatedBy": {
       "user": {
         "displayName": "cybaem",
-        "userPrincipalName": "cybaem@zensustech.com",
-        "ipAddress": "103.21.124.8"
+        "userPrincipalName": "cybaem@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
-        "displayName": "cybaem",
+        "id": "res-12",
+        "displayName": "cybaem@zensustech.com",
         "type": "User",
-        "userPrincipalName": "cybaem@zensustech.com"
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "AuthMethod",
-        "value": "Microsoft Authenticator Push"
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "MFA Strong Auth Success"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-03T08:06:30.522261+00:00"
   },
   {
-    "id": "AUTH_9c234a56-b789-4cd0-8923-4567890bcdef_003",
+    "id": "LOG_AUT_00250_01",
     "category": "Authentication",
-    "correlationId": "9c234a56-b789-4cd0-8923-4567890bcdef",
+    "correlationId": "corr-authentication-25",
     "result": "failure",
     "resultReason": "Invalid password attempt",
     "activityDisplayName": "User login failure (Bad Password)",
-    "activityDateTime": "2026-11-03T06:32:02.417317+00:00",
+    "hours_ago": 2.5,
     "loggedByService": "Core Directory",
     "operationType": "Sign-in",
     "initiatedBy": {
       "user": {
         "displayName": "Chaithra",
-        "userPrincipalName": "Chaithra@zensustech.com",
-        "ipAddress": "49.36.110.42"
+        "userPrincipalName": "Chaithra@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "4963ff19-c681-4a7e-a044-facb085add51",
-        "displayName": "Chaithra",
+        "id": "res-25",
+        "displayName": "Chaithra@zensustech.com",
         "type": "User",
-        "userPrincipalName": "Chaithra@zensustech.com"
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "ErrorCode",
-        "value": "50126"
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Invalid password attempt"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-03T06:48:30.522261+00:00"
   },
   {
-    "id": "USER_1b345c67-c890-4de1-9034-5678901cdef0_004",
+    "id": "LOG_USE_00400_01",
     "category": "UserManagement",
-    "correlationId": "1b345c67-c890-4de1-9034-5678901cdef0",
+    "correlationId": "corr-usermanagement-40",
     "result": "success",
     "resultReason": "Passkey registered",
     "activityDisplayName": "Get passkey creation options",
-    "activityDateTime": "2026-11-03T05:02:02.417317+00:00",
+    "hours_ago": 4.0,
     "loggedByService": "User Management",
-    "operationType": "Credential Management",
+    "operationType": "Read",
     "initiatedBy": {
       "user": {
         "displayName": "cybaem",
@@ -418,152 +430,181 @@ export const DEFAULT_AUDIT_LOGS = [
     },
     "targetResources": [
       {
-        "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
+        "id": "res-40",
         "displayName": "cybaem",
-        "type": "User"
+        "type": "User",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "PasskeyType",
-        "value": "FIDO2 / WebAuthn"
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Passkey registered"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-03T05:18:30.522261+00:00"
   },
   {
-    "id": "ROLE_2c456d78-d901-4ef2-a145-6789012def01_005",
+    "id": "LOG_ROL_00650_01",
     "category": "RoleManagement",
-    "correlationId": "2c456d78-d901-4ef2-a145-6789012def01",
+    "correlationId": "corr-rolemanagement-65",
     "result": "success",
     "resultReason": "Role Verified",
     "activityDisplayName": "Privileged Role Verification (Global Reader)",
-    "activityDateTime": "2026-11-03T02:32:02.417317+00:00",
+    "hours_ago": 6.5,
     "loggedByService": "PIM",
-    "operationType": "Role Assignment",
+    "operationType": "Update",
     "initiatedBy": {
       "user": {
         "displayName": "admin@zensustech.com",
-        "userPrincipalName": "admin@zensustech.com"
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "role-gr-01",
+        "id": "res-65",
         "displayName": "Global Reader",
-        "type": "DirectoryRole"
+        "type": "DirectoryRole",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "AssignmentType",
-        "value": "Permanent Active"
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Role Verified"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-03T02:48:30.522261+00:00"
   },
   {
-    "id": "APP_3d567e89-ea12-4f03-b256-7890123ef012_006",
+    "id": "LOG_APP_01000_01",
     "category": "Application",
-    "correlationId": "3d567e89-ea12-4f03-b256-7890123ef012",
+    "correlationId": "corr-application-100",
     "result": "success",
-    "resultReason": "App Token Generated",
+    "resultReason": "Token Issued",
     "activityDisplayName": "Service Principal Token Handshake",
-    "activityDateTime": "2026-11-02T23:02:02.417317+00:00",
-    "loggedByService": "Application Proxy",
-    "operationType": "Token Issue",
+    "hours_ago": 10.0,
+    "loggedByService": "User Management",
+    "operationType": "Update",
     "initiatedBy": {
       "user": null,
       "app": {
-        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae",
-        "displayName": "ZensusTechAI-Ops"
+        "displayName": "ZensusTechAI-Ops",
+        "appId": "0ffa2118-1e76-4537-b0d4-0ad853240893"
       }
     },
     "targetResources": [
       {
-        "id": "sp-ai-ops-01",
+        "id": "res-100",
         "displayName": "ZensusTechAI-Ops",
-        "type": "ServicePrincipal"
+        "type": "ServicePrincipal",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "OAuthScope",
-        "value": "https://graph.microsoft.com/.default"
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Token Issued"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-02T23:18:30.522261+00:00"
   },
   {
-    "id": "GRP_4e678f90-fb23-4014-c367-8901234f0123_007",
+    "id": "LOG_GRO_01400_01",
     "category": "GroupManagement",
-    "correlationId": "4e678f90-fb23-4014-c367-8901234f0123",
+    "correlationId": "corr-groupmanagement-140",
     "result": "success",
     "resultReason": "Settings Retrievable",
     "activityDisplayName": "Settings_GetSettingsAsync",
-    "activityDateTime": "2026-11-02T19:02:02.417317+00:00",
+    "hours_ago": 14.0,
     "loggedByService": "Self-service Group Management",
     "operationType": "Read",
     "initiatedBy": {
       "user": null,
       "app": {
         "displayName": "System Service",
-        "servicePrincipalId": "2e5db490-09ef-49c9-9fe5-76c1525716ae"
+        "appId": "0ffa2118-1e76-4537-b0d4-0ad853240893"
       }
     },
     "targetResources": [
       {
-        "id": "00000000-0000-0000-0000-000000000000",
+        "id": "res-140",
         "displayName": "Tenant Group Policy",
-        "type": "Policy"
+        "type": "Policy",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "TenantId",
-        "value": "9414ece9-9039-40b7-a6a7-7ecbe7409245"
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Settings Retrievable"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-02T19:18:30.522261+00:00"
   },
   {
-    "id": "AUTH_5f7890a1-0c34-4125-d478-901234501234_008",
+    "id": "LOG_AUT_02000_01",
     "category": "Authentication",
-    "correlationId": "5f7890a1-0c34-4125-d478-901234501234",
+    "correlationId": "corr-authentication-200",
     "result": "failure",
     "resultReason": "MFA challenge timed out",
     "activityDisplayName": "Conditional Access MFA Prompt Timeout",
-    "activityDateTime": "2026-11-02T13:02:02.417317+00:00",
-    "loggedByService": "Conditional Access",
-    "operationType": "Policy Evaluation",
+    "hours_ago": 20.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
     "initiatedBy": {
       "user": {
         "displayName": "Microsoft",
-        "userPrincipalName": "Microsoft@zensustech.com",
-        "ipAddress": "104.28.19.74"
+        "userPrincipalName": "Microsoft@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "c7496808-c608-4f22-ba16-33eee3aa2bf6",
-        "displayName": "Microsoft",
-        "type": "User"
+        "id": "res-200",
+        "displayName": "Microsoft@zensustech.com",
+        "type": "User",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "PolicyName",
-        "value": "Enforce MFA for Cloud Apps"
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "MFA challenge timed out"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-02T13:18:30.522261+00:00"
   },
   {
-    "id": "USER_6a8901b2-1d45-4236-e589-012345612345_009",
+    "id": "LOG_USE_02800_02",
     "category": "UserManagement",
-    "correlationId": "6a8901b2-1d45-4236-e589-012345612345",
+    "correlationId": "corr-usermanagement-280",
     "result": "success",
     "resultReason": "Profile Updated",
     "activityDisplayName": "Update user attributes",
-    "activityDateTime": "2026-11-01T21:02:02.417317+00:00",
-    "loggedByService": "Core Directory",
+    "hours_ago": 28.0,
+    "loggedByService": "User Management",
     "operationType": "Update",
     "initiatedBy": {
       "user": {
@@ -574,216 +615,256 @@ export const DEFAULT_AUDIT_LOGS = [
     },
     "targetResources": [
       {
-        "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
+        "id": "res-280",
         "displayName": "cybaem",
-        "type": "User"
+        "type": "User",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "Attribute",
-        "value": "UsageLocation: IN"
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Profile Updated"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-02T05:18:30.522261+00:00"
   },
   {
-    "id": "APP_7b9012c3-2e56-4347-f69a-123456723456_010",
+    "id": "LOG_APP_03600_02",
     "category": "Application",
-    "correlationId": "7b9012c3-2e56-4347-f69a-123456723456",
+    "correlationId": "corr-application-360",
     "result": "success",
     "resultReason": "Consent granted",
     "activityDisplayName": "Consent to application (CybaemTech-0365)",
-    "activityDateTime": "2026-11-01T09:02:02.417317+00:00",
-    "loggedByService": "Core Directory",
-    "operationType": "Consent",
+    "hours_ago": 36.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
     "initiatedBy": {
       "user": {
-        "displayName": "Global Administrator",
-        "userPrincipalName": "admin@zensustech.com"
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "app-consent-01",
+        "id": "res-360",
         "displayName": "CybaemTech-0365",
-        "type": "Application"
+        "type": "Application",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "Permissions",
-        "value": "User.Read, Directory.Read.All"
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Consent granted"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-01T21:18:30.522261+00:00"
   },
   {
-    "id": "GRP_8c0123d4-3f67-4458-07ab-234567834567_011",
+    "id": "LOG_GRO_04400_02",
     "category": "GroupManagement",
-    "correlationId": "8c0123d4-3f67-4458-07ab-234567834567",
+    "correlationId": "corr-groupmanagement-440",
     "result": "success",
-    "resultReason": "Approval Request Completed",
+    "resultReason": "Approvals retrieved",
     "activityDisplayName": "Approval_GetAll",
-    "activityDateTime": "2026-10-31T21:02:02.417317+00:00",
+    "hours_ago": 44.0,
     "loggedByService": "Self-service Group Management",
     "operationType": "Read",
     "initiatedBy": {
       "user": null,
       "app": {
         "displayName": "System Service",
-        "servicePrincipalId": "2e5db490-09ef-49c9-9fe5-76c1525716ae"
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
       }
     },
     "targetResources": [
       {
-        "id": "grp-approvals-01",
+        "id": "res-440",
         "displayName": "Access Approvals",
-        "type": "Workflow"
+        "type": "Workflow",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "ResultCode",
-        "value": "200"
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Approvals retrieved"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-01T13:18:30.522261+00:00"
   },
   {
-    "id": "ROLE_9d1234e5-4078-4569-18bc-345678945678_012",
+    "id": "LOG_ROL_05200_02",
     "category": "RoleManagement",
-    "correlationId": "9d1234e5-4078-4569-18bc-345678945678",
+    "correlationId": "corr-rolemanagement-520",
     "result": "success",
-    "resultReason": "Role Assignment Added",
+    "resultReason": "Role Assigned",
     "activityDisplayName": "Add member to role (Security Administrator)",
-    "activityDateTime": "2026-10-31T01:02:02.417317+00:00",
+    "hours_ago": 52.0,
     "loggedByService": "PIM",
-    "operationType": "Role Assignment",
+    "operationType": "Read",
     "initiatedBy": {
       "user": {
         "displayName": "admin@zensustech.com",
-        "userPrincipalName": "admin@zensustech.com"
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "role-secadmin-01",
+        "id": "res-520",
         "displayName": "Security Administrator",
-        "type": "DirectoryRole"
+        "type": "DirectoryRole",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "RoleName",
-        "value": "Security Administrator"
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Role Assigned"
       }
-    ]
+    ],
+    "activityDateTime": "2026-11-01T05:18:30.522261+00:00"
   },
   {
-    "id": "AUTH_0e2345f6-5189-467a-29cd-456789056789_013",
+    "id": "LOG_AUT_06000_02",
     "category": "Authentication",
-    "correlationId": "0e2345f6-5189-467a-29cd-456789056789",
+    "correlationId": "corr-authentication-600",
     "result": "success",
-    "resultReason": "Passwordless FIDO2 Login",
-    "activityDisplayName": "User login with FIDO2 Security Key",
-    "activityDateTime": "2026-10-29T19:02:02.417317+00:00",
+    "resultReason": "FIDO2 Key Verified",
+    "activityDisplayName": "Passwordless FIDO2 Login",
+    "hours_ago": 60.0,
     "loggedByService": "Core Directory",
     "operationType": "Sign-in",
     "initiatedBy": {
       "user": {
         "displayName": "cybaem",
-        "userPrincipalName": "cybaem@zensustech.com",
-        "ipAddress": "103.21.124.8"
+        "userPrincipalName": "cybaem@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "fecb0d9a-a656-4801-8341-79486d71bc77",
+        "id": "res-600",
         "displayName": "cybaem",
-        "type": "User"
+        "type": "User",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "CredentialType",
-        "value": "FIDO2 Security Key"
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "FIDO2 Key Verified"
       }
-    ]
+    ],
+    "activityDateTime": "2026-10-31T21:18:30.522261+00:00"
   },
   {
-    "id": "AUTH_1f3456a7-629a-478b-3ade-567890167890_014",
+    "id": "LOG_AUT_06800_02",
     "category": "Authentication",
-    "correlationId": "1f3456a7-629a-478b-3ade-567890167890",
+    "correlationId": "corr-authentication-680",
     "result": "failure",
-    "resultReason": "Blocked by IP location filter",
+    "resultReason": "Untrusted IP range",
     "activityDisplayName": "Conditional Access Block (Untrusted Location)",
-    "activityDateTime": "2026-10-28T13:02:02.417317+00:00",
-    "loggedByService": "Conditional Access",
+    "hours_ago": 68.0,
+    "loggedByService": "Core Directory",
     "operationType": "Sign-in",
     "initiatedBy": {
-      "user": {
-        "displayName": "ExternalGuest",
-        "userPrincipalName": "guest@external.org",
-        "ipAddress": "185.220.101.5"
-      },
-      "app": null
+      "user": null,
+      "app": {
+        "displayName": "GuestUser",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
     },
     "targetResources": [
       {
-        "id": "guest-user-01",
-        "displayName": "ExternalGuest",
-        "type": "User"
+        "id": "res-680",
+        "displayName": "guest@external.org",
+        "type": "User",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "BlockedCountry",
-        "value": "RU"
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Untrusted IP range"
       }
-    ]
+    ],
+    "activityDateTime": "2026-10-31T13:18:30.522261+00:00"
   },
   {
-    "id": "APP_2a4567b8-73ab-489c-4bef-678901278901_015",
+    "id": "LOG_APP_07600_02",
     "category": "Application",
-    "correlationId": "2a4567b8-73ab-489c-4bef-678901278901",
+    "correlationId": "corr-application-760",
     "result": "success",
-    "resultReason": "Secret Credential Added",
+    "resultReason": "Key Added",
     "activityDisplayName": "Add service principal credentials",
-    "activityDateTime": "2026-10-26T21:02:02.417317+00:00",
-    "loggedByService": "Core Directory",
-    "operationType": "Key Management",
+    "hours_ago": 76.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
     "initiatedBy": {
       "user": {
         "displayName": "admin@zensustech.com",
-        "userPrincipalName": "admin@zensustech.com"
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "sp-test-reg-01",
+        "id": "res-760",
         "displayName": "Test-App-Registration",
-        "type": "ServicePrincipal"
+        "type": "ServicePrincipal",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "KeyType",
-        "value": "ClientSecret (24 months)"
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Key Added"
       }
-    ]
+    ],
+    "activityDateTime": "2026-10-31T05:18:30.522261+00:00"
   },
   {
-    "id": "USER_3b5678c9-84bc-49ad-5cf0-789012389012_016",
+    "id": "LOG_USE_08500_02",
     "category": "UserManagement",
-    "correlationId": "3b5678c9-84bc-49ad-5cf0-789012389012",
+    "correlationId": "corr-usermanagement-850",
     "result": "success",
-    "resultReason": "Password Reset Success",
+    "resultReason": "Password Reset",
     "activityDisplayName": "Self-service password reset flow completed",
-    "activityDateTime": "2026-10-24T09:02:02.417317+00:00",
-    "loggedByService": "SSPR",
-    "operationType": "Password Reset",
+    "hours_ago": 85.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
     "initiatedBy": {
       "user": {
         "displayName": "Chaithra",
@@ -793,78 +874,1280 @@ export const DEFAULT_AUDIT_LOGS = [
     },
     "targetResources": [
       {
-        "id": "4963ff19-c681-4a7e-a044-facb085add51",
+        "id": "res-850",
         "displayName": "Chaithra",
-        "type": "User"
+        "type": "User",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "Method",
-        "value": "Mobile OTP + Security Questions"
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Password Reset"
       }
-    ]
+    ],
+    "activityDateTime": "2026-10-30T20:18:30.522261+00:00"
   },
   {
-    "id": "ROLE_4c6789da-95cd-4abe-6d01-890123490123_017",
+    "id": "LOG_ROL_09500_02",
     "category": "RoleManagement",
-    "correlationId": "4c6789da-95cd-4abe-6d01-890123490123",
+    "correlationId": "corr-rolemanagement-950",
     "result": "success",
-    "resultReason": "PIM Access Review Completed",
+    "resultReason": "Review Approved",
     "activityDisplayName": "PIM Access Review: Global Administrators",
-    "activityDateTime": "2026-10-21T01:02:02.417317+00:00",
+    "hours_ago": 95.0,
     "loggedByService": "PIM",
-    "operationType": "Access Review",
+    "operationType": "Read",
     "initiatedBy": {
       "user": {
         "displayName": "admin@zensustech.com",
-        "userPrincipalName": "admin@zensustech.com"
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "role-ga-01",
+        "id": "res-950",
         "displayName": "Global Administrator",
-        "type": "DirectoryRole"
+        "type": "DirectoryRole",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "ReviewDecision",
-        "value": "Approve 4 Admin Accounts"
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Review Approved"
       }
-    ]
+    ],
+    "activityDateTime": "2026-10-30T10:18:30.522261+00:00"
   },
   {
-    "id": "GRP_5d7890eb-a6de-4bcf-7e12-901234501234_018",
+    "id": "LOG_GRO_10500_02",
     "category": "GroupManagement",
-    "correlationId": "5d7890eb-a6de-4bcf-7e12-901234501234",
+    "correlationId": "corr-groupmanagement-1050",
     "result": "success",
-    "resultReason": "Security Group Modified",
+    "resultReason": "Member Added",
     "activityDisplayName": "Add member to security group (AdminAgents)",
-    "activityDateTime": "2026-10-16T21:02:02.417317+00:00",
-    "loggedByService": "Core Directory",
-    "operationType": "Membership",
+    "hours_ago": 105.0,
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
     "initiatedBy": {
       "user": {
         "displayName": "admin@zensustech.com",
-        "userPrincipalName": "admin@zensustech.com"
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
       },
       "app": null
     },
     "targetResources": [
       {
-        "id": "06aa20f3-7505-4060-b8d5-e6027dde23a2",
+        "id": "res-1050",
         "displayName": "AdminAgents",
-        "type": "Group"
+        "type": "Group",
+        "modifiedProperties": []
       }
     ],
     "additionalDetails": [
       {
-        "key": "AddedMember",
-        "value": "cybaem@zensustech.com"
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Member Added"
       }
-    ]
+    ],
+    "activityDateTime": "2026-10-30T00:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_AUT_11500_02",
+    "category": "Authentication",
+    "correlationId": "corr-authentication-1150",
+    "result": "success",
+    "resultReason": "Passkey Verified",
+    "activityDisplayName": "Interactive user sign-in",
+    "hours_ago": 115.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "vinay@zensustech.com",
+        "userPrincipalName": "vinay@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-1150",
+        "displayName": "vinay@zensustech.com",
+        "type": "User",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Passkey Verified"
+      }
+    ],
+    "activityDateTime": "2026-10-29T14:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_APP_12500_02",
+    "category": "Application",
+    "correlationId": "corr-application-1250",
+    "result": "failure",
+    "resultReason": "Expired client secret",
+    "activityDisplayName": "OAuth application token request failed",
+    "hours_ago": 125.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "ZensusTech Login App",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-1250",
+        "displayName": "ZensusTech Login App",
+        "type": "Application",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Expired client secret"
+      }
+    ],
+    "activityDateTime": "2026-10-29T04:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_GRO_13500_02",
+    "category": "GroupManagement",
+    "correlationId": "corr-groupmanagement-1350",
+    "result": "success",
+    "resultReason": "Group Updated",
+    "activityDisplayName": "Update group display name",
+    "hours_ago": 135.0,
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Update",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-1350",
+        "displayName": "ZensusTech-Sales",
+        "type": "Group",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Group Updated"
+      }
+    ],
+    "activityDateTime": "2026-10-28T18:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_ROL_14200_02",
+    "category": "RoleManagement",
+    "correlationId": "corr-rolemanagement-1420",
+    "result": "failure",
+    "resultReason": "Elevation denied by policy",
+    "activityDisplayName": "Privilege escalation request rejected",
+    "hours_ago": 142.0,
+    "loggedByService": "PIM",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "cybaem",
+        "userPrincipalName": "cybaem@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-1420",
+        "displayName": "Global Administrator",
+        "type": "DirectoryRole",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Elevation denied by policy"
+      }
+    ],
+    "activityDateTime": "2026-10-28T11:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_USE_14800_02",
+    "category": "UserManagement",
+    "correlationId": "corr-usermanagement-1480",
+    "result": "success",
+    "resultReason": "Account Activated",
+    "activityDisplayName": "User account enabled",
+    "hours_ago": 148.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-1480",
+        "displayName": "cybaem@zensustech.com",
+        "type": "User",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Account Activated"
+      }
+    ],
+    "activityDateTime": "2026-10-28T05:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_USE_15400_02",
+    "category": "UserManagement",
+    "correlationId": "corr-usermanagement-1540",
+    "result": "success",
+    "resultReason": "Workplace Joined",
+    "activityDisplayName": "Device registration completed",
+    "hours_ago": 154.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "cybaem",
+        "userPrincipalName": "cybaem@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-1540",
+        "displayName": "Vinay-Magam",
+        "type": "Device",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Workplace Joined"
+      }
+    ],
+    "activityDateTime": "2026-10-27T23:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_AUT_15800_02",
+    "category": "Authentication",
+    "correlationId": "corr-authentication-1580",
+    "result": "failure",
+    "resultReason": "Rate limit exceeded",
+    "activityDisplayName": "Sign-in throttled (Too many requests)",
+    "hours_ago": 158.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "UnknownActor",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-1580",
+        "displayName": "external@anon.com",
+        "type": "User",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Rate limit exceeded"
+      }
+    ],
+    "activityDateTime": "2026-10-27T19:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_GRO_16000_02",
+    "category": "GroupManagement",
+    "correlationId": "corr-groupmanagement-1600",
+    "result": "success",
+    "resultReason": "Member Removed",
+    "activityDisplayName": "Group member removed",
+    "hours_ago": 160.0,
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-1600",
+        "displayName": "SalesAgents",
+        "type": "Group",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Member Removed"
+      }
+    ],
+    "activityDateTime": "2026-10-27T17:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_GRO_18500_03",
+    "category": "GroupManagement",
+    "correlationId": "corr-groupmanagement-1850",
+    "result": "success",
+    "resultReason": "Sync Successful",
+    "activityDisplayName": "Directory synchronization cycle completed",
+    "hours_ago": 185.0,
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "SyncService",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-1850",
+        "displayName": "Entra ID Connect",
+        "type": "Directory",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Sync Successful"
+      }
+    ],
+    "activityDateTime": "2026-10-26T16:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_APP_20000_03",
+    "category": "Application",
+    "correlationId": "corr-application-2000",
+    "result": "success",
+    "resultReason": "Permissions Granted",
+    "activityDisplayName": "Add delegated permission grants",
+    "hours_ago": 200.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-2000",
+        "displayName": "Microsoft Graph",
+        "type": "OAuth2PermissionGrant",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Permissions Granted"
+      }
+    ],
+    "activityDateTime": "2026-10-26T01:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_AUT_22000_03",
+    "category": "Authentication",
+    "correlationId": "corr-authentication-2200",
+    "result": "success",
+    "resultReason": "Break-glass Auth",
+    "activityDisplayName": "Emergency Access Account Sign-in",
+    "hours_ago": 220.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "breakglass@zensustech.com",
+        "userPrincipalName": "breakglass@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-2200",
+        "displayName": "breakglass@zensustech.com",
+        "type": "User",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Break-glass Auth"
+      }
+    ],
+    "activityDateTime": "2026-10-25T05:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_ROL_24000_03",
+    "category": "RoleManagement",
+    "correlationId": "corr-rolemanagement-2400",
+    "result": "success",
+    "resultReason": "Policy Enacted",
+    "activityDisplayName": "Conditional Access policy created",
+    "hours_ago": 240.0,
+    "loggedByService": "PIM",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-2400",
+        "displayName": "Require MFA for Admins",
+        "type": "Policy",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Policy Enacted"
+      }
+    ],
+    "activityDateTime": "2026-10-24T09:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_APP_26000_03",
+    "category": "Application",
+    "correlationId": "corr-application-2600",
+    "result": "success",
+    "resultReason": "SP Removed",
+    "activityDisplayName": "Service principal deleted",
+    "hours_ago": 260.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-2600",
+        "displayName": "Deprecated-Integration",
+        "type": "ServicePrincipal",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "SP Removed"
+      }
+    ],
+    "activityDateTime": "2026-10-23T13:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_AUT_28000_03",
+    "category": "Authentication",
+    "correlationId": "corr-authentication-2800",
+    "result": "failure",
+    "resultReason": "Blocked by Smart Lockout",
+    "activityDisplayName": "Password spray attempt blocked",
+    "hours_ago": 280.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "ThreatIntelBot",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-2800",
+        "displayName": "multiple@zensustech.com",
+        "type": "User",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Blocked by Smart Lockout"
+      }
+    ],
+    "activityDateTime": "2026-10-22T17:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_USE_30000_03",
+    "category": "UserManagement",
+    "correlationId": "corr-usermanagement-3000",
+    "result": "success",
+    "resultReason": "14 Users Validated",
+    "activityDisplayName": "Bulk user import completed",
+    "hours_ago": 300.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-3000",
+        "displayName": "CSV Import",
+        "type": "Batch",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "14 Users Validated"
+      }
+    ],
+    "activityDateTime": "2026-10-21T21:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_USE_32000_03",
+    "category": "UserManagement",
+    "correlationId": "corr-usermanagement-3200",
+    "result": "success",
+    "resultReason": "Business Basic Assigned",
+    "activityDisplayName": "License assigned to user",
+    "hours_ago": 320.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-3200",
+        "displayName": "Microsoft 365 Business Basic",
+        "type": "License",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Business Basic Assigned"
+      }
+    ],
+    "activityDateTime": "2026-10-21T01:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_ROL_34000_03",
+    "category": "RoleManagement",
+    "correlationId": "corr-rolemanagement-3400",
+    "result": "success",
+    "resultReason": "PIM Activation",
+    "activityDisplayName": "Privileged role activation requested",
+    "hours_ago": 340.0,
+    "loggedByService": "PIM",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-3400",
+        "displayName": "Global Administrator",
+        "type": "DirectoryRole",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "PIM Activation"
+      }
+    ],
+    "activityDateTime": "2026-10-20T05:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_APP_36000_03",
+    "category": "Application",
+    "correlationId": "corr-application-3600",
+    "result": "failure",
+    "resultReason": "High-risk permissions blocked",
+    "activityDisplayName": "Malicious app consent attempt detected",
+    "hours_ago": 360.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "SuspiciousApp",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-3600",
+        "displayName": "Unknown OAuth App",
+        "type": "Application",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "High-risk permissions blocked"
+      }
+    ],
+    "activityDateTime": "2026-10-19T09:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_AUT_38000_03",
+    "category": "Authentication",
+    "correlationId": "corr-authentication-3800",
+    "result": "success",
+    "resultReason": "Custom Ban List Active",
+    "activityDisplayName": "Password protection policy enforced",
+    "hours_ago": 380.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "SecurityAdmin",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-3800",
+        "displayName": "Banned Passwords",
+        "type": "Policy",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Custom Ban List Active"
+      }
+    ],
+    "activityDateTime": "2026-10-18T13:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_GRO_41000_03",
+    "category": "GroupManagement",
+    "correlationId": "corr-groupmanagement-4100",
+    "result": "success",
+    "resultReason": "Group Created",
+    "activityDisplayName": "Security group created (ZensusTechCarriers)",
+    "hours_ago": 410.0,
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-4100",
+        "displayName": "ZensustechCarriers",
+        "type": "Group",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Group Created"
+      }
+    ],
+    "activityDateTime": "2026-10-17T07:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_USE_44000_03",
+    "category": "UserManagement",
+    "correlationId": "corr-usermanagement-4400",
+    "result": "success",
+    "resultReason": "Guest Joined",
+    "activityDisplayName": "User invitation accepted",
+    "hours_ago": 440.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "guest@partner.com",
+        "userPrincipalName": "guest@partner.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-4400",
+        "displayName": "guest@partner.com",
+        "type": "User",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Guest Joined"
+      }
+    ],
+    "activityDateTime": "2026-10-16T01:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_APP_47000_03",
+    "category": "Application",
+    "correlationId": "corr-application-4700",
+    "result": "failure",
+    "resultReason": "Secret Expired",
+    "activityDisplayName": "Stale service principal secret expired",
+    "hours_ago": 470.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "System Monitoring",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-4700",
+        "displayName": "Legacy-Feed",
+        "type": "ServicePrincipal",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Secret Expired"
+      }
+    ],
+    "activityDateTime": "2026-10-14T19:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_AUT_50000_03",
+    "category": "Authentication",
+    "correlationId": "corr-authentication-5000",
+    "result": "success",
+    "resultReason": "Registration Required",
+    "activityDisplayName": "MFA registration policy updated",
+    "hours_ago": 500.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-5000",
+        "displayName": "MFA Registration Policy",
+        "type": "Policy",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Registration Required"
+      }
+    ],
+    "activityDateTime": "2026-10-13T13:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_ROL_53000_03",
+    "category": "RoleManagement",
+    "correlationId": "corr-rolemanagement-5300",
+    "result": "success",
+    "resultReason": "Least Privilege Enforced",
+    "activityDisplayName": "Role assignment removed",
+    "hours_ago": 530.0,
+    "loggedByService": "PIM",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-5300",
+        "displayName": "Application Administrator",
+        "type": "DirectoryRole",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Least Privilege Enforced"
+      }
+    ],
+    "activityDateTime": "2026-10-12T07:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_GRO_56000_03",
+    "category": "GroupManagement",
+    "correlationId": "corr-groupmanagement-5600",
+    "result": "success",
+    "resultReason": "Mail Enabled",
+    "activityDisplayName": "Group mail settings updated",
+    "hours_ago": 560.0,
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-5600",
+        "displayName": "Info",
+        "type": "Group",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Mail Enabled"
+      }
+    ],
+    "activityDateTime": "2026-10-11T01:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_USE_59000_03",
+    "category": "UserManagement",
+    "correlationId": "corr-usermanagement-5900",
+    "result": "failure",
+    "resultReason": "Risky User Detected",
+    "activityDisplayName": "User risk level changed to High",
+    "hours_ago": 590.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "Identity Protection",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-5900",
+        "displayName": "Microsoft@zensustech.com",
+        "type": "User",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "UserManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Risky User Detected"
+      }
+    ],
+    "activityDateTime": "2026-10-09T19:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_APP_62000_03",
+    "category": "Application",
+    "correlationId": "corr-application-6200",
+    "result": "success",
+    "resultReason": "Key Rotated",
+    "activityDisplayName": "Application sign-in key rotated",
+    "hours_ago": 620.0,
+    "loggedByService": "User Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-6200",
+        "displayName": "CybaemTech-0365",
+        "type": "KeyCredential",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Application"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Key Rotated"
+      }
+    ],
+    "activityDateTime": "2026-10-08T13:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_AUT_64000_03",
+    "category": "Authentication",
+    "correlationId": "corr-authentication-6400",
+    "result": "success",
+    "resultReason": "FIDO2 Key Registered",
+    "activityDisplayName": "FIDO2 security key registration",
+    "hours_ago": 640.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-6400",
+        "displayName": "admin@zensustech.com",
+        "type": "User",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "FIDO2 Key Registered"
+      }
+    ],
+    "activityDateTime": "2026-10-07T17:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_GRO_66000_03",
+    "category": "GroupManagement",
+    "correlationId": "corr-groupmanagement-6600",
+    "result": "success",
+    "resultReason": "Contact Updated",
+    "activityDisplayName": "Tenant technical contact updated",
+    "hours_ago": 660.0,
+    "loggedByService": "Self-service Group Management",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-6600",
+        "displayName": "ZensusTech Tenant",
+        "type": "Tenant",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "GroupManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Contact Updated"
+      }
+    ],
+    "activityDateTime": "2026-10-06T21:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_AUT_68000_03",
+    "category": "Authentication",
+    "correlationId": "corr-authentication-6800",
+    "result": "success",
+    "resultReason": "Domain Verified",
+    "activityDisplayName": "External domain federation verified",
+    "hours_ago": 680.0,
+    "loggedByService": "Core Directory",
+    "operationType": "Sign-in",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-6800",
+        "displayName": "zensustech.com",
+        "type": "Domain",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "Authentication"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Domain Verified"
+      }
+    ],
+    "activityDateTime": "2026-10-06T01:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_ROL_69500_03",
+    "category": "RoleManagement",
+    "correlationId": "corr-rolemanagement-6950",
+    "result": "success",
+    "resultReason": "Entitlement Management",
+    "activityDisplayName": "Access package assignment granted",
+    "hours_ago": 695.0,
+    "loggedByService": "PIM",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": {
+        "displayName": "admin@zensustech.com",
+        "userPrincipalName": "admin@zensustech.com@zensustech.com"
+      },
+      "app": null
+    },
+    "targetResources": [
+      {
+        "id": "res-6950",
+        "displayName": "Default Developer Access",
+        "type": "AccessPackage",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Entitlement Management"
+      }
+    ],
+    "activityDateTime": "2026-10-05T10:18:30.522261+00:00"
+  },
+  {
+    "id": "LOG_ROL_70000_03",
+    "category": "RoleManagement",
+    "correlationId": "corr-rolemanagement-7000",
+    "result": "success",
+    "resultReason": "Secure Score Updated",
+    "activityDisplayName": "Security baseline assessment completed",
+    "hours_ago": 700.0,
+    "loggedByService": "PIM",
+    "operationType": "Read",
+    "initiatedBy": {
+      "user": null,
+      "app": {
+        "displayName": "Defender Engine",
+        "appId": "31d16397-9b29-4d39-9d2b-5e29446f57ae"
+      }
+    },
+    "targetResources": [
+      {
+        "id": "res-7000",
+        "displayName": "Microsoft 365 Tenant Posture",
+        "type": "SecureScore",
+        "modifiedProperties": []
+      }
+    ],
+    "additionalDetails": [
+      {
+        "key": "Category",
+        "value": "RoleManagement"
+      },
+      {
+        "key": "ResultReason",
+        "value": "Secure Score Updated"
+      }
+    ],
+    "activityDateTime": "2026-10-05T05:18:30.522261+00:00"
   }
 ];
