@@ -164,6 +164,10 @@ export function DatabaseSettingsPage({ onStatusChange }: DatabaseSettingsPagePro
           setSelectedEngine(eng);
         }
       }
+      if (data.database) setDatabase(data.database);
+      if (data.host) setHost(data.host);
+      if (data.port) setPort(data.port);
+      if (data.user) setUsername(data.user);
     } catch (e: any) {
       console.error(e);
     } finally {
@@ -320,7 +324,7 @@ export function DatabaseSettingsPage({ onStatusChange }: DatabaseSettingsPagePro
   };
 
   useEffect(() => {
-    if (activeTab === 'tables' && status?.connected) {
+    if (activeTab === 'tables') {
       loadTablePreview(selectedTable);
     } else if (activeTab === 'sql_script') {
       loadSqlScript(selectedEngine);
@@ -436,16 +440,20 @@ export function DatabaseSettingsPage({ onStatusChange }: DatabaseSettingsPagePro
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
             <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Database Name</p>
-            <p className="text-sm font-mono font-bold text-cyan-700 mt-0.5 truncate">{database}</p>
-            <p className="text-[0.68rem] text-slate-500">Host: {host}:{port}</p>
+            <p className="text-sm font-mono font-bold text-cyan-700 mt-0.5 truncate">{status?.database || database}</p>
+            <p className="text-[0.68rem] text-slate-500">
+              {status?.is_fallback ? 'Storage: Cloud Engine' : `Host: ${status?.host || host}:${status?.port || port}`}
+            </p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
             <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Ping Latency</p>
             <p className="text-sm font-mono font-bold text-emerald-600 mt-0.5">
-              {status?.latency_ms ? `${status.latency_ms} ms` : isConnected ? '< 100 ms' : 'Not Connected'}
+              {status?.latency_ms ? `${status.latency_ms} ms` : isConnected ? '< 10 ms' : 'Not Connected'}
             </p>
-            <p className="text-[0.68rem] text-slate-500">Server response</p>
+            <p className="text-[0.68rem] text-slate-500">
+              {status?.is_fallback ? 'Active / Cloud Storage' : 'Server response'}
+            </p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">

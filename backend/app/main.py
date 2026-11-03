@@ -143,6 +143,16 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(api_router, prefix="/backend-api" + settings.API_V1_STR)
 
 
+@app.on_event("startup")
+async def on_startup():
+    try:
+        from app.services.database_service import db_service
+        db_service.ensure_ready()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Database startup check note: {e}")
+
+
 @app.post("/api/verify-azure", include_in_schema=False)
 async def verify_azure_compat(payload: dict):
     from app.services.azure.auth_service import AzureAuthService

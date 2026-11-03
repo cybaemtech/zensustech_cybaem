@@ -54,5 +54,6 @@ Thumbs.db
 !.env.example
 sessions.json
 **/data/*.json
+*.db
 __pycache__/
 *.py[cod]

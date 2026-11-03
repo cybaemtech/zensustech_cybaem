@@ -12,6 +12,9 @@ export interface DatabaseStatusResponse {
   database_type?: string;
   database?: string;
   user?: string;
+  host?: string;
+  port?: number;
+  is_fallback?: boolean;
   server_version?: string;
   latency_ms?: number;
   masked_url?: string;
