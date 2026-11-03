@@ -1071,9 +1071,9 @@ export function AuditLogExplorer({
                 }`}>
                   <Shield className="h-4.5 w-4.5" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">Audit Event Full Detail</p>
-                  <h3 className="font-bold text-slate-800 text-sm">{inspectItem.activityDisplayName}</h3>
+                  <h3 className="font-bold text-slate-800 text-sm break-words truncate max-w-md" title={inspectItem.activityDisplayName}>{inspectItem.activityDisplayName}</h3>
                 </div>
               </div>
               <button
@@ -1324,41 +1324,47 @@ function FullInfoCard({
         <div className="space-y-4">
           
           {/* Top Key Metadata Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 text-xs">
-            <div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 text-xs">
+            <div className="min-w-0 space-y-0.5">
               <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Activity</p>
-              <p className="font-semibold text-slate-800 mt-0.5">{item.activityDisplayName}</p>
+              <p className="font-semibold text-slate-800 break-words [overflow-wrap:anywhere]" title={item.activityDisplayName}>
+                {item.activityDisplayName}
+              </p>
             </div>
-            <div>
+            <div className="min-w-0 space-y-0.5">
               <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Category</p>
-              <p className="font-semibold text-slate-800 mt-0.5">{item.category || '—'}</p>
+              <p className="font-semibold text-slate-800 break-words [overflow-wrap:anywhere]" title={item.category || '—'}>
+                {item.category || '—'}
+              </p>
             </div>
-            <div>
+            <div className="min-w-0 space-y-0.5">
               <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Service</p>
-              <p className="font-semibold text-slate-800 mt-0.5">{item.loggedByService || '—'}</p>
+              <p className="font-semibold text-slate-800 break-words [overflow-wrap:anywhere]" title={item.loggedByService || '—'}>
+                {item.loggedByService || '—'}
+              </p>
             </div>
-            <div>
+            <div className="min-w-0 space-y-0.5">
               <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Result</p>
-              <p className={`font-bold mt-0.5 inline-flex items-center gap-1 ${
+              <p className={`font-bold inline-flex items-center gap-1 flex-wrap break-words ${
                 item.result === 'failure' ? 'text-rose-600' : 'text-emerald-700'
               }`}>
                 {item.result === 'failure' ? '● Failure' : '● Success'}
-                {item.resultReason ? ` (${item.resultReason})` : ''}
+                {item.resultReason ? <span className="font-normal text-[0.7rem] text-slate-500 break-words">({item.resultReason})</span> : null}
               </p>
             </div>
           </div>
 
           {/* Timestamps & IDs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-white p-3.5 rounded-xl border border-slate-200/80">
-            <div>
+            <div className="min-w-0">
               <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Activity Time (Local)</p>
-              <p className="font-mono text-slate-700 mt-0.5">{formatDate(item.activityDateTime, 'local', 'azure')}</p>
+              <p className="font-mono text-slate-700 mt-0.5 break-words">{formatDate(item.activityDateTime, 'local', 'azure')}</p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Activity Time (UTC)</p>
-              <p className="font-mono text-slate-700 mt-0.5">{formatDate(item.activityDateTime, 'utc', 'azure')}</p>
+              <p className="font-mono text-slate-700 mt-0.5 break-words">{formatDate(item.activityDateTime, 'utc', 'azure')}</p>
             </div>
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 min-w-0">
               <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Event ID</p>
               <p className="font-mono text-[0.7rem] text-slate-600 mt-0.5 break-all select-all">{item.id}</p>
             </div>
@@ -1370,55 +1376,55 @@ function FullInfoCard({
             {/* Initiated By Card */}
             <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-2.5">
               <p className="text-[0.68rem] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <UserCheck className="h-3.5 w-3.5 text-sky-500" />
+                <UserCheck className="h-3.5 w-3.5 text-sky-500 shrink-0" />
                 Initiated By (Actor)
               </p>
 
               {userActor ? (
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Display Name:</span>
-                    <span className="font-bold text-slate-800">{userActor.displayName || '—'}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400 shrink-0">Display Name:</span>
+                    <span className="font-bold text-slate-800 truncate" title={userActor.displayName || undefined}>{userActor.displayName || '—'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">UPN:</span>
-                    <span className="font-mono text-slate-800">{userActor.userPrincipalName || '—'}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400 shrink-0">UPN:</span>
+                    <span className="font-mono text-slate-800 truncate" title={userActor.userPrincipalName || undefined}>{userActor.userPrincipalName || '—'}</span>
                   </div>
                   {userActor.id && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">User ID:</span>
-                      <span className="font-mono text-[0.68rem] text-slate-600">{userActor.id}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                      <span className="text-slate-400 shrink-0">User ID:</span>
+                      <span className="font-mono text-[0.68rem] text-slate-600 break-all select-all">{userActor.id}</span>
                     </div>
                   )}
                   {userActor.ipAddress && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">IP Address:</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-slate-400 shrink-0">IP Address:</span>
                       <span className="font-mono text-slate-800 font-semibold">{userActor.ipAddress}</span>
                     </div>
                   )}
                   {userActor.userType && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">User Type:</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-slate-400 shrink-0">User Type:</span>
                       <span className="text-slate-700 font-medium">{userActor.userType}</span>
                     </div>
                   )}
                 </div>
               ) : appActor ? (
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Application:</span>
-                    <span className="font-bold text-slate-800">{appActor.displayName || 'System Service'}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400 shrink-0">Application:</span>
+                    <span className="font-bold text-slate-800 truncate" title={appActor.displayName || undefined}>{appActor.displayName || 'System Service'}</span>
                   </div>
                   {appActor.servicePrincipalId && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Service Principal ID:</span>
-                      <span className="font-mono text-[0.68rem] text-slate-600">{appActor.servicePrincipalId}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                      <span className="text-slate-400 shrink-0">Service Principal ID:</span>
+                      <span className="font-mono text-[0.68rem] text-slate-600 break-all select-all">{appActor.servicePrincipalId}</span>
                     </div>
                   )}
                   {appActor.appId && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">App ID:</span>
-                      <span className="font-mono text-[0.68rem] text-slate-600">{appActor.appId}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                      <span className="text-slate-400 shrink-0">App ID:</span>
+                      <span className="font-mono text-[0.68rem] text-slate-600 break-all select-all">{appActor.appId}</span>
                     </div>
                   )}
                 </div>
@@ -1430,32 +1436,32 @@ function FullInfoCard({
             {/* Target Resources Card */}
             <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-2.5">
               <p className="text-[0.68rem] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Laptop className="h-3.5 w-3.5 text-sky-500" />
+                <Laptop className="h-3.5 w-3.5 text-sky-500 shrink-0" />
                 Target Resource
               </p>
 
               {target ? (
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Display Name:</span>
-                    <span className="font-bold text-slate-800">{target.displayName || '—'}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400 shrink-0">Display Name:</span>
+                    <span className="font-bold text-slate-800 truncate" title={target.displayName || undefined}>{target.displayName || '—'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Type:</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400 shrink-0">Type:</span>
                     <span className="px-2 py-0.5 rounded bg-slate-100 text-[0.68rem] font-semibold text-slate-700">
                       {target.type || 'Resource'}
                     </span>
                   </div>
                   {target.userPrincipalName && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Target UPN:</span>
-                      <span className="font-mono text-slate-800">{target.userPrincipalName}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-slate-400 shrink-0">Target UPN:</span>
+                      <span className="font-mono text-slate-800 truncate" title={target.userPrincipalName || undefined}>{target.userPrincipalName}</span>
                     </div>
                   )}
                   {target.id && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Target ID:</span>
-                      <span className="font-mono text-[0.68rem] text-slate-600">{target.id}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                      <span className="text-slate-400 shrink-0">Target ID:</span>
+                      <span className="font-mono text-[0.68rem] text-slate-600 break-all select-all">{target.id}</span>
                     </div>
                   )}
                 </div>
