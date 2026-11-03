@@ -2326,56 +2326,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* License Optimization & Cost Management full section (mini cards view) */}
-                <div className="bg-white rounded-2xl px-6 pt-5 pb-6 border border-slate-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)]">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-indigo-500" />
-                      <h3 className="text-sm font-bold text-slate-800">License Optimization &amp; Cost Management</h3>
-                    </div>
-                    <span className="text-[0.68rem] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">{displayLicenseData.length} SKUs</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {displayLicenseData.map((lic: any, i: number) => {
-                      const purchased = lic.purchased ?? lic.totalLicenses ?? 0;
-                      const assigned = lic.assigned ?? lic.usedLicenses ?? 0;
-                      const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
-                      const savings = lic.potentialSavings || (available === 0 ? '$0 (100% Utilized)' : '$0 (Free Service)');
-                      const pct = purchased > 0 ? Math.round((assigned / purchased) * 100) : 0;
-                      const name = lic.product || lic.license || lic.key || 'License';
-                      const isFull = pct >= 99;
-                      return (
-                        <div key={lic.key || i} onClick={() => handleLicenseClick(lic)} className="border border-slate-200/80 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer group">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-bold text-slate-700 truncate max-w-[70%]">{name}</span>
-                            <span className={`text-[0.65rem] font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>{pct}% used</span>
-                          </div>
-                          <div className="w-full bg-slate-200 rounded-full h-1.5 mb-4 overflow-hidden">
-                            <div className={`h-1.5 rounded-full transition-all ${isFull ? 'bg-emerald-500' : 'bg-slate-300'}`} style={{ width: `${Math.min(100, pct)}%` }} />
-                          </div>
-                          <div className="grid grid-cols-3 gap-3 text-center">
-                            <div>
-                              <p className="text-sm font-bold text-slate-800">{purchased.toLocaleString()}</p>
-                              <p className="text-[0.65rem] text-slate-400">Purchased</p>
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-slate-800">{assigned.toLocaleString()}</p>
-                              <p className="text-[0.65rem] text-slate-400">Assigned</p>
-                            </div>
-                            <div>
-                              <p className={`text-sm font-bold ${available > 0 ? 'text-amber-500' : 'text-emerald-600'}`}>{available.toLocaleString()}</p>
-                              <p className="text-[0.65rem] text-slate-400">Available</p>
-                            </div>
-                          </div>
-                          <div className={`mt-3 pt-3 border-t border-slate-100 text-[0.68rem] font-bold ${savings.includes('Free') ? 'text-amber-500' : 'text-emerald-600'}`}>
-                            {savings.includes('Free') ? '⚠ ' : '✓ '}{savings}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 {/* Header Banner */}
                 <div className="bg-gradient-to-r from-[#722ed1] to-[#2f54eb] rounded-2xl p-6 sm:p-8 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
                   <div className="flex items-center gap-5">
