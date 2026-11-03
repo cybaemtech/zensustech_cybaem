@@ -2265,67 +2265,6 @@ export default function Dashboard() {
             {/* TAB 7: MICROSOFT O365 */}
             {activeTab === 'm365' && (
               <div className="space-y-6">
-                {/* M365 License & Security Score Header */}
-                <div className="bg-white rounded-2xl px-6 pt-5 pb-6 border border-slate-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)]">
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h2 className="text-base font-bold text-slate-800 tracking-tight">Microsoft 365 License &amp; Security Score</h2>
-                      <p className="text-xs text-slate-400 mt-0.5">Live license allocation, usage metrics, and Microsoft Secure Score</p>
-                    </div>
-                    <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      Secure Score: {m365Score?.currentScore ?? secureScore ?? 68}%
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {/* License tiles from live data */}
-                    {displayLicenseData.map((lic: any, i: number) => {
-                      const purchased = lic.purchased ?? lic.totalLicenses ?? 0;
-                      const assigned = lic.assigned ?? lic.usedLicenses ?? 0;
-                      const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
-                      const pct = purchased > 0 ? Math.round((assigned / purchased) * 100) : 0;
-                      const name = lic.product || lic.license || lic.key || 'License';
-                      return (
-                        <div key={lic.key || i} className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col gap-1 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => handleLicenseClick(lic)} title={`Click to view ${name} details`}>
-                          <p className="text-[0.68rem] font-semibold text-slate-400 leading-tight truncate">{name}</p>
-                          <p className="text-xl font-black text-slate-800 tracking-tight leading-none mt-1">{assigned.toLocaleString()} / {purchased.toLocaleString()}</p>
-                          <p className="text-[0.68rem] text-slate-400">{available.toLocaleString()} available seats</p>
-                          <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
-                            <div className={`h-1 rounded-full ${pct >= 90 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-400' : 'bg-slate-300'}`} style={{ width: `${Math.min(100, pct)}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {/* Tenant Users tile */}
-                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col gap-1 hover:border-sky-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => { setActiveTab('identity'); }} title="View all tenant users">
-                      <p className="text-[0.68rem] font-semibold text-slate-400 leading-tight">Tenant Users</p>
-                      <p className="text-xl font-black text-slate-800 tracking-tight leading-none mt-1">{totalUsersCount}</p>
-                      <p className="text-[0.68rem] text-slate-400">{standardUsersCount} standard / {adminCount} admin</p>
-                      <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
-                        <div className="h-1 rounded-full bg-sky-500" style={{ width: `${totalUsersCount > 0 ? Math.min(100, Math.round((adminCount / totalUsersCount) * 100 * 5)) : 0}%` }} />
-                      </div>
-                    </div>
-                    {/* Admin Coverage tile */}
-                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col gap-1 hover:border-purple-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => handleExecutiveSummaryClick({ area: 'Identity & Privileged Roles' })} title="View admin roles & privileged access">
-                      <p className="text-[0.68rem] font-semibold text-slate-400 leading-tight">Admin Coverage</p>
-                      <p className="text-xl font-black text-slate-800 tracking-tight leading-none mt-1">{adminCount}</p>
-                      <p className="text-[0.68rem] text-slate-400">Privileged accounts</p>
-                      <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
-                        <div className="h-1 rounded-full bg-purple-500" style={{ width: `${totalUsersCount > 0 ? Math.min(100, Math.round((adminCount / totalUsersCount) * 100 * 4)) : 0}%` }} />
-                      </div>
-                    </div>
-                    {/* MFA Compliance tile */}
-                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col gap-1 hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => handleExecutiveSummaryClick({ area: 'Account Protection & MFA' })} title="View MFA compliance details">
-                      <p className="text-[0.68rem] font-semibold text-slate-400 leading-tight">MFA Compliance</p>
-                      <p className={`text-xl font-black tracking-tight leading-none mt-1 ${mfaDisabledCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{mfaEnabledCount}</p>
-                      <p className="text-[0.68rem] text-slate-400">{mfaDisabledCount} MFA disabled</p>
-                      <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
-                        <div className={`h-1 rounded-full ${mfaDisabledCount > 0 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${totalUsersCount > 0 ? Math.min(100, Math.round((mfaEnabledCount / totalUsersCount) * 100)) : 0}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Header Banner */}
                 <div className="bg-gradient-to-r from-[#722ed1] to-[#2f54eb] rounded-2xl p-6 sm:p-8 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
                   <div className="flex items-center gap-5">
