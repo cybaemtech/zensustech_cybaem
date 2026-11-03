@@ -55,7 +55,7 @@ export interface CustomerData {
 }
 
 // ─── Default package template (structure only, seats from live data) ────────
-function makeDefaultPackages(): CustomerData['categories']['office365']['packages'] {
+export function makeDefaultPackages(): CustomerData['categories']['office365']['packages'] {
   return {
     starter: {
       name: 'Starter Plan',
@@ -136,13 +136,26 @@ export function buildCustomerFromSession(raw: any, index: number): CustomerData 
 let _dynamicCustomers: CustomerData[] = [];
 let _customersLoaded = false;
 
+export function makeFallbackCustomer(): CustomerData {
+  const tenantId = (typeof window !== 'undefined' ? sessionStorage.getItem('azure_tenant_id') : '') || 'tenant-default';
+  const clientId = (typeof window !== 'undefined' ? sessionStorage.getItem('azure_client_id') : '') || '';
+  let org: any = {};
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = sessionStorage.getItem('azure_org_details');
+      if (raw) org = JSON.parse(raw);
+    } catch {}
+  }
+  return buildCustomerFromSession({ tenantId, clientId, organization: org }, 0);
+}
+
 // Seed immediately from sessionStorage so getActiveCustomer() never returns
 // null during the first render when a user is already logged in.
-(function seedFromSession() {
+export function seedFromSession(): void {
   if (typeof window === 'undefined') return;
   const tenantId = sessionStorage.getItem('azure_tenant_id') || '';
   const clientId = sessionStorage.getItem('azure_client_id') || '';
-  if (tenantId && _dynamicCustomers.length === 0) {
+  if (_dynamicCustomers.length === 0) {
     let org: any = {};
     try {
       const raw = sessionStorage.getItem('azure_org_details');
@@ -150,10 +163,14 @@ let _customersLoaded = false;
     } catch {}
     _dynamicCustomers = [buildCustomerFromSession({ tenantId, clientId, organization: org }, 0)];
   }
-})();
+}
+seedFromSession();
 
 /** Returns the currently loaded customers (may be empty before fetch completes). */
 export function getDynamicCustomers(): CustomerData[] {
+  if (_dynamicCustomers.length === 0) {
+    seedFromSession();
+  }
   return _dynamicCustomers;
 }
 
@@ -180,12 +197,19 @@ export async function loadCustomersFromAPI(): Promise<CustomerData[]> {
   }
 
   // Fallback: build from current session tenant only
-  const tenantId = sessionStorage.getItem('azure_tenant_id') || '';
-  const clientId = sessionStorage.getItem('azure_client_id') || '';
-  if (tenantId) {
-    const fallback = buildCustomerFromSession({ tenantId, clientId }, 0);
-    _dynamicCustomers = [fallback];
-    _customersLoaded = true;
+  const tenantId = typeof window !== 'undefined' ? sessionStorage.getItem('azure_tenant_id') || '' : '';
+  const clientId = typeof window !== 'undefined' ? sessionStorage.getItem('azure_client_id') || '' : '';
+  let org: any = {};
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = sessionStorage.getItem('azure_org_details');
+      if (raw) org = JSON.parse(raw);
+    } catch {}
+  }
+  const fallback = buildCustomerFromSession({ tenantId, clientId, organization: org }, 0);
+  _dynamicCustomers = [fallback];
+  _customersLoaded = true;
+  if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('zensustech_customers_loaded', { detail: _dynamicCustomers }));
   }
   return _dynamicCustomers;
@@ -216,9 +240,19 @@ export function setActiveCustomerId(id: string): void {
   }
 }
 
-export function getActiveCustomer(): CustomerData | null {
+export function getActiveCustomer(): CustomerData {
+  if (_dynamicCustomers.length === 0) {
+    seedFromSession();
+  }
   const id = getActiveCustomerId();
-  return _dynamicCustomers.find(c => c.id === id) || _dynamicCustomers[0] || null;
+  let found = _dynamicCustomers.find(c => c.id === id) || _dynamicCustomers[0];
+  if (!found) {
+    found = makeFallbackCustomer();
+    if (_dynamicCustomers.length === 0) {
+      _dynamicCustomers = [found];
+    }
+  }
+  return found;
 }
 
 export function getActiveCategory(): CategoryType {

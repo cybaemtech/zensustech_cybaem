@@ -126,7 +126,7 @@ export function CustomerCategorySwitcher({
                             </span>
                             <span>•</span>
                             <span className="font-mono truncate max-w-[110px]" title={cust.tenantId}>
-                              {cust.tenantId.substring(0, 8)}...
+                              {(cust.tenantId || '').substring(0, 8)}...
                             </span>
                           </div>
                         </div>

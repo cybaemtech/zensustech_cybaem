@@ -19,25 +19,46 @@ import {
 import { useLocation } from 'wouter';
 import {
   type CustomerData,
-  type CategoryType
+  type CategoryType,
+  getActiveCustomer,
+  makeFallbackCustomer,
+  makeDefaultPackages
 } from '@/lib/customer-store';
 
 interface ClientCategoryViewProps {
-  customer: CustomerData;
+  customer?: CustomerData | null;
   category: CategoryType;
   onNavigateToTab?: (tabId: string) => void;
 }
 
 export function ClientCategoryView({ customer, category, onNavigateToTab }: ClientCategoryViewProps) {
   const [, setLocation] = useLocation();
-  const o365 = customer.categories.office365.packages;
-  const azureSubs = customer.categories.azure.subscriptions;
 
-  const totalSeats = o365.starter.seats + o365.business.seats + o365.premium.seats;
+  const activeCust = customer || getActiveCustomer() || makeFallbackCustomer();
+  const defaultPkgs = makeDefaultPackages();
+
+  const o365 = activeCust?.categories?.office365?.packages || defaultPkgs;
+  const azureSubs = activeCust?.categories?.azure?.subscriptions || [];
+
+  const starterSeats = o365?.starter?.seats ?? 0;
+  const starterPrice = o365?.starter?.unitPrice ?? 100;
+  const businessSeats = o365?.business?.seats ?? 0;
+  const businessPrice = o365?.business?.unitPrice ?? 200;
+  const premiumSeats = o365?.premium?.seats ?? 0;
+  const premiumPrice = o365?.premium?.unitPrice ?? 500;
+
+  const totalSeats = starterSeats + businessSeats + premiumSeats;
   const totalValue =
-    o365.starter.seats * o365.starter.unitPrice +
-    o365.business.seats * o365.business.unitPrice +
-    o365.premium.seats * o365.premium.unitPrice;
+    starterSeats * starterPrice +
+    businessSeats * businessPrice +
+    premiumSeats * premiumPrice;
+
+  const domainLabel = activeCust?.domainId || 'Primary Domain';
+  const tenantLabel = activeCust?.tenantId
+    ? activeCust.tenantId.length > 13
+      ? `${activeCust.tenantId.substring(0, 13)}...`
+      : activeCust.tenantId
+    : '—';
 
   if (category === 'office365') {
     return (
@@ -58,7 +79,7 @@ export function ClientCategoryView({ customer, category, onNavigateToTab }: Clie
                 <span>Client Plan &amp; Packaging Model</span>
               </h2>
               <p className="text-xs text-sky-100/70 mt-1 max-w-xl">
-                Mapped to <span className="font-semibold text-white">{customer.domainId}</span> (Tenant: {customer.tenantId.substring(0, 13)}...). Tiers reflect the client specification with Bronze, Silver, and Gold service levels.
+                Mapped to <span className="font-semibold text-white">{domainLabel}</span> (Tenant: {tenantLabel}). Tiers reflect the client specification with Bronze, Silver, and Gold service levels.
               </p>
             </div>
 
@@ -246,7 +267,7 @@ export function ClientCategoryView({ customer, category, onNavigateToTab }: Clie
               <span>Azure Subscription Mapping</span>
             </h2>
             <p className="text-xs text-indigo-100/70 mt-1 max-w-xl">
-              Linked Subscriptions for <span className="font-semibold text-white">{customer.name}</span>. Matches the client's Subscriber ID / Subscription ID branch.
+              Linked Subscriptions for <span className="font-semibold text-white">{activeCust?.name || 'Customer'}</span>. Matches the client's Subscriber ID / Subscription ID branch.
             </p>
           </div>
 
@@ -267,7 +288,7 @@ export function ClientCategoryView({ customer, category, onNavigateToTab }: Clie
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-base font-bold text-slate-900">Active Azure Subscriptions ({azureSubs.length})</h3>
-            <p className="text-xs text-slate-500">Subscriptions attached to Tenant ID: {customer.tenantId}</p>
+            <p className="text-xs text-slate-500">Subscriptions attached to Tenant ID: {activeCust?.tenantId || '—'}</p>
           </div>
         </div>
 

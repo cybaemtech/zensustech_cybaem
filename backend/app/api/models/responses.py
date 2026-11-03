@@ -56,6 +56,7 @@ class LicenseUsageData(BaseModel):
     purchased: int
     assigned: int
     unused: int
+    potentialSavings: Optional[str] = None
 
 class SummaryItem(BaseModel):
     """Executive summary item model."""
@@ -70,6 +71,7 @@ class SummaryItem(BaseModel):
 class LicenseUsageResponse(BaseModel):
     """Response model for license usage endpoint."""
 
+    success: Optional[bool] = True
     overallScore: int
     summaryItems: List[SummaryItem]
     tableData: List[LicenseUsageData]

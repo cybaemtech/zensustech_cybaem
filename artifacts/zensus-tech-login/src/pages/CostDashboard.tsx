@@ -12,6 +12,7 @@ import {
 import { CustomerCategorySwitcher } from '@/components/CustomerCategorySwitcher';
 import {
   getActiveCustomer,
+  makeFallbackCustomer,
   type CustomerData
 } from '@/lib/customer-store';
 
@@ -92,15 +93,17 @@ export default function CostDashboard() {
   const [expandedSub, setExpandedSub]         = useState<string | null>(null);
   const [showDailyTable, setShowDailyTable]   = useState(false);
 
-  const applyCustomerData = useCallback((cust: CustomerData) => {
-    const custSubs: Sub[] = cust.categories.azure.subscriptions.map((s, idx) => ({
+  const applyCustomerData = useCallback((cust?: CustomerData | null) => {
+    const safeCust = cust || getActiveCustomer() || makeFallbackCustomer();
+    const subs = safeCust?.categories?.azure?.subscriptions || [];
+    const custSubs: Sub[] = subs.map((s, idx) => ({
       id: `sub-${idx}`,
-      subscriptionId: s.subscriptionId,
-      name: s.name,
-      state: s.state,
-      monthlySpendUSD: s.monthlySpendUSD,
+      subscriptionId: s.subscriptionId || '',
+      name: s.name || `Subscription ${idx + 1}`,
+      state: s.state || 'Enabled',
+      monthlySpendUSD: s.monthlySpendUSD || 0,
     }));
-    const custTotal = cust.categories.azure.subscriptions.reduce((sum, s) => sum + s.monthlySpendUSD, 0);
+    const custTotal = subs.reduce((sum, s) => sum + (s.monthlySpendUSD || 0), 0);
     const now = new Date();
     const dp = Math.max(1, now.getDate());
     const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();

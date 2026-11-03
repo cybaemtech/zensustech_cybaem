@@ -654,6 +654,7 @@ class DatabaseService:
                             }
                         ]
 
+
                         for cust in default_customers:
                             cid = cust.get("id") or "cust-1"
                             name = cust.get("name", "Customer")

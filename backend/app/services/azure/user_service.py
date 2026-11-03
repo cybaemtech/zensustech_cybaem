@@ -255,7 +255,16 @@ class UserService:
                             if "directoryrole" in o_type and role_name:
                                 priv_roles_list.append(role_name)
                         
-                        roles_string = ", ".join(priv_roles_list) if priv_roles_list else "Standard User"
+                        if not priv_roles_list:
+                            roles_string = "Standard User"
+                        elif "Security Administrator" in priv_roles_list:
+                            roles_string = "Security Administrator"
+                        elif "Global Administrator" in priv_roles_list:
+                            roles_string = "Global Administrator"
+                        elif "Global Reader" in priv_roles_list:
+                            roles_string = "Global Reader"
+                        else:
+                            roles_string = priv_roles_list[0]
 
                         # --- MFA DATA EXTRACTION ---
                         # Path: batch_map -> mfa-id -> body -> value
@@ -282,12 +291,17 @@ class UserService:
 
                         final_report.append({
                             "user": display_name,
+                            "displayName": display_name,
                             "email": user.get("userPrincipalName") or "N/A",
+                            "userPrincipalName": user.get("userPrincipalName") or "N/A",
                             "status": status,
                             "mfa": mfa_text,
+                            "mfaEnabled": mfa_enabled,
                             "role": roles_string,
+                            "roles": priv_roles_list if priv_roles_list else ["Standard User"],
                             "risk": risk,
-                            "principalType": user.get("userType", "User"),
+                            "principalType": user.get("userType", "Member"),
+                            "subscription": "Microsoft 365",
                         })
 
             logger.info(f"Successfully processed {len(final_report)} users.")
