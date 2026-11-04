@@ -267,9 +267,6 @@ class DatabaseService:
                 ("9414ece9-sub1-prod-core-001", "9414ece9-9039-40b7-a6a7-7ecbe7409245", "Production Workloads & Web Tier", "Enabled", 2300.75),
                 ("9414ece9-sub2-stg-sandbox-002", "9414ece9-9039-40b7-a6a7-7ecbe7409245", "Staging & QA Environment", "Enabled", 840.50),
                 ("9414ece9-sub3-rnd-storage-003", "9414ece9-9039-40b7-a6a7-7ecbe7409245", "R&D Sandbox & Recovery Vaults", "Enabled", 410.20),
-                ("a4b23c91-sub1-enterprise-01", "a4b23c91-1122-3344-5566-778899aabbcc", "Enterprise Core Services", "Enabled", 3820.00),
-                ("a4b23c91-sub2-data-ai-02", "a4b23c91-1122-3344-5566-778899aabbcc", "Data Platform & Analytics", "Enabled", 1450.00),
-                ("f5e4d3c2-sub1-hybrid-ops-01", "f5e4d3c2-b1a0-9876-5432-10fedcba9876", "Hybrid Infrastructure & Backup", "Enabled", 1120.00),
             ]
             for sub in subs_list:
                 cur.execute("""
@@ -372,17 +369,39 @@ class DatabaseService:
         Called automatically on startup so Render's DB stays clean after every deploy."""
         try:
             with conn.cursor() as cur:
+                whitelist = list(REAL_AZURE_TENANT_IDS)
+
                 # 1. Delete non-whitelisted customers
                 cur.execute("""
                     DELETE FROM customers
                     WHERE tenant_id IS NOT NULL
-                      AND tenant_id NOT IN %s;
-                """, (tuple(REAL_AZURE_TENANT_IDS),))
+                      AND NOT (tenant_id = ANY(%s));
+                """, (whitelist,))
                 removed_cust = cur.rowcount
                 if removed_cust:
                     logger.warning("Startup cleanup: removed %d non-Azure customer(s)", removed_cust)
 
-                # 2. Remove orphaned customer_subscriptions
+                # 2. Delete non-whitelisted azure_subscriptions
+                cur.execute("""
+                    DELETE FROM azure_subscriptions
+                    WHERE tenant_id IS NOT NULL
+                      AND NOT (tenant_id = ANY(%s));
+                """, (whitelist,))
+                removed_subs = cur.rowcount
+                if removed_subs:
+                    logger.warning("Startup cleanup: removed %d non-Azure azure_subscription(s)", removed_subs)
+
+                # 3. Delete non-whitelisted m365_licenses
+                cur.execute("""
+                    DELETE FROM m365_licenses
+                    WHERE tenant_id IS NOT NULL
+                      AND NOT (tenant_id = ANY(%s));
+                """, (whitelist,))
+                removed_lic_fake = cur.rowcount
+                if removed_lic_fake:
+                    logger.warning("Startup cleanup: removed %d non-Azure m365_license(s)", removed_lic_fake)
+
+                # 4. Remove orphaned customer_subscriptions
                 cur.execute("""
                     DELETE FROM customer_subscriptions
                     WHERE customer_id NOT IN (SELECT customer_id FROM customers);
@@ -391,7 +410,7 @@ class DatabaseService:
                 if removed_cs:
                     logger.info("Startup cleanup: removed %d orphaned customer_subscription(s)", removed_cs)
 
-                # 3. Deduplicate m365_licenses — keep latest per (tenant_id, sku_id)
+                # 5. Deduplicate m365_licenses — keep latest per (tenant_id, sku_id)
                 cur.execute("""
                     DELETE FROM m365_licenses
                     WHERE id NOT IN (
@@ -402,7 +421,7 @@ class DatabaseService:
                 if removed_lic:
                     logger.info("Startup cleanup: removed %d duplicate license row(s)", removed_lic)
 
-                # 4. Ensure UNIQUE constraint exists on m365_licenses
+                # 6. Ensure UNIQUE constraint exists on m365_licenses
                 cur.execute("""
                     DO $$
                     BEGIN
@@ -416,7 +435,7 @@ class DatabaseService:
                     END $$;
                 """)
 
-                # 5. Ensure UNIQUE constraint exists on azure_subscriptions
+                # 7. Ensure UNIQUE constraint exists on azure_subscriptions
                 cur.execute("""
                     DO $$
                     BEGIN
