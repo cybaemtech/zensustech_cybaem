@@ -7,9 +7,7 @@ import {
   ArrowRight,
   Sparkles,
   Lock,
-  X,
-  ChevronLeft,
-  ChevronRight
+  X
 } from 'lucide-react';
 
 export interface ZohoAuthCardProps {
@@ -428,86 +426,8 @@ export function ZohoAuthCard({
                   </button>
                 </form>
 
-                {/* Social / SSO Row */}
-                <div className="pt-2">
-                  <p className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 mb-2.5 text-center sm:text-left">
-                    SIGN IN USING
-                  </p>
-                  <div className="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
-                    {/* Google Sign-in */}
-                    <button
-                      type="button"
-                      title="Sign in with Google"
-                      onClick={() => {
-                        setGoogleError('');
-                        setShowCustomGoogleInput(false);
-                        setShowGoogleModal(true);
-                      }}
-                      className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center shadow-xs transition-all hover:scale-105 active:scale-95 cursor-pointer relative group"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                      </svg>
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full ring-2 ring-white" />
-                    </button>
-
-                    {/* LinkedIn */}
-                    <button
-                      type="button"
-                      title="Sign in with LinkedIn"
-                      onClick={() => alert('LinkedIn authentication: Enterprise single sign-on is enabled via Microsoft Entra ID.')}
-                      className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center shadow-xs transition-transform active:scale-95 text-[#0077b5]"
-                    >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                        <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
-                      </svg>
-                    </button>
-
-                    {/* Microsoft Entra ID / 365 (Highlighted Live SSO) */}
-                    <button
-                      type="button"
-                      title="Sign in with Microsoft Entra ID"
-                      onClick={onAzureSSO}
-                      className="w-9 h-9 rounded-lg border-2 border-sky-400 bg-sky-50/60 hover:bg-sky-100/80 flex items-center justify-center shadow-xs transition-transform active:scale-95 relative group cursor-pointer"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 23 23">
-                        <rect x="1" y="1" width="10" height="10" fill="#f25022" />
-                        <rect x="12" y="1" width="10" height="10" fill="#7fba00" />
-                        <rect x="1" y="12" width="10" height="10" fill="#00a4ef" />
-                        <rect x="12" y="12" width="10" height="10" fill="#ffb900" />
-                      </svg>
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse" />
-                    </button>
-
-                    {/* Apple */}
-                    <button
-                      type="button"
-                      title="Sign in with Apple"
-                      onClick={() => alert('Apple ID sign-in is available for enterprise mobile users.')}
-                      className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center shadow-xs transition-transform active:scale-95 text-slate-800"
-                    >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.84c.62-.75 1.04-1.8 1.01-2.84-.96.04-2.11.64-2.77 1.41-.57.66-.99 1.73-.86 2.76.99.08 2.06-.57 2.62-1.33z" />
-                      </svg>
-                    </button>
-
-                    {/* More / Dots */}
-                    <button
-                      type="button"
-                      title="Other sign-in options"
-                      onClick={() => setShowSmartSignInModal(true)}
-                      className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center shadow-xs transition-transform active:scale-95 text-slate-400"
-                    >
-                      <span className="font-bold tracking-widest text-[11px]">•••</span>
-                    </button>
-                  </div>
-                </div>
-
                 {/* Switch to Sign Up */}
-                <div className="pt-2 text-xs text-slate-600">
+                <div className="pt-3 text-xs text-slate-600">
                   <span>Don't have a ZensusTech account? </span>
                   <button
                     type="button"
@@ -770,14 +690,14 @@ export function ZohoAuthCard({
           <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-indigo-400/10 rounded-full blur-2xl pointer-events-none" />
 
           {/* Auto-Swiping Authentication Images Showcase (Enlarged & Prominent) */}
-          <div className="w-full max-w-[380px] my-auto pt-1 relative">
+          <div className="w-full max-w-[420px] my-auto pt-1 relative">
             
-            {/* Auto-swiping images container with crisp large image display */}
-            <div className="relative mx-auto w-full h-56 sm:h-64 flex items-center justify-center overflow-hidden rounded-2xl bg-white p-3.5 border border-slate-200/90 shadow-sm group">
+            {/* Auto-swiping images container without white box or border */}
+            <div className="relative mx-auto w-full h-64 sm:h-76 flex items-center justify-center overflow-hidden">
               {slides.map((s, idx) => (
                 <div
                   key={idx}
-                  className={`absolute inset-0 p-3 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
+                  className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
                     activeSlide === idx
                       ? 'opacity-100 z-10'
                       : 'opacity-0 z-0 pointer-events-none'
@@ -786,29 +706,11 @@ export function ZohoAuthCard({
                   <img
                     src={s.image}
                     alt={s.title}
-                    className="w-full h-full object-contain select-none filter drop-shadow-xs"
+                    className="w-full h-full object-contain select-none mix-blend-multiply"
                     loading="eager"
                   />
                 </div>
               ))}
-
-              {/* Prev / Next micro-buttons on hover */}
-              <button
-                type="button"
-                onClick={() => setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-white/95 hover:bg-white text-slate-700 flex items-center justify-center shadow-md transition-all cursor-pointer opacity-70 hover:opacity-100 hover:scale-105"
-                aria-label="Previous slide"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSlide((prev) => (prev + 1) % slides.length)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-white/95 hover:bg-white text-slate-700 flex items-center justify-center shadow-md transition-all cursor-pointer opacity-70 hover:opacity-100 hover:scale-105"
-                aria-label="Next slide"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
             </div>
 
             {/* Slide Text Content */}

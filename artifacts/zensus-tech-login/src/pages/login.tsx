@@ -38,3 +38,4 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
 }
 
 export default LoginPage;
+
