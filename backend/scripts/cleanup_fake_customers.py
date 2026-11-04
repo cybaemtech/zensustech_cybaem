@@ -16,3 +16,4 @@ try:
             print("Remaining customers:", rows)
 except Exception as e:
     print("Error:", e)
+

@@ -28,6 +28,35 @@ SQLITE_DB_PATH = os.path.join(DATA_DIR, "zensustech.db")
 
 DEFAULT_PG_URL = os.getenv("DATABASE_URL", "postgresql://postgres:root@localhost:5432/zensustech")
 
+# ---------------------------------------------------------------------------
+# Real Azure tenant whitelist – ONLY these tenants may be seeded/migrated.
+# Any customer whose tenantId is NOT in this set is rejected at the DB layer.
+# Add new entries here ONLY after the customer has authenticated via Microsoft
+# Graph API and their tenantId has been verified against Azure AD.
+# ---------------------------------------------------------------------------
+REAL_AZURE_TENANT_IDS: set = {
+    "9414ece9-9039-40b7-a6a7-7ecbe7409245",  # ZensusTech (cust-1) — verified
+}
+
+
+def _filter_real_azure_customers(customers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return only customers whose tenantId is in the verified Azure whitelist.
+    Logs a warning for every customer that is rejected so it's visible in Render logs."""
+    allowed, rejected = [], []
+    for c in customers:
+        tid = c.get("tenantId", "")
+        if tid in REAL_AZURE_TENANT_IDS:
+            allowed.append(c)
+        else:
+            rejected.append(c.get("id", "?"))
+    if rejected:
+        logger.warning(
+            "Rejected %d non-Azure customer(s) from seeding: %s",
+            len(rejected),
+            rejected,
+        )
+    return allowed
+
 
 def mask_connection_url(url: str) -> str:
     """Masks password in connection URL for safe display."""
@@ -183,8 +212,8 @@ class DatabaseService:
                 "***** [PROTECTED]", "", "", "{}"
             ))
 
-            # 3. Customers
-            customers_list = extra_customers or [
+            # 3. Customers — only real Azure-verified tenants are written to DB
+            raw_customers = extra_customers or [
                 {
                     "id": "cust-1",
                     "name": "Customer #1 (Zensus Technologies)",
@@ -199,6 +228,7 @@ class DatabaseService:
                     "categories": {}
                 },
             ]
+            customers_list = _filter_real_azure_customers(raw_customers)
 
             for c in customers_list:
                 cur.execute("""
@@ -982,8 +1012,8 @@ class DatabaseService:
                             except Exception as e:
                                 logger.error(f"Error migrating sessions: {e}")
 
-                        # 2. Customers & Subscriptions
-                        default_customers = extra_customers or [
+                        # 2. Customers & Subscriptions — only real Azure-verified tenants
+                        raw_customers = extra_customers or [
                             {
                                 "id": "cust-1",
                                 "name": "Customer #1 (Zensus Technologies)",
@@ -1008,6 +1038,7 @@ class DatabaseService:
                                 }
                             },
                         ]
+                        default_customers = _filter_real_azure_customers(raw_customers)
 
 
                         for cust in default_customers:
