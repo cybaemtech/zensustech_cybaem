@@ -198,32 +198,6 @@ class DatabaseService:
                     "licenseExpDate": "2026-11-11 00:00:00+00",
                     "categories": {}
                 },
-                {
-                    "id": "cust-2",
-                    "name": "Customer #2 (Contoso Global Corp)",
-                    "domainId": "contoso.onmicrosoft.com",
-                    "tenantId": "a4b23c91-1122-3344-5566-778899aabbcc",
-                    "clientId": "7c8d9e0f-1234-5678-90ab-cdef12345678",
-                    "phone": "+1 (425) 555-0199",
-                    "email": "admin@contoso.onmicrosoft.com",
-                    "planTier": "Silver",
-                    "licensesCount": 25,
-                    "licenseExpDate": "2027-03-31 00:00:00+00",
-                    "categories": {}
-                },
-                {
-                    "id": "cust-3",
-                    "name": "Customer #3 (Fabrikam Cloud Systems)",
-                    "domainId": "fabrikamcloud.com",
-                    "tenantId": "f5e4d3c2-b1a0-9876-5432-10fedcba9876",
-                    "clientId": "4a5b6c7d-8e9f-0123-4567-89abcdef0123",
-                    "phone": "+1 (206) 555-0144",
-                    "email": "ops@fabrikamcloud.com",
-                    "planTier": "Bronze",
-                    "licensesCount": 10,
-                    "licenseExpDate": "2026-12-15 00:00:00+00",
-                    "categories": {}
-                }
             ]
 
             for c in customers_list:
@@ -1033,49 +1007,6 @@ class DatabaseService:
                                     }
                                 }
                             },
-                            {
-                                "id": "cust-2",
-                                "name": "Customer #2 (Contoso Global Corp)",
-                                "domainId": "contoso.onmicrosoft.com",
-                                "tenantId": "a4b23c91-1122-3344-5566-778899aabbcc",
-                                "clientId": "7c8d9e0f-1234-5678-90ab-cdef12345678",
-                                "phone": "+1 (425) 555-0199",
-                                "email": "admin@contoso.onmicrosoft.com",
-                                "planTier": "Silver",
-                                "licensesCount": 25,
-                                "licenseExpDate": "2027-03-31 00:00:00+00",
-                                "categories": {
-                                    "office365": {"enabled": True, "tier": "Silver"},
-                                    "azure": {
-                                        "enabled": True,
-                                        "subscriptions": [
-                                            {"subscriptionId": "a4b23c91-sub1-enterprise-01", "name": "Enterprise Core Services", "state": "Enabled", "monthlySpendUSD": 3820.00},
-                                            {"subscriptionId": "a4b23c91-sub2-data-ai-02", "name": "Data Platform & Analytics", "state": "Enabled", "monthlySpendUSD": 1450.00}
-                                        ]
-                                    }
-                                }
-                            },
-                            {
-                                "id": "cust-3",
-                                "name": "Customer #3 (Fabrikam Cloud Systems)",
-                                "domainId": "fabrikamcloud.com",
-                                "tenantId": "f5e4d3c2-b1a0-9876-5432-10fedcba9876",
-                                "clientId": "4a5b6c7d-8e9f-0123-4567-89abcdef0123",
-                                "phone": "+1 (206) 555-0144",
-                                "email": "ops@fabrikamcloud.com",
-                                "planTier": "Bronze",
-                                "licensesCount": 10,
-                                "licenseExpDate": "2026-12-15 00:00:00+00",
-                                "categories": {
-                                    "office365": {"enabled": True, "tier": "Bronze"},
-                                    "azure": {
-                                        "enabled": True,
-                                        "subscriptions": [
-                                            {"subscriptionId": "f5e4d3c2-sub1-hybrid-ops-01", "name": "Hybrid Infrastructure & Backup", "state": "Enabled", "monthlySpendUSD": 1120.00}
-                                        ]
-                                    }
-                                }
-                            }
                         ]
 
 
@@ -1269,9 +1200,7 @@ VALUES ('9414ece9-9039-40b7-a6a7-7ecbe7409245', 'ZensusTech', 'zensustech.com', 
 ON DUPLICATE KEY UPDATE display_name=VALUES(display_name);
 
 INSERT INTO customers (customer_id, name, domain_id, tenant_id)
-VALUES ('cust-1', 'Customer #1 (Zensus Technologies)', 'zensustech.com', '9414ece9-9039-40b7-a6a7-7ecbe7409245'),
-       ('cust-2', 'Customer #2 (Contoso Global Corp)', 'contoso.onmicrosoft.com', 'a4b23c91-1122-3344-5566-778899aabbcc'),
-       ('cust-3', 'Customer #3 (Fabrikam Cloud Systems)', 'fabrikamcloud.com', 'f5e4d3c2-b1a0-9876-5432-10fedcba9876')
+VALUES ('cust-1', 'Customer #1 (Zensus Technologies)', 'zensustech.com', '9414ece9-9039-40b7-a6a7-7ecbe7409245')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 """
         elif target_engine in ("mssql", "sqlserver", "azure_sql"):
