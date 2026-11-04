@@ -614,8 +614,8 @@ export function AdminDatabaseModal({ isOpen, onClose, onStatusChange }: AdminDat
                   <ul className="text-xs text-slate-400 space-y-1">
                     <li>• <code className="text-slate-300">data/sessions.json</code></li>
                     <li>• <code className="text-slate-300">data/organization.json</code></li>
-                    <li>• 3 Active Multi-Tenant Customers</li>
-                    <li>• 6 Azure Cloud Subscriptions</li>
+                    <li>• 1 Azure-Verified Customer (ZensusTech)</li>
+                    <li>• 3 Azure Cloud Subscriptions</li>
                   </ul>
                 </div>
 
@@ -777,7 +777,11 @@ export function AdminDatabaseModal({ isOpen, onClose, onStatusChange }: AdminDat
                       <Users className="w-3.5 h-3.5 text-cyan-400" />
                       <span>Total Customers</span>
                     </div>
-                    <div className="text-sm font-bold text-white">3 Registered Clients</div>
+                    <div className="text-sm font-bold text-white">
+                      {status?.tables?.customers != null
+                        ? `${status.tables.customers} Registered Client${status.tables.customers !== 1 ? 's' : ''}`
+                        : '— Clients'}
+                    </div>
                     <div className="text-[10px] text-slate-400 mt-0.5 truncate">Tenant: 9414ece9-9039...</div>
                   </div>
 

@@ -756,8 +756,8 @@ export function DatabaseSettingsPage({ onStatusChange }: DatabaseSettingsPagePro
               <ul className="text-xs text-slate-600 space-y-1.5">
                 <li>• <code className="text-slate-800 font-bold">data/sessions.json</code></li>
                 <li>• <code className="text-slate-800 font-bold">data/organization.json</code></li>
-                <li>• 3 Multi-Tenant Enterprise Customers</li>
-                <li>• 6 Azure Cloud Subscriptions</li>
+                <li>• 1 Azure-Verified Customer (ZensusTech)</li>
+                <li>• 3 Azure Cloud Subscriptions</li>
               </ul>
             </div>
 
@@ -906,7 +906,11 @@ export function DatabaseSettingsPage({ onStatusChange }: DatabaseSettingsPagePro
                   <Users className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Total Customers</span>
                 </div>
-                <div className="text-base font-bold text-white">3 Registered Clients</div>
+                <div className="text-base font-bold text-white">
+                  {status?.tables?.customers != null
+                    ? `${status.tables.customers} Registered Client${status.tables.customers !== 1 ? 's' : ''}`
+                    : '— Clients'}
+                </div>
                 <div className="text-[11px] text-slate-400 mt-0.5 truncate">Active Tenant: 9414ece9-9039...</div>
               </div>
 

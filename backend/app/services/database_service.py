@@ -1124,7 +1124,14 @@ class DatabaseService:
                             cur.execute("""
                                 INSERT INTO m365_licenses (tenant_id, sku_id, sku_name, status, consumed_units, prepaid_units, expiration_date, raw_json, updated_at)
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
-                                ON CONFLICT DO NOTHING;
+                                ON CONFLICT (tenant_id, sku_id) DO UPDATE SET
+                                    sku_name = EXCLUDED.sku_name,
+                                    status = EXCLUDED.status,
+                                    consumed_units = EXCLUDED.consumed_units,
+                                    prepaid_units = EXCLUDED.prepaid_units,
+                                    expiration_date = EXCLUDED.expiration_date,
+                                    raw_json = EXCLUDED.raw_json,
+                                    updated_at = CURRENT_TIMESTAMP;
                             """, (
                                 lic["tenant_id"],
                                 lic["sku_id"],
