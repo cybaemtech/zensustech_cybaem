@@ -52,3 +52,4 @@ with psycopg.connect(url, row_factory=dict_row) as conn:
         """)
         for c in cur.fetchall():
             print(f"  {c['conname']} ({c['contype']}): {c['pg_get_constraintdef']}")
+

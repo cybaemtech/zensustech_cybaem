@@ -83,3 +83,4 @@ with psycopg.connect(url, row_factory=dict_row) as conn:
             print(f"  {r['customer_id']}  |  {r['name']}")
 
 print("\nAll DB fixes applied.")
+

@@ -365,6 +365,80 @@ class DatabaseService:
             logger.error(f"Error migrating to SQLite: {e}")
             return {"success": False, "error": str(e)}
 
+    def _purge_non_azure_data(self, conn) -> None:
+        """Remove any customer rows whose tenant_id is not in the Azure whitelist,
+        then cascade-remove orphaned m365_licenses, azure_subscriptions,
+        customer_subscriptions and deduplicate licenses.
+        Called automatically on startup so Render's DB stays clean after every deploy."""
+        try:
+            with conn.cursor() as cur:
+                # 1. Delete non-whitelisted customers
+                cur.execute("""
+                    DELETE FROM customers
+                    WHERE tenant_id IS NOT NULL
+                      AND tenant_id NOT IN %s;
+                """, (tuple(REAL_AZURE_TENANT_IDS),))
+                removed_cust = cur.rowcount
+                if removed_cust:
+                    logger.warning("Startup cleanup: removed %d non-Azure customer(s)", removed_cust)
+
+                # 2. Remove orphaned customer_subscriptions
+                cur.execute("""
+                    DELETE FROM customer_subscriptions
+                    WHERE customer_id NOT IN (SELECT customer_id FROM customers);
+                """)
+                removed_cs = cur.rowcount
+                if removed_cs:
+                    logger.info("Startup cleanup: removed %d orphaned customer_subscription(s)", removed_cs)
+
+                # 3. Deduplicate m365_licenses — keep latest per (tenant_id, sku_id)
+                cur.execute("""
+                    DELETE FROM m365_licenses
+                    WHERE id NOT IN (
+                        SELECT MAX(id) FROM m365_licenses GROUP BY tenant_id, sku_id
+                    );
+                """)
+                removed_lic = cur.rowcount
+                if removed_lic:
+                    logger.info("Startup cleanup: removed %d duplicate license row(s)", removed_lic)
+
+                # 4. Ensure UNIQUE constraint exists on m365_licenses
+                cur.execute("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_constraint
+                            WHERE conname = 'uq_m365_tenant_sku'
+                        ) THEN
+                            ALTER TABLE m365_licenses
+                            ADD CONSTRAINT uq_m365_tenant_sku UNIQUE (tenant_id, sku_id);
+                        END IF;
+                    END $$;
+                """)
+
+                # 5. Ensure UNIQUE constraint exists on azure_subscriptions
+                cur.execute("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_constraint
+                            WHERE conname = 'uq_az_tenant_sub'
+                        ) THEN
+                            ALTER TABLE azure_subscriptions
+                            ADD CONSTRAINT uq_az_tenant_sub UNIQUE (tenant_id, subscription_id);
+                        END IF;
+                    END $$;
+                """)
+
+                conn.commit()
+                logger.info("Startup DB cleanup complete.")
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            logger.warning("Startup DB cleanup non-fatal error: %s", e)
+
     def ensure_ready(self) -> None:
         """Initializes SQLite fallback and attempts PostgreSQL connection/migration if configured."""
         self._ensure_sqlite_ready()
@@ -382,6 +456,8 @@ class DatabaseService:
                             res = cur.fetchone()
                             if res and res.get("count", 0) == 0:
                                 self.migrate_data()
+                    # Always run cleanup on startup to remove stale/fake data
+                    self._purge_non_azure_data(conn)
             except Exception as e:
                 logger.info(f"PostgreSQL connection at startup not reachable: {e}")
 

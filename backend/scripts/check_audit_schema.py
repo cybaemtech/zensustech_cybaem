@@ -20,3 +20,4 @@ with psycopg.connect(url, row_factory=dict_row) as conn:
         rows = cur.fetchall()
         for r in rows:
             print(r)
+

@@ -134,3 +134,4 @@ with psycopg.connect(url, row_factory=dict_row) as conn:
             print(f"  {r['sku_name'][:50]}  |  {r['consumed_units']}/{r['prepaid_units']}  |  {r['status']}  |  exp: {r['expiration_date']}")
 
 print("\nAll fixes applied successfully.")
+
