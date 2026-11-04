@@ -9,6 +9,7 @@ import Dashboard from '@/pages/dashboard';
 import CostDashboard from '@/pages/CostDashboard';
 import { LIVE_API_BASE } from '@/lib/live-api';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
+import { ZohoAuthCard } from '@/components/ZohoAuthCard';
 
 // ... (skipping to the Router component)
 // NOTE: using replace_file_content to properly patch the file. I will use the start and end lines specifically.
@@ -324,406 +325,235 @@ function Home() {
     }
   };
 
+  const [location] = useLocation();
+  const initialMode = location === '/signup' ? 'signup' : 'signin';
+
+  if (!showVerification) {
+    return (
+      <ZohoAuthCard
+        initialMode={initialMode}
+        isSubmitting={isSubmitting}
+        onSignInSuccess={(userEmail, userPassword) => {
+          setEmail(userEmail);
+          if (userPassword) setPassword(userPassword);
+          setShowVerification(true);
+        }}
+        onAzureSSO={() => {
+          setShowVerification(true);
+        }}
+      />
+    );
+  }
+
   return (
-    <main className="login-shell flex min-h-screen h-screen flex-col lg:h-screen lg:min-h-0 lg:flex-row">
-      <section className="brand-rail flex min-h-[24rem] flex-1 flex-col justify-start px-6 py-7 text-white sm:px-10 lg:min-h-full lg:h-full lg:max-w-[47%] lg:px-[clamp(2.5rem,6vw,7.5rem)] lg:py-10" aria-label="ZensusTech platform overview">
-        <div className="orb orb-a" aria-hidden="true" />
-        <div className="orb orb-b" aria-hidden="true" />
-        <div className="entrance relative z-10 flex items-center justify-between">
-          <img
-            src="/ZensusTech_Logo.PNG"
-            alt="ZensusTech"
-            className="brand-logo h-[9rem] w-[9rem] rounded-[1.5rem] object-contain shadow-[0_16px_38px_rgba(0,0,0,.26)]"
-            data-testid="img-brand-logo"
-          />
-          <span className="mono-label hidden text-[.62rem] text-cyan-100/70 sm:block">ZT / 04.26</span>
+    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-[#f8fafc] font-sans">
+      {/* Background decoration */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0 opacity-80"
+        style={{
+          background: `
+            radial-gradient(circle at 10% 15%, rgba(14, 165, 233, 0.04) 0%, transparent 40%),
+            radial-gradient(circle at 90% 85%, rgba(59, 130, 246, 0.05) 0%, transparent 45%),
+            linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)
+          `,
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-xl bg-white rounded-2xl shadow-[0_12px_45px_-8px_rgba(15,23,42,0.12),0_2px_8px_-2px_rgba(15,23,42,0.06)] border border-slate-200/90 p-6 sm:p-8 lg:p-10">
+        {/* Back link */}
+        <button
+          type="button"
+          onClick={() => {
+            setShowVerification(false);
+            setVerificationError('');
+          }}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors mb-5 cursor-pointer"
+        >
+          <span className="text-base leading-none">←</span>
+          <span>Back to Sign in</span>
+        </button>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Connect Azure Tenant
+            </h2>
+            <p className="text-xs text-slate-500">
+              Verify Microsoft Entra ID credentials for your ZensusTech workspace
+            </p>
+          </div>
         </div>
 
-        <div className="brand-copy relative z-10 mt-[clamp(2.5rem,8vh,6rem)] max-w-[34rem] pb-5 pt-10 sm:pt-16 lg:pb-5 lg:pt-0">
-          <div className="brand-kicker entrance entrance-delay-1 mb-7 flex items-center gap-3 text-[.67rem] font-semibold text-cyan-100/75">
-            <span className="status-dot" aria-hidden="true" />
-            <span className="mono-label">ZenAI Ops / secure access</span>
+        {/* Verification Form */}
+        <form onSubmit={handleVerificationSubmit} noValidate className="space-y-4 mt-6">
+          <div>
+            <label htmlFor="tenant-id" className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Tenant ID
+            </label>
+            <input
+              id="tenant-id"
+              name="tenantId"
+              type="text"
+              autoComplete="off"
+              value={tenantId}
+              onChange={(event) => {
+                setTenantId(event.target.value);
+                setVerificationError('');
+                setConnectionTestMessage('');
+                setConnectionTestError('');
+              }}
+              placeholder="9414ece9-9039-40b7-a6a7-7ecbe7409245"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 bg-white focus:border-[#008cff] focus:ring-4 focus:ring-[#008cff]/15 focus:outline-none transition-all font-mono"
+              data-testid="input-tenant-id"
+            />
           </div>
-          <h1 className="brand-headline entrance entrance-delay-2 max-w-[12ch] font-['Space_Grotesk'] text-[clamp(2.5rem,5vw,5.25rem)] font-semibold leading-[.97] tracking-[-.065em] text-[#f1f7fc]">
-            Clarity for complex cloud operations.
-          </h1>
-          <p className="brand-description entrance entrance-delay-3 mt-7 max-w-[31rem] text-[clamp(.96rem,1.3vw,1.08rem)] leading-7 text-slate-300/75">
-            One secure command center for the teams keeping modern infrastructure steady, observable, and ready for what is next.
-          </p>
-          <div className="brand-meta entrance entrance-delay-4 mt-10 flex items-center gap-3 border-t border-white/10 pt-5 text-xs text-slate-300/60">
-            <ShieldCheck className="h-4 w-4 text-cyan-300/90" strokeWidth={1.8} aria-hidden="true" />
-            <span>Identity-first access · Azure managed services</span>
-          </div>
-        </div>
-      </section>
 
-      <section className="auth-panel flex flex-1 flex-col justify-start bg-[#f4f7fa] px-6 py-7 sm:px-10 lg:min-h-0 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:max-w-[53%] lg:px-[clamp(2.5rem,8vw,10rem)] lg:py-10" aria-label="Sign in">
-        <header className="auth-header entrance flex items-center justify-end">
-          <div className="flex items-center gap-2 text-[.68rem] font-semibold text-[#65788c]">
-            <LockKeyhole className="h-3.5 w-3.5 text-[#159bcf]" strokeWidth={2} aria-hidden="true" />
-            <span className="mono-label">Encrypted session</span>
+          <div>
+            <label htmlFor="client-id" className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Client ID (Application ID)
+            </label>
+            <input
+              id="client-id"
+              name="clientId"
+              type="text"
+              autoComplete="off"
+              value={clientId}
+              onChange={(event) => {
+                setClientId(event.target.value);
+                setVerificationError('');
+                setConnectionTestMessage('');
+                setConnectionTestError('');
+              }}
+              placeholder="0ffa2118-1e76-4537-b0d4-0ad853240893"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 bg-white focus:border-[#008cff] focus:ring-4 focus:ring-[#008cff]/15 focus:outline-none transition-all font-mono"
+              data-testid="input-client-id"
+            />
           </div>
-        </header>
 
-        <div className="auth-content mx-auto mt-[clamp(3rem,8vh,5.5rem)] w-full max-w-[27rem] py-12 lg:flex-none lg:py-4">
-          {isSuccess ? (
-            <div className="entrance rounded-[1.2rem] border border-[#cbe4e3] bg-white p-7 shadow-[0_20px_60px_rgba(26,59,91,.1)] sm:p-9" data-testid="status-login-success" role="status" aria-live="polite">
-              <div className="success-mark mb-6 flex h-14 w-14 items-center justify-center rounded-2xl">
-                <Check className="h-7 w-7" strokeWidth={2.5} />
-              </div>
-              <p className="mono-label text-[.65rem] font-medium text-[#0a8579]">Access verified</p>
-              <h2 className="mt-3 font-['Space_Grotesk'] text-3xl font-semibold tracking-[-.045em] text-[#162a44]">Welcome back.</h2>
-              <p className="mt-3 text-[.94rem] leading-6 text-[#65788c]">
-                Your ZenAI Ops workspace is ready. This frontend confirmation completes the sign-in flow.
-              </p>
-              <div className="mt-7 flex items-center gap-3 rounded-xl bg-[#f2f8f9] px-4 py-3 text-sm text-[#34606c]">
-                <span className="h-2 w-2 rounded-full bg-[#31bca9]" />
-                Session prepared for <span className="truncate font-semibold text-[#1a4755]">{email}</span>
-              </div>
-              {azureDetails && (
-                <div className="mt-4 rounded-xl border border-[#cbe4e3] bg-[#f8fbfa] p-4 text-xs" data-testid="azure-verified-info">
-                  <div className="flex items-center gap-2 font-semibold text-[#0a8579]">
-                    <ShieldCheck className="h-4 w-4" />
-                    <span>Azure Entra ID Verified</span>
-                  </div>
-                  <div className="mt-2 space-y-1 text-[#486572]">
-                    <p className="truncate"><span className="font-medium text-[#203c4a]">Tenant ID:</span> {azureDetails.tenantId}</p>
-                    <p className="truncate"><span className="font-medium text-[#203c4a]">Client ID:</span> {azureDetails.clientId}</p>
-                  </div>
-                </div>
-              )}
+          <div>
+            <label htmlFor="client-secret" className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Client Secret
+            </label>
+            <div className="relative">
+              <input
+                id="client-secret"
+                name="clientSecret"
+                type={showClientSecret ? 'text' : 'password'}
+                autoComplete="new-password"
+                spellCheck={false}
+                value={clientSecret}
+                onChange={(event) => {
+                  setClientSecret(event.target.value);
+                  setVerificationError('');
+                  setConnectionTestMessage('');
+                  setConnectionTestError('');
+                }}
+                placeholder="Enter Azure client secret value"
+                className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 bg-white focus:border-[#008cff] focus:ring-4 focus:ring-[#008cff]/15 focus:outline-none transition-all font-mono"
+                data-testid="input-client-secret"
+              />
               <button
                 type="button"
-                onClick={() => setLocation('/dashboard')}
-                className="auth-submit mt-7 flex w-full items-center justify-center gap-2.5 px-5 text-sm font-semibold"
-                data-testid="button-continue-dashboard"
+                onClick={() => setShowClientSecret((visible) => !visible)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                aria-label={showClientSecret ? 'Hide secret' : 'Show secret'}
               >
-                Continue to Dashboard <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                {showClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-          ) : showLoginCheck ? (
-            <div className="entrance entrance-delay-1" role="status" aria-live="polite" aria-label="Verifying permissions">
-              <div className="auth-intro mb-7">
-                <p className="mono-label text-[.67rem] font-medium text-[#0d73aa]">Step 1 of 2 · Access verification</p>
-                <h2 className="mt-3 font-['Space_Grotesk'] text-[clamp(2rem,4vw,2.6rem)] font-semibold tracking-[-.06em] text-[#162a44]">Checking your access.</h2>
-                <p className="mt-2 text-[.94rem] text-[#718397]">Validating permissions for your ZenAI Ops workspace.</p>
-              </div>
-              <section className="rounded-xl border border-[#dce5ed] bg-white p-4" aria-label="Login permission checks">
-                <p className="mono-label mb-3 text-[.62rem] font-semibold tracking-[.12em] text-[#718397]">CHECKING ACCESS</p>
-                <div className="space-y-2 overflow-y-auto overscroll-contain pr-1" style={{ maxHeight: 'min(55vh, 22rem)' }}>
-                  {loginChecks.map((check, index) => (
-                    <div key={`login-check-${index}`} className="flex items-start gap-3 rounded-lg bg-[#f7f9fb] px-3 py-2.5">
-                      <span
-                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[.65rem] font-bold ${
-                          check.status === 'finish'
-                            ? 'bg-[#d9f2e9] text-[#16805f]'
-                            : check.status === 'error'
-                            ? 'bg-[#fde5e5] text-[#b34d50]'
-                            : check.status === 'process'
-                            ? 'bg-[#e1f3fa] text-[#0d73aa]'
-                            : 'bg-[#e9eef3] text-[#8796a5]'
-                        }`}
-                        aria-label={check.status}
-                      >
-                        {check.status === 'finish' ? (
-                          <Check className="h-3 w-3" strokeWidth={3} />
-                        ) : check.status === 'error' ? (
-                          '!'
-                        ) : check.status === 'process' ? (
-                          <span className="h-2 w-2 animate-pulse rounded-full bg-current" />
-                        ) : (
-                          index + 1
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-[#2b435d]">{check.title}</p>
-                        <p className="break-all text-[.68rem] leading-5 text-[#8090a0]">{check.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          ) : showVerification ? (
-            <div className="verification-screen entrance entrance-delay-1">
-              <div className="auth-intro mb-9">
-                <p className="mono-label text-[.67rem] font-medium text-[#0d73aa]">Step 2 of 2 · Azure verification</p>
-                <h2 className="mt-3 font-['Space_Grotesk'] text-[clamp(2rem,4vw,2.8rem)] font-semibold tracking-[-.06em] text-[#162a44]">Connect your tenant.</h2>
-                <p className="mt-3 text-[.94rem] text-[#718397]">Verify the Azure connection for your ZenAI Ops workspace.</p>
-              </div>
+          </div>
 
-              <form onSubmit={handleVerificationSubmit} noValidate className="auth-form space-y-5" aria-label="Azure verification form">
-                <div>
-                  <label htmlFor="tenant-id" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Tenant ID</label>
-                  <input
-                    id="tenant-id"
-                    name="tenantId"
-                    type="text"
-                    autoComplete="off"
-                    value={tenantId}
-                    onChange={(event) => {
-                      setTenantId(event.target.value);
-                      setVerificationError('');
-                      setConnectionTestMessage('');
-                      setConnectionTestError('');
-                    }}
-                    placeholder="Enter tenant ID"
-                    className="auth-input"
-                    data-testid="input-tenant-id"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="client-id" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Client ID</label>
-                  <input
-                    id="client-id"
-                    name="clientId"
-                    type="text"
-                    autoComplete="off"
-                    value={clientId}
-                    onChange={(event) => {
-                      setClientId(event.target.value);
-                      setVerificationError('');
-                      setConnectionTestMessage('');
-                      setConnectionTestError('');
-                    }}
-                    placeholder="Enter client ID"
-                    className="auth-input"
-                    data-testid="input-client-id"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="client-secret" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Client secret</label>
-                  <div className="relative">
-                    <input
-                      id="client-secret"
-                      name="clientSecret"
-                      type={showClientSecret ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      spellCheck={false}
-                      value={clientSecret}
-                      onChange={(event) => {
-                        setClientSecret(event.target.value);
-                        setVerificationError('');
-                        setConnectionTestMessage('');
-                        setConnectionTestError('');
-                      }}
-                      placeholder="Enter client secret"
-                      className="auth-input"
-                      style={{ paddingRight: '3.25rem' }}
-                      data-testid="input-client-secret"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowClientSecret((visible) => !visible)}
-                      className="password-toggle absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg"
-                      aria-label={showClientSecret ? 'Hide client secret' : 'Show client secret'}
-                      aria-pressed={showClientSecret}
-                      data-testid="button-toggle-client-secret"
-                    >
-                      {showClientSecret ? <EyeOff className="h-[1.05rem] w-[1.05rem]" strokeWidth={1.8} /> : <Eye className="h-[1.05rem] w-[1.05rem]" strokeWidth={1.8} />}
-                    </button>
-                  </div>
-                </div>
-
-                {connectionTestError && (
-                  <div className="flex items-start gap-2.5 rounded-lg border border-[#f1d1d1] bg-[#fff6f6] px-3.5 py-3 text-xs leading-5 text-[#9f4b4b]" role="alert" aria-live="polite" data-testid="text-connection-test-error">
-                    <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>{connectionTestError}</span>
-                  </div>
-                )}
-                {connectionTestMessage && (
-                  <div className="rounded-lg border border-[#cbe4e3] bg-[#f2f8f9] px-3.5 py-3 text-xs leading-5 text-[#34606c]" role="status" aria-live="polite" data-testid="text-connection-test-success">
-                    {connectionTestMessage}
-                  </div>
-                )}
-                {connectionChecks.length > 0 && (
-                  <section className="rounded-xl border border-[#dce5ed] bg-white p-4" aria-label="Azure permission checks" data-testid="connection-permission-checklist">
-                    <p className="mono-label mb-3 text-[.62rem] font-semibold tracking-[.12em] text-[#718397]">VERIFYING PERMISSIONS</p>
-                    <div className="space-y-2 overflow-y-auto overscroll-contain pr-1" style={{ maxHeight: 'min(35vh, 16rem)' }}>
-                      {connectionChecks.map((check, index) => (
-                        <div key={`${check.title}-${index}`} className="flex items-start gap-3 rounded-lg bg-[#f7f9fb] px-3 py-2.5">
-                          <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[.65rem] font-bold ${check.status === 'finish' ? 'bg-[#d9f2e9] text-[#16805f]' : check.status === 'error' ? 'bg-[#fde5e5] text-[#b34d50]' : check.status === 'process' ? 'bg-[#e1f3fa] text-[#0d73aa]' : 'bg-[#e9eef3] text-[#8796a5]'}`} aria-label={check.status}>
-                            {check.status === 'finish' ? <Check className="h-3 w-3" strokeWidth={3} /> : check.status === 'error' ? '!' : check.status === 'process' ? <span className="h-2 w-2 animate-pulse rounded-full bg-current" /> : index + 1}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-[#2b435d]">{check.title}</p>
-                            <p className="break-all text-[.68rem] leading-5 text-[#8090a0]">{check.description}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {connectionCheckSummary && <p className="mt-3 border-t border-[#e6edf2] pt-3 text-xs font-medium text-[#34606c]" role="status">{connectionCheckSummary}</p>}
-                  </section>
-                )}
-
-                {verificationError && (
-                  <div className="flex items-start gap-2.5 rounded-lg border border-[#f1d1d1] bg-[#fff6f6] px-3.5 py-3 text-xs leading-5 text-[#9f4b4b]" role="alert" aria-live="polite" data-testid="text-verification-error">
-                    <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>{verificationError}</span>
-                  </div>
-                )}
-
-                <div className="mt-2 space-y-2 border-t border-[#dce5ed] pt-3">
-                  <button type="button" disabled={isSubmitting || isTestingConnection} onClick={handleTestConnection} className="ghost-action flex w-full items-center justify-center gap-2.5 rounded-lg border border-[#cbd8e3] bg-white px-5 py-3 text-sm font-semibold disabled:cursor-wait disabled:opacity-75" data-testid="button-test-connection">
-                    {isTestingConnection ? 'Testing connection…' : 'Test Connection'}
-                  </button>
-                  <button type="submit" disabled={isSubmitting || isTestingConnection} className="auth-submit flex w-full items-center justify-center gap-2.5 px-5 text-sm font-semibold disabled:cursor-wait disabled:opacity-75" data-testid="button-verify-azure">
-                    {isSubmitting ? (
-                      <>
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />
-                        Verifying connection
-                      </>
-                    ) : (
-                      <>
-                        Verify and continue <ArrowRight className="h-4 w-4" strokeWidth={2.2} aria-hidden="true" />
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowVerification(false);
-                    setVerificationError('');
-                  }}
-                  className="ghost-action mx-auto flex items-center gap-2 text-sm font-semibold"
-                  data-testid="button-back-to-login"
-                >
-                  Back to sign in
-                </button>
-              </form>
-
-              <div className="auth-security mt-9 flex items-center gap-3 border-t border-[#dce5ed] pt-5 text-[.7rem] leading-5 text-[#8090a0]">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-[#159bcf]" strokeWidth={1.8} aria-hidden="true" />
-                <span>Live verification active · Credentials are authenticated in real-time against Microsoft Entra ID.</span>
-              </div>
-
-            </div>
-          ) : (
-            <div className="entrance entrance-delay-1">
-              <div className="auth-intro mb-9">
-                <p className="mono-label text-[.67rem] font-medium text-[#0d73aa]">Welcome to ZenAI Ops</p>
-                <h2 className="mt-3 font-['Space_Grotesk'] text-[clamp(2rem,4vw,2.8rem)] font-semibold tracking-[-.06em] text-[#162a44]">Sign in to your account.</h2>
-                <p className="mt-3 text-[.94rem] text-[#718397]">Your operational intelligence, all in one place.</p>
-              </div>
-
-              <form onSubmit={handleSubmit} noValidate className="auth-form space-y-5" aria-label="Login form">
-                <div>
-                  <label htmlFor="email" className="mb-2 block text-[.75rem] font-semibold text-[#2b435d]">Work email</label>
-                  <div className="relative">
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      value={email}
-                      onChange={(event) => handleEmailChange(event.target.value)}
-                      placeholder="you@company.com"
-                      aria-invalid={Boolean(errors.email)}
-                      aria-describedby={errors.email ? 'email-error' : undefined}
-                      className={`auth-input ${errors.email ? 'has-error' : ''}`}
-                      data-testid="input-email"
-                    />
-                  </div>
-                  {errors.email && <p id="email-error" className="mt-2 text-xs font-medium text-[#b34d50]" data-testid="text-error-email">{errors.email}</p>}
-                </div>
-
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <label htmlFor="password" className="block text-[.75rem] font-semibold text-[#2b435d]">Password</label>
-                    <button
-                      type="button"
-                      onClick={() => setForgotMessage(true)}
-                      className="ghost-action text-xs font-semibold"
-                      data-testid="button-forgot-password"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(event) => handlePasswordChange(event.target.value)}
-                      placeholder="Enter your password"
-                      aria-invalid={Boolean(errors.password)}
-                      aria-describedby={errors.password ? 'password-error' : undefined}
-                      className={`auth-input ${errors.password ? 'has-error' : ''}`}
-                      style={{ paddingRight: '3.25rem' }}
-                      data-testid="input-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((visible) => !visible)}
-                      className="password-toggle absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      aria-pressed={showPassword}
-                      data-testid="button-toggle-password"
-                    >
-                      {showPassword ? <EyeOff className="h-[1.05rem] w-[1.05rem]" strokeWidth={1.8} /> : <Eye className="h-[1.05rem] w-[1.05rem]" strokeWidth={1.8} />}
-                    </button>
-                  </div>
-                  {errors.password && <p id="password-error" className="mt-2 text-xs font-medium text-[#b34d50]" data-testid="text-error-password">{errors.password}</p>}
-                </div>
-
-                <label className="remember-box flex cursor-pointer items-center gap-3 py-1 text-sm text-[#667b91]">
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(event) => setRemember(event.target.checked)}
-                    className="peer sr-only"
-                    data-testid="checkbox-remember-me"
-                  />
-                  <span className="flex h-[1.1rem] w-[1.1rem] items-center justify-center rounded-[.3rem] border border-[#b9c8d6] bg-white text-transparent transition-colors peer-checked:border-[#0f73ad] peer-checked:bg-[#0f73ad] peer-focus-visible:ring-4 peer-focus-visible:ring-[#159bcf]/20">
-                    <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
-                  </span>
-                  <span>Keep me signed in for 30 days</span>
-                </label>
-
-                {forgotMessage && (
-                  <div className="flex items-start gap-2.5 rounded-lg border border-[#c9e1ee] bg-[#eef8fc] px-3.5 py-3 text-xs leading-5 text-[#31647b]" role="status" aria-live="polite" data-testid="status-forgot-password">
-                    <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-[#168ebf]" aria-hidden="true" />
-                    <span>Password recovery is not connected yet. Contact your workspace administrator for access.</span>
-                  </div>
-                )}
-
-                {errors.credentials && (
-                  <div className="flex items-start gap-2.5 rounded-lg border border-[#f1d1d1] bg-[#fff6f6] px-3.5 py-3 text-xs leading-5 text-[#9f4b4b]" role="alert" aria-live="polite" data-testid="text-credentials-error">
-                    <CircleHelp className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>{errors.credentials}</span>
-                  </div>
-                )}
-
-                <button type="submit" disabled={isSubmitting} className="auth-submit flex w-full items-center justify-center gap-2.5 px-5 text-sm font-semibold disabled:cursor-wait disabled:opacity-75" data-testid="button-submit-login">
-                  {isSubmitting ? (
-                    <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />
-                      Checking access
-                    </>
-                  ) : (
-                    <>
-                      Continue to workspace <ArrowRight className="h-4 w-4" strokeWidth={2.2} aria-hidden="true" />
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <div className="auth-security mt-9 flex items-center gap-3 border-t border-[#dce5ed] pt-5 text-[.7rem] leading-5 text-[#8090a0]">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-[#159bcf]" strokeWidth={1.8} aria-hidden="true" />
-                <span>Protected by ZensusTech identity controls and encrypted session handling.</span>
-              </div>
+          {connectionTestError && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50/70 p-3 text-xs text-rose-800">
+              <CircleHelp className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{connectionTestError}</span>
             </div>
           )}
-        </div>
 
-      </section>
-    </main>
+          {connectionTestMessage && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-800">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{connectionTestMessage}</span>
+            </div>
+          )}
+
+          {connectionChecks.length > 0 && (
+            <section className="rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label="Azure permission checks">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2.5">
+                VERIFYING PERMISSIONS
+              </p>
+              <div className="space-y-1.5 overflow-y-auto max-h-48 pr-1">
+                {connectionChecks.map((check, index) => (
+                  <div key={`${check.title}-${index}`} className="flex items-start gap-2.5 rounded-lg bg-white p-2 border border-slate-200 text-xs">
+                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                      check.status === 'finish'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : check.status === 'error'
+                        ? 'bg-rose-100 text-rose-700'
+                        : check.status === 'process'
+                        ? 'bg-blue-100 text-blue-700 animate-pulse'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {check.status === 'finish' ? '✓' : check.status === 'error' ? '!' : index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-800">{check.title}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{check.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {connectionCheckSummary && (
+                <p className="mt-2 text-xs font-semibold text-emerald-700 border-t border-slate-200 pt-2">
+                  {connectionCheckSummary}
+                </p>
+              )}
+            </section>
+          )}
+
+          {verificationError && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+              <CircleHelp className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{verificationError}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+            <button
+              type="button"
+              disabled={isSubmitting || isTestingConnection}
+              onClick={handleTestConnection}
+              className="w-full py-2.5 px-4 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all cursor-pointer disabled:opacity-60"
+            >
+              {isTestingConnection ? 'Testing...' : 'Test Connection'}
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || isTestingConnection}
+              className="w-full py-2.5 px-4 rounded-lg bg-[#008cff] hover:bg-[#007be6] text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+            >
+              {isSubmitting ? (
+                <span>Verifying...</span>
+              ) : (
+                <>
+                  <span>Verify and Continue</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-400">
+          <ShieldCheck className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+          <span>Encrypted token handshake · Direct Microsoft Entra ID verification</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -757,6 +587,8 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/signin" component={Home} />
+        <Route path="/signup" component={Home} />
         <Route path="/dashboard">
           {() => <ProtectedRoute component={Dashboard} />}
         </Route>
