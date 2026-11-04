@@ -48,6 +48,7 @@ export function ZohoAuthCard({
   const [orgName, setOrgName] = useState('');
   const [customer, setCustomer] = useState('');
   const [signUpEmail, setSignUpEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [vendorCode, setVendorCode] = useState<VendorCode>('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
@@ -156,6 +157,7 @@ export function ZohoAuthCard({
         organization: orgName.trim() || 'ZensusTech Cloud',
         customer: customer.trim() || 'ZensusTech Primary',
         email: signUpEmail.trim(),
+        phone: phone.trim(),
         vendorCode,
         createdAt: new Date().toISOString(),
       };
@@ -538,39 +540,54 @@ export function ZohoAuthCard({
                     </div>
                   </div>
 
-                  {/* Row 4: Password * */}
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                      Password <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
+                  {/* Row 4: Phone No. & Password * */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                        Phone No.
+                      </label>
                       <input
-                        type={showSignUpPassword ? 'text' : 'password'}
-                        value={signUpPassword}
-                        onChange={(e) => {
-                          setSignUpPassword(e.target.value);
-                          if (signUpErrors.password) setSignUpErrors((p) => ({ ...p, password: '' }));
-                        }}
-                        placeholder="At least 8 characters"
-                        className={`w-full pl-2.5 pr-8 py-1.5 rounded-lg border text-xs text-slate-900 bg-white focus:outline-none transition-all ${
-                          signUpErrors.password
-                            ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
-                            : 'border-slate-300 focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20'
-                        }`}
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+91 9823101112"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20 focus:outline-none transition-all"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowSignUpPassword(!showSignUpPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showSignUpPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
                     </div>
-                    {signUpErrors.password && (
-                      <p className="text-[10px] text-rose-500 mt-0.5 font-medium leading-none">
-                        {signUpErrors.password}
-                      </p>
-                    )}
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                        Password <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showSignUpPassword ? 'text' : 'password'}
+                          value={signUpPassword}
+                          onChange={(e) => {
+                            setSignUpPassword(e.target.value);
+                            if (signUpErrors.password) setSignUpErrors((p) => ({ ...p, password: '' }));
+                          }}
+                          placeholder="At least 8 characters"
+                          className={`w-full pl-2.5 pr-8 py-1.5 rounded-lg border text-xs text-slate-900 bg-white focus:outline-none transition-all ${
+                            signUpErrors.password
+                              ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                              : 'border-slate-300 focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showSignUpPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                      {signUpErrors.password && (
+                        <p className="text-[10px] text-rose-500 mt-0.5 font-medium leading-none">
+                          {signUpErrors.password}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Row 5: Terms Checkbox */}
