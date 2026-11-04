@@ -61,6 +61,59 @@ export function ZohoAuthCard({
   const [activeSlide, setActiveSlide] = useState(0);
   const [showLearnMoreModal, setShowLearnMoreModal] = useState(false);
   const [showSmartSignInModal, setShowSmartSignInModal] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleSigningInEmail, setGoogleSigningInEmail] = useState<string | null>(null);
+  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+  const [showCustomGoogleInput, setShowCustomGoogleInput] = useState(false);
+  const [googleError, setGoogleError] = useState('');
+
+  const GOOGLE_ACCOUNTS = [
+    {
+      name: 'Vinayak Salunkhe',
+      email: 'vinayak.salunkhe@zensustech.com',
+      role: 'Enterprise Cloud Administrator',
+      initials: 'VS',
+      bgColor: 'bg-emerald-600',
+    },
+    {
+      name: 'Priyanka K',
+      email: 'priyanka.k@cybaemtech.com',
+      role: 'Cloud Security Engineer',
+      initials: 'PK',
+      bgColor: 'bg-indigo-600',
+    },
+    {
+      name: 'ZensusTech Operations',
+      email: 'admin@zensustech.com',
+      role: 'Enterprise Primary Workspace',
+      initials: 'ZT',
+      bgColor: 'bg-blue-600',
+    },
+  ];
+
+  const handleGoogleAccountSelect = (selectedEmail: string) => {
+    setGoogleSigningInEmail(selectedEmail);
+    setGoogleError('');
+    setTimeout(() => {
+      sessionStorage.setItem('user_email', selectedEmail);
+      setShowGoogleModal(false);
+      setGoogleSigningInEmail(null);
+      onSignInSuccess(selectedEmail, 'google-oauth');
+    }, 1200);
+  };
+
+  const handleCustomGoogleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customGoogleEmail.trim()) {
+      setGoogleError('Please enter a Google account email');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customGoogleEmail.trim())) {
+      setGoogleError('Please enter a valid email address');
+      return;
+    }
+    handleGoogleAccountSelect(customGoogleEmail.trim());
+  };
 
   // Sync mode with prop if changed
   useEffect(() => {
@@ -206,12 +259,12 @@ export function ZohoAuthCard({
       </svg>
 
       {/* Main Floating Card Container (Zoho Layout) */}
-      <div className="relative z-10 w-full max-w-[940px] max-h-[96vh] bg-white rounded-2xl shadow-[0_12px_45px_-8px_rgba(15,23,42,0.12),0_2px_8px_-2px_rgba(15,23,42,0.06)] border border-slate-200/90 overflow-hidden flex flex-col md:flex-row transition-all duration-300">
+      <div className="relative z-10 w-full max-w-[1020px] max-h-[96vh] bg-white rounded-2xl shadow-[0_12px_45px_-8px_rgba(15,23,42,0.12),0_2px_8px_-2px_rgba(15,23,42,0.06)] border border-slate-200/90 overflow-hidden flex flex-col md:flex-row transition-all duration-300">
         
         {/* ========================================================= */}
         {/* LEFT COLUMN: FORM SECTION (SIGN IN / SIGN UP)            */}
         {/* ========================================================= */}
-        <div className="w-full md:w-[58%] p-5 sm:p-7 lg:p-8 flex flex-col justify-between overflow-y-auto max-h-[96vh]">
+        <div className="w-full md:w-[52%] lg:w-[50%] p-5 sm:p-7 flex flex-col justify-between overflow-y-auto max-h-[96vh]">
           <div>
             {/* Top Bar: Official ZensusTech Brand Logo & "Try smart sign-in" Pill */}
             <div className="flex items-center justify-between gap-3 mb-4">
@@ -381,12 +434,16 @@ export function ZohoAuthCard({
                     SIGN IN USING
                   </p>
                   <div className="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
-                    {/* Google */}
+                    {/* Google Sign-in */}
                     <button
                       type="button"
                       title="Sign in with Google"
-                      onClick={() => alert('Google Sign-in: Please use Microsoft Entra ID SSO for your enterprise workspace.')}
-                      className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center shadow-xs transition-transform active:scale-95"
+                      onClick={() => {
+                        setGoogleError('');
+                        setShowCustomGoogleInput(false);
+                        setShowGoogleModal(true);
+                      }}
+                      className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center shadow-xs transition-all hover:scale-105 active:scale-95 cursor-pointer relative group"
                     >
                       <svg className="w-4 h-4" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -394,6 +451,7 @@ export function ZohoAuthCard({
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                       </svg>
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full ring-2 ring-white" />
                     </button>
 
                     {/* LinkedIn */}
@@ -705,21 +763,21 @@ export function ZohoAuthCard({
         {/* ========================================================= */}
         {/* RIGHT COLUMN: AUTO-SWIPE AUTHENTICATION SHOWCASE          */}
         {/* ========================================================= */}
-        <div className="w-full md:w-[42%] bg-gradient-to-b from-[#f8fafc] via-[#f1f5f9] to-[#eef2f6] border-t md:border-t-0 md:border-l border-slate-200/90 p-5 sm:p-6 lg:p-7 flex flex-col justify-between items-center text-center relative overflow-hidden">
+        <div className="w-full md:w-[48%] lg:w-[50%] bg-gradient-to-b from-[#f8fafc] via-[#f1f5f9] to-[#eef2f6] border-t md:border-t-0 md:border-l border-slate-200/90 p-5 sm:p-6 lg:p-7 flex flex-col justify-between items-center text-center relative overflow-hidden">
           
           {/* Subtle background glow */}
           <div className="absolute top-1/4 -right-10 w-48 h-48 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-indigo-400/10 rounded-full blur-2xl pointer-events-none" />
 
-          {/* Auto-Swiping Authentication Images Showcase */}
-          <div className="w-full max-w-[270px] my-auto pt-1 relative">
+          {/* Auto-Swiping Authentication Images Showcase (Enlarged & Prominent) */}
+          <div className="w-full max-w-[380px] my-auto pt-1 relative">
             
-            {/* Auto-swiping images container with crisp single image display & no bleeding */}
-            <div className="relative mx-auto w-full h-48 sm:h-52 flex items-center justify-center overflow-hidden rounded-xl bg-white p-2 border border-slate-200/80 shadow-xs">
+            {/* Auto-swiping images container with crisp large image display */}
+            <div className="relative mx-auto w-full h-56 sm:h-64 flex items-center justify-center overflow-hidden rounded-2xl bg-white p-3.5 border border-slate-200/90 shadow-sm group">
               {slides.map((s, idx) => (
                 <div
                   key={idx}
-                  className={`absolute inset-0 p-2.5 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
+                  className={`absolute inset-0 p-3 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
                     activeSlide === idx
                       ? 'opacity-100 z-10'
                       : 'opacity-0 z-0 pointer-events-none'
@@ -728,7 +786,7 @@ export function ZohoAuthCard({
                   <img
                     src={s.image}
                     alt={s.title}
-                    className="w-full h-full object-contain select-none"
+                    className="w-full h-full object-contain select-none filter drop-shadow-xs"
                     loading="eager"
                   />
                 </div>
@@ -738,30 +796,30 @@ export function ZohoAuthCard({
               <button
                 type="button"
                 onClick={() => setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length)}
-                className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20 w-6 h-6 rounded-full bg-white/90 hover:bg-white text-slate-700 flex items-center justify-center shadow-xs transition-opacity cursor-pointer opacity-60 hover:opacity-100"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-white/95 hover:bg-white text-slate-700 flex items-center justify-center shadow-md transition-all cursor-pointer opacity-70 hover:opacity-100 hover:scale-105"
                 aria-label="Previous slide"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setActiveSlide((prev) => (prev + 1) % slides.length)}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 z-20 w-6 h-6 rounded-full bg-white/90 hover:bg-white text-slate-700 flex items-center justify-center shadow-xs transition-opacity cursor-pointer opacity-60 hover:opacity-100"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-white/95 hover:bg-white text-slate-700 flex items-center justify-center shadow-md transition-all cursor-pointer opacity-70 hover:opacity-100 hover:scale-105"
                 aria-label="Next slide"
               >
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* Slide Text Content */}
-            <div className="mt-3.5 space-y-1">
+            <div className="mt-4 space-y-1">
               <span className="inline-block px-2.5 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 border border-blue-200">
                 {slides[activeSlide].badge}
               </span>
               <h3 className="text-sm sm:text-base font-bold text-slate-800 tracking-tight transition-all duration-300">
                 {slides[activeSlide].title}
               </h3>
-              <p className="text-[11px] text-slate-500 leading-relaxed max-w-[260px] mx-auto min-h-[34px] transition-all duration-300">
+              <p className="text-[11.5px] text-slate-500 leading-relaxed max-w-[320px] mx-auto min-h-[34px] transition-all duration-300">
                 {slides[activeSlide].subtitle}
               </p>
             </div>
@@ -890,6 +948,132 @@ export function ZohoAuthCard({
               >
                 Use ZensusTech Verified Admin Profile
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* POPUP MODAL: GOOGLE SIGN-IN ACCOUNT CHOOSER               */}
+      {/* ========================================================= */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl border border-slate-200 overflow-hidden relative animate-scaleUp">
+            
+            {/* Header with Google Logo */}
+            <div className="p-5 pb-3 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span className="font-semibold text-sm text-slate-800">Sign in with Google</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGoogleModal(false);
+                  setGoogleSigningInEmail(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sub-header instruction */}
+            <div className="px-5 pt-3 pb-2">
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">Choose an account</h3>
+              <p className="text-xs text-slate-500 mt-0.5">to continue to ZensusTech Cloud Operations</p>
+            </div>
+
+            {/* Google accounts list */}
+            <div className="px-4 py-2 space-y-1.5 max-h-64 overflow-y-auto">
+              {GOOGLE_ACCOUNTS.map((acc) => {
+                const isSelected = googleSigningInEmail === acc.email;
+                return (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    disabled={Boolean(googleSigningInEmail)}
+                    onClick={() => handleGoogleAccountSelect(acc.email)}
+                    className="w-full p-2.5 rounded-xl border border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/40 text-left flex items-center gap-3 transition-all cursor-pointer group disabled:opacity-60"
+                  >
+                    <div className={`w-9 h-9 rounded-full ${acc.bgColor} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform`}>
+                      {acc.initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-700">
+                        {acc.name}
+                      </p>
+                      <p className="text-[11px] text-slate-500 truncate">{acc.email}</p>
+                    </div>
+                    {isSelected ? (
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                    ) : (
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Use Another Account Toggle */}
+              {!showCustomGoogleInput ? (
+                <button
+                  type="button"
+                  disabled={Boolean(googleSigningInEmail)}
+                  onClick={() => setShowCustomGoogleInput(true)}
+                  className="w-full p-2.5 rounded-xl border border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-left flex items-center gap-3 transition-all cursor-pointer text-xs text-slate-600 font-semibold"
+                >
+                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center shrink-0">
+                    <span className="text-sm font-bold">+</span>
+                  </div>
+                  <span>Use another Google account</span>
+                </button>
+              ) : (
+                <form onSubmit={handleCustomGoogleSubmit} className="p-2.5 rounded-xl border border-blue-300 bg-blue-50/30 space-y-2">
+                  <label className="block text-[11px] font-semibold text-slate-700">
+                    Google Email
+                  </label>
+                  <input
+                    type="email"
+                    value={customGoogleEmail}
+                    onChange={(e) => {
+                      setCustomGoogleEmail(e.target.value);
+                      if (googleError) setGoogleError('');
+                    }}
+                    placeholder="you@gmail.com or corporate email"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-500"
+                    autoFocus
+                  />
+                  {googleError && (
+                    <p className="text-[10.5px] text-rose-500">{googleError}</p>
+                  )}
+                  <div className="flex gap-2 justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomGoogleInput(false)}
+                      className="px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-200 rounded cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={Boolean(googleSigningInEmail)}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded cursor-pointer"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* Google Terms Footer */}
+            <div className="p-3 bg-slate-50 border-t border-slate-100 text-[10.5px] text-slate-400 text-center">
+              Google OAuth 2.0 Secure Handshake · ZensusTech IAM
             </div>
           </div>
         </div>
