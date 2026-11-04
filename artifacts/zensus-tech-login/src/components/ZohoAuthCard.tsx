@@ -7,17 +7,9 @@ import {
   ArrowRight,
   Sparkles,
   Lock,
-  Building,
-  User,
-  Mail,
-  ChevronRight,
-  Info,
   X,
-  Laptop,
-  Smartphone,
-  KeyRound,
-  Fingerprint,
-  ScanFace
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export interface ZohoAuthCardProps {
@@ -65,7 +57,7 @@ export function ZohoAuthCard({
   const [signUpErrors, setSignUpErrors] = useState<Record<string, string>>({});
   const [signUpSuccessMessage, setSignUpSuccessMessage] = useState('');
 
-  // Right side carousel slide
+  // Right side auto-swipe authentication slides
   const [activeSlide, setActiveSlide] = useState(0);
   const [showLearnMoreModal, setShowLearnMoreModal] = useState(false);
   const [showSmartSignInModal, setShowSmartSignInModal] = useState(false);
@@ -75,13 +67,37 @@ export function ZohoAuthCard({
     setMode(initialMode);
   }, [initialMode]);
 
-  // Auto-rotate right carousel every 6s
+  const slides = [
+    {
+      image: '/auth/auth-biometric-mfa.jpg',
+      title: 'Biometric & Multi-Factor Access',
+      subtitle:
+        'Secure one-tap mobile authentication and Microsoft Entra ID biometric sign-in protecting enterprise cloud operations.',
+      badge: 'Biometric MFA',
+    },
+    {
+      image: '/auth/auth-identity-guard.jpg',
+      title: 'Zero Trust Identity Defense',
+      subtitle:
+        'Continuous identity posture verification and role-based access controls safeguarding sensitive organizational assets.',
+      badge: 'Identity Guard',
+    },
+    {
+      image: '/auth/auth-passwordless-key.jpg',
+      title: 'Passwordless Credential Security',
+      subtitle:
+        'Eliminate credential theft and phishing attacks with cryptographic FIDO2 keys and automated passwordless handshakes.',
+      badge: 'Passwordless Key',
+    },
+  ];
+
+  // Auto-rotate right carousel every 4.5s
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % 3);
-    }, 6000);
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 4500);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   // Validation for Sign In
   const validateSignIn = () => {
@@ -103,7 +119,6 @@ export function ZohoAuthCard({
     if (!validateSignIn()) return;
 
     if (signInStep === 'email') {
-      // Advance to password entry step (just like Zoho)
       setSignInStep('password');
     } else {
       onSignInSuccess(signInEmail.trim(), signInPassword);
@@ -136,7 +151,6 @@ export function ZohoAuthCard({
     e.preventDefault();
     if (!validateSignUp()) return;
 
-    // Save newly created user credentials into localStorage for instant sign-in test
     try {
       const newUser = {
         firstName: firstName.trim(),
@@ -156,7 +170,6 @@ export function ZohoAuthCard({
       `Account created for ${firstName} ${lastName}! Please sign in with your email.`
     );
 
-    // Populate sign-in email and switch to sign in
     setSignInEmail(signUpEmail.trim());
     setSignInStep('email');
     setTimeout(() => {
@@ -164,27 +177,6 @@ export function ZohoAuthCard({
       setSignUpSuccessMessage('');
     }, 2200);
   };
-
-  const slides = [
-    {
-      title: 'Passwordless sign-in',
-      subtitle:
-        'Move away from risky passwords and experience one-tap access to ZensusTech. Download and install OneAuth or connect via Microsoft Entra ID.',
-      badge: 'Zero-Trust Auth',
-    },
-    {
-      title: 'Multi-Cloud Observability',
-      subtitle:
-        'Single pane of glass across Microsoft 365, Azure subscriptions, spending analytics, and privileged directory identities.',
-      badge: 'Cloud Governance',
-    },
-    {
-      title: 'Continuous Identity Defense',
-      subtitle:
-        'Real-time Microsoft Entra audit telemetry, automated Secure Score benchmarking, and instant threat remediation.',
-      badge: 'Security Posture',
-    },
-  ];
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-x-hidden font-sans select-none bg-[#f8fafc]">
@@ -221,18 +213,17 @@ export function ZohoAuthCard({
         {/* ========================================================= */}
         <div className="w-full md:w-[58%] p-6 sm:p-10 lg:p-12 flex flex-col justify-between">
           <div>
-            {/* Top Bar: Brand Logo & "Try smart sign-in" Pill */}
+            {/* Top Bar: Official ZensusTech Brand Logo & "Try smart sign-in" Pill */}
             <div className="flex items-center justify-between gap-3 mb-6">
-              {/* Brand Logo styled in Zoho colorful box spirit + ZensusTech */}
+              {/* ZensusTech Brand Logo (Removed Zoho colorful boxes) */}
               <div className="flex items-center gap-2.5">
-                <div className="flex items-center -space-x-1">
-                  <div className="w-4 h-4 rounded-[4px] border-2 border-rose-500 bg-rose-50 transform -rotate-6 shadow-sm" />
-                  <div className="w-4 h-4 rounded-[4px] border-2 border-emerald-500 bg-emerald-50 transform rotate-3 shadow-sm" />
-                  <div className="w-4 h-4 rounded-[4px] border-2 border-sky-500 bg-sky-50 transform -rotate-3 shadow-sm" />
-                  <div className="w-4 h-4 rounded-[4px] border-2 border-amber-500 bg-amber-50 transform rotate-6 shadow-sm" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-extrabold text-[15px] tracking-wider text-slate-800 leading-none">
+                <img
+                  src="/ZensusTech_Logo.PNG"
+                  alt="ZensusTech"
+                  className="h-9 w-auto max-w-[120px] object-contain rounded-md"
+                />
+                <div className="flex flex-col border-l border-slate-200 pl-2.5">
+                  <span className="font-extrabold text-[14px] tracking-wider text-slate-800 leading-none">
                     ZENSUSTECH
                   </span>
                   <span className="text-[9px] font-medium tracking-widest text-slate-400 uppercase mt-0.5">
@@ -241,7 +232,7 @@ export function ZohoAuthCard({
                 </div>
               </div>
 
-              {/* Zoho-style "Try smart sign-in" Pill Button */}
+              {/* "Try smart sign-in" Pill Button */}
               <button
                 type="button"
                 onClick={() => setShowSmartSignInModal(true)}
@@ -367,7 +358,7 @@ export function ZohoAuthCard({
                     </div>
                   )}
 
-                  {/* Zoho vibrant Blue Next/Sign in Button */}
+                  {/* Vibrant Blue Next/Sign in Button */}
                   <button
                     type="submit"
                     disabled={isSubmitting}
@@ -384,10 +375,10 @@ export function ZohoAuthCard({
                   </button>
                 </form>
 
-                {/* Zoho Social / SSO Row */}
+                {/* Social / SSO Row */}
                 <div className="pt-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3 text-center sm:text-left">
-                    Sign in using
+                    SIGN IN USING
                   </p>
                   <div className="flex items-center gap-2.5 justify-center sm:justify-start flex-wrap">
                     {/* Google */}
@@ -547,15 +538,13 @@ export function ZohoAuthCard({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Organization Name
                     </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={orgName}
-                        onChange={(e) => setOrgName(e.target.value)}
-                        placeholder="e.g. Zensus Technologies Pvt Ltd"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:border-[#008cff] focus:ring-2 focus:ring-[#008cff]/15 focus:outline-none transition-all"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={orgName}
+                      onChange={(e) => setOrgName(e.target.value)}
+                      placeholder="e.g. Zensus Technologies Pvt Ltd"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:border-[#008cff] focus:ring-2 focus:ring-[#008cff]/15 focus:outline-none transition-all"
+                    />
                   </div>
 
                   {/* Field 4: Customer */}
@@ -615,7 +604,7 @@ export function ZohoAuthCard({
                           </option>
                         ))}
                       </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
                         ▼
                       </div>
                     </div>
@@ -712,7 +701,7 @@ export function ZohoAuthCard({
         </div>
 
         {/* ========================================================= */}
-        {/* RIGHT COLUMN: HERO CAROUSEL (ZOHO LOOK-ALIKE BANNER)      */}
+        {/* RIGHT COLUMN: AUTO-SWIPE AUTHENTICATION SHOWCASE          */}
         {/* ========================================================= */}
         <div className="w-full md:w-[42%] bg-gradient-to-b from-[#f8fafc] via-[#f1f5f9] to-[#eef2f6] border-t md:border-t-0 md:border-l border-slate-200/90 p-6 sm:p-8 flex flex-col justify-between items-center text-center relative overflow-hidden">
           
@@ -720,62 +709,65 @@ export function ZohoAuthCard({
           <div className="absolute top-1/4 -right-10 w-48 h-48 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-indigo-400/10 rounded-full blur-2xl pointer-events-none" />
 
-          {/* Interactive SVG Illustration matching Zoho's layout */}
-          <div className="w-full max-w-[280px] my-auto pt-4 relative">
-            <div className="relative mx-auto w-56 h-48 flex items-center justify-center">
-              
-              {/* Laptop illustration base */}
-              <div className="w-48 h-32 rounded-xl bg-slate-800 border-2 border-slate-700 shadow-lg relative flex flex-col items-center justify-center p-3">
-                {/* Laptop Camera */}
-                <div className="absolute top-1 w-1.5 h-1.5 rounded-full bg-slate-600" />
-                
-                {/* Authenticated email pill inside laptop screen */}
-                <div className="bg-amber-100/90 border border-amber-300 text-amber-900 text-[10px] font-semibold px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1 max-w-[90%] truncate">
-                  <Lock className="w-2.5 h-2.5 text-amber-700 shrink-0" />
-                  <span className="truncate">vinayak@zensustech.com</span>
+          {/* Auto-Swiping Authentication Images Showcase */}
+          <div className="w-full max-w-[280px] my-auto pt-2 relative">
+            
+            {/* Auto-swiping images container with smooth transition */}
+            <div className="relative mx-auto w-full h-52 flex items-center justify-center overflow-hidden rounded-xl bg-white/70 p-2 border border-slate-200/80 shadow-xs">
+              {slides.map((s, idx) => (
+                <div
+                  key={idx}
+                  className={`absolute inset-0 p-3 flex items-center justify-center transition-all duration-700 ease-in-out ${
+                    activeSlide === idx
+                      ? 'opacity-100 scale-100 translate-x-0'
+                      : activeSlide > idx
+                      ? 'opacity-0 scale-95 -translate-x-full pointer-events-none'
+                      : 'opacity-0 scale-95 translate-x-full pointer-events-none'
+                  }`}
+                >
+                  <img
+                    src={s.image}
+                    alt={s.title}
+                    className="w-full h-full object-contain drop-shadow-sm select-none"
+                    loading="eager"
+                  />
                 </div>
+              ))}
 
-                {/* Fingerprint scan icon on screen */}
-                <div className="mt-2.5 w-10 h-10 rounded-full bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-400">
-                  <Fingerprint className="w-6 h-6 animate-pulse" />
-                </div>
-              </div>
-
-              {/* Laptop base keyboard tray */}
-              <div className="absolute bottom-4 w-56 h-3 bg-slate-700 rounded-b-md shadow-md" />
-
-              {/* Floating Badge 1: Key Icon (Top Left) */}
-              <div className="absolute -top-1 left-2 w-9 h-9 rounded-full bg-blue-600 text-white shadow-md flex items-center justify-center animate-bounce duration-1000">
-                <KeyRound className="w-4 h-4" />
-              </div>
-
-              {/* Floating Badge 2: Facial Recognition (Top Right) */}
-              <div className="absolute -top-1 right-2 w-9 h-9 rounded-full bg-indigo-600 text-white shadow-md flex items-center justify-center">
-                <ScanFace className="w-4 h-4" />
-              </div>
-
-              {/* Floating Badge 3: User Avatar / Smartphone (Bottom Right) */}
-              <div className="absolute -bottom-1 -right-2 bg-white border border-slate-200 rounded-lg p-1.5 shadow-md flex items-center gap-1.5 text-[10px] font-bold text-slate-700">
-                <Smartphone className="w-3.5 h-3.5 text-blue-600" />
-                <span>OneAuth</span>
-              </div>
+              {/* Prev / Next micro-buttons on hover */}
+              <button
+                type="button"
+                onClick={() => setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length)}
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/80 hover:bg-white text-slate-600 flex items-center justify-center shadow-xs transition-opacity cursor-pointer opacity-40 hover:opacity-100"
+                aria-label="Previous slide"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSlide((prev) => (prev + 1) % slides.length)}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/80 hover:bg-white text-slate-600 flex items-center justify-center shadow-xs transition-opacity cursor-pointer opacity-40 hover:opacity-100"
+                aria-label="Next slide"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
 
             {/* Slide Text Content */}
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-1.5">
               <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 border border-blue-200">
                 {slides[activeSlide].badge}
               </span>
-              <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
+              <h3 className="text-base font-bold text-slate-800 tracking-tight transition-all duration-300">
                 {slides[activeSlide].title}
               </h3>
-              <p className="text-xs text-slate-500 leading-relaxed max-w-[270px] mx-auto">
+              <p className="text-xs text-slate-500 leading-relaxed max-w-[270px] mx-auto min-h-[38px] transition-all duration-300">
                 {slides[activeSlide].subtitle}
               </p>
             </div>
 
-            {/* Zoho "Learn more" Pill Button */}
-            <div className="mt-4">
+            {/* "Learn more" Pill Button */}
+            <div className="mt-3">
               <button
                 type="button"
                 onClick={() => setShowLearnMoreModal(true)}
@@ -793,7 +785,7 @@ export function ZohoAuthCard({
                 key={idx}
                 type="button"
                 onClick={() => setActiveSlide(idx)}
-                className={`h-1.5 rounded-full transition-all duration-200 ${
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
                   activeSlide === idx
                     ? 'w-5 bg-[#008cff]'
                     : 'w-1.5 bg-slate-300 hover:bg-slate-400'
@@ -842,7 +834,7 @@ export function ZohoAuthCard({
             <button
               type="button"
               onClick={() => setShowLearnMoreModal(false)}
-              className="w-full py-2 bg-[#008cff] hover:bg-[#007be6] text-white font-semibold text-xs rounded-lg transition-colors"
+              className="w-full py-2 bg-[#008cff] hover:bg-[#007be6] text-white font-semibold text-xs rounded-lg transition-colors cursor-pointer"
             >
               Close
             </button>
