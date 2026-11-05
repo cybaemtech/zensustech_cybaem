@@ -3,16 +3,15 @@ Auth service: OTP generation, hashing, email sending, user lookups.
 """
 import secrets
 import hashlib
-import smtplib
 import os
 import logging
-from pathlib import Path
+import html
+from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 import aiosqlite
 import bcrypt
+import httpx
 
 logger = logging.getLogger("auth_service")
 
@@ -60,74 +59,19 @@ def hash_session_token(token: str) -> str:
 
 # ─── Email ────────────────────────────────────────────────────────────────────
 
-# In-memory store for generated HTML emails (keyed by lowercased recipient email)
-RECENT_EMAILS: dict[str, dict[str, Any]] = {}
-
-def store_html_email(to_email: str, sender: str, subject: str, html_body: str, plain_body: str, otp: str):
-    RECENT_EMAILS[to_email.lower().strip()] = {
-        "to": to_email,
-        "from": sender,
-        "subject": subject,
-        "html": html_body,
-        "text": plain_body,
-        "otp": otp,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-def get_latest_email(to_email: str) -> dict[str, Any] | None:
-    return RECENT_EMAILS.get(to_email.lower().strip())
-
-
-def get_smtp_config():
-    # Reload .env if present
-    try:
-        from dotenv import load_dotenv
-        for p in [Path(".env"), Path("backend/.env"), Path(__file__).resolve().parents[3] / ".env"]:
-            if p.is_file():
-                load_dotenv(p, override=True)
-                break
-    except Exception:
-        pass
-
-    user = os.getenv("SMTP_USER") or os.getenv("MAIL_USER") or "noreply@cybaemtech.com"
-    host = os.getenv("SMTP_HOST") or os.getenv("MAIL_HOST") or "smtp.office365.com"
-    port = int(os.getenv("SMTP_PORT") or os.getenv("MAIL_PORT") or "587")
-    password = (
-        os.getenv("SMTP_PASS")
-        or os.getenv("SMTP_PASSWORD")
-        or os.getenv("MAIL_PASS")
-        or os.getenv("MAIL_PASSWORD")
-        or ""
-    )
-    sender = (
-        os.getenv("SMTP_FROM")
-        or os.getenv("MAIL_FROM")
-        or "ZensusTech <noreply@cybaemtech.com>"
-    )
-    is_configured = bool(password)
-    return {
-        "host": host,
-        "port": port,
-        "user": user,
-        "password": password,
-        "sender": sender,
-        "is_configured": is_configured,
-    }
-
-
-def is_live_email_configured() -> bool:
-    return get_smtp_config()["is_configured"]
-
+class EmailDeliveryError(RuntimeError):
+    """Raised when a verification email cannot be delivered."""
 
 def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
-    """
-    Generate the OTP verification email in normal HTML from noreply@cybaemtech.com.
-    Works seamlessly without requiring SMTP password configuration.
-    If SMTP credentials are provided, also dispatches via SMTP.
-    """
-    cfg = get_smtp_config()
-    sender = cfg["sender"]
+    tenant_id = os.getenv("AZURE_TENANT_ID", "").strip()
+    client_id = os.getenv("AZURE_CLIENT_ID", "").strip()
+    client_secret = os.getenv("AZURE_CLIENT_SECRET", "")
+    sender = os.getenv("GRAPH_MAIL_SENDER", "").strip()
+    if not all((tenant_id, client_id, client_secret, sender)):
+        raise EmailDeliveryError("Microsoft Graph email delivery is not configured.")
+
     subject = "Zensus - Email Verification Code"
+    safe_name = html.escape(full_name)
 
     html_body = f"""
     <html><body style="font-family:Inter,Segoe UI,-apple-system,sans-serif;background:#f8fafc;margin:0;padding:24px;">
@@ -137,7 +81,7 @@ def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
           <p style="color:#64748b;margin:0;font-size:13px;">Enterprise Cloud Operations & Identity Management</p>
         </div>
         <p style="color:#334155;margin:0 0 16px;font-size:15px;line-height:1.5;">
-          Hello <strong>{full_name}</strong>,
+          Hello <strong>{safe_name}</strong>,
         </p>
         <p style="color:#475569;margin:0 0 24px;font-size:14px;line-height:1.6;">
           Thank you for registering with Zensus. Your email verification code is:
@@ -155,58 +99,56 @@ def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
         </p>
         <hr style="border:none;border-top:1px solid #e2e8f0;margin:28px 0 20px;">
         <p style="color:#94a3b8;font-size:11px;margin:0;text-align:center;">
-          © Zensus Team · Sent from {sender}
+          ZensusTech Security Team
         </p>
       </div>
     </body></html>
     """
 
-    plain_body = f"""Hello {full_name},
-
-Thank you for registering with Zensus.
-
-Your email verification code is: {otp}
-
-This code is valid for 5 minutes. Please do not share this code with anyone.
-If you did not request this verification, please ignore this email.
-
-Regards,
-Zensus Team
-Sent from {sender}
-"""
-
-    # Always record the normal HTML email in memory so it can be previewed/accessed without SMTP pass
-    store_html_email(to_email, sender, subject, html_body, plain_body, otp)
-
-    if not cfg["is_configured"]:
-        print(f"[HTML EMAIL READY] Prepared normal HTML verification email from {sender} for {to_email} (no SMTP pass needed)")
-        return True
-
-    # If SMTP pass is available, attempt to send out through SMTP as well
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = sender
-        msg["To"] = to_email
-        msg.attach(MIMEText(plain_body, "plain"))
-        msg.attach(MIMEText(html_body, "html"))
+        timeout = httpx.Timeout(15.0, connect=5.0)
+        with httpx.Client(timeout=timeout) as client:
+            token_response = client.post(
+                f"https://login.microsoftonline.com/{quote(tenant_id, safe='')}/oauth2/v2.0/token",
+                data={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "grant_type": "client_credentials",
+                    "scope": "https://graph.microsoft.com/.default",
+                },
+            )
+            if token_response.is_error:
+                logger.error("Microsoft Graph token request failed with status %s.", token_response.status_code)
+                raise EmailDeliveryError("Microsoft Graph authentication failed.")
 
-        if cfg["port"] == 465:
-            with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=8) as server:
-                server.login(cfg["user"], cfg["password"])
-                server.sendmail(sender, [to_email], msg.as_string())
-        else:
-            with smtplib.SMTP(cfg["host"], cfg["port"], timeout=8) as server:
-                server.ehlo()
-                server.starttls()
-                server.login(cfg["user"], cfg["password"])
-                server.sendmail(sender, [to_email], msg.as_string())
+            access_token = token_response.json().get("access_token")
+            if not access_token:
+                logger.error("Microsoft Graph token response did not contain an access token.")
+                raise EmailDeliveryError("Microsoft Graph authentication failed.")
 
-        print(f"[EMAIL SENT] Successfully dispatched OTP email from {sender} to {to_email}")
+            mail_response = client.post(
+                f"https://graph.microsoft.com/v1.0/users/{quote(sender, safe='')}/sendMail",
+                headers={"Authorization": f"Bearer {access_token}"},
+                json={
+                    "message": {
+                        "subject": subject,
+                        "body": {"contentType": "HTML", "content": html_body},
+                        "toRecipients": [{"emailAddress": {"address": to_email}}],
+                    },
+                    "saveToSentItems": False,
+                },
+            )
+            if mail_response.is_error:
+                logger.error("Microsoft Graph mail request failed with status %s.", mail_response.status_code)
+                raise EmailDeliveryError("Microsoft Graph could not deliver the message.")
+
+        logger.info("Verification email accepted by Microsoft Graph.")
+        return True
+    except EmailDeliveryError:
+        raise
     except Exception as exc:
-        print(f"[EMAIL NOTICE] SMTP delivery attempted to {to_email} ({exc}), HTML email remains available.")
-
-    return True
+        logger.error("Microsoft Graph email delivery failed (%s).", type(exc).__name__)
+        raise EmailDeliveryError("Microsoft Graph could not deliver the message.") from exc
 
 
 # ─── DB helpers ───────────────────────────────────────────────────────────────
@@ -251,4 +193,3 @@ async def get_pending_otp(user_id: int, db: Any):
         (user_id,),
     ) as cur:
         return await cur.fetchone()
-

@@ -26,8 +26,7 @@ from app.api.services.auth_service import (
     create_session_token,
     hash_session_token,
     send_otp_email,
-    is_live_email_configured,
-    get_latest_email,
+    EmailDeliveryError,
 )
 from app.core.security import create_access_token
 
@@ -148,10 +147,18 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Con
         (user_id, otp_hash, expires_at),
     )
     await db.commit()
-    # Send email in background (don't block the response)
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, send_otp_email, email, otp, full_name)
-    return otp  # returned only for dev-mode; don't expose in prod responses
+    try:
+        await asyncio.to_thread(send_otp_email, email, otp, full_name)
+    except EmailDeliveryError as exc:
+        await db.execute(
+            "DELETE FROM email_verifications WHERE user_id = ? AND otp_hash = ?",
+            (user_id, otp_hash),
+        )
+        await db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail="We couldn't send a verification code right now. Please try again later.",
+        ) from exc
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -425,18 +432,4 @@ async def get_me(request: Request, db: Any = Depends(get_db)):
         "has_tenant": tenant is not None,
         "tenant": dict(tenant) if tenant else None,
     }
-
-
-@router.get("/latest-email")
-async def get_latest_email_endpoint(email: str):
-    """
-    Returns the latest formatted normal HTML email from noreply@cybaemtech.com
-    for this recipient, allowing in-app preview without requiring an SMTP password.
-    """
-    clean_email = email.lower().strip()
-    msg = get_latest_email(clean_email)
-    if not msg:
-        raise HTTPException(status_code=404, detail="No email found for this address.")
-    return msg
-
 

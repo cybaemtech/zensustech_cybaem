@@ -266,7 +266,7 @@ export function TenantPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-[#f8fafc] font-sans">
+    <div className="h-full min-h-0 w-full flex items-start justify-center overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#f8fafc] font-sans">
       {/* Background decoration */}
       <div 
         className="fixed inset-0 pointer-events-none z-0 opacity-80"
@@ -279,7 +279,7 @@ export function TenantPage() {
         }}
       />
 
-      <div className="relative z-10 w-full max-w-xl bg-white rounded-2xl shadow-[0_12px_45px_-8px_rgba(15,23,42,0.12),0_2px_8px_-2px_rgba(15,23,42,0.06)] border border-slate-200/90 p-6 sm:p-8 lg:p-10">
+      <div className="relative z-10 my-auto w-full max-w-xl bg-white rounded-2xl shadow-[0_12px_45px_-8px_rgba(15,23,42,0.12),0_2px_8px_-2px_rgba(15,23,42,0.06)] border border-slate-200/90 p-6 sm:p-8 lg:p-10">
         {/* Back link */}
         <button
           type="button"
@@ -493,4 +493,3 @@ export function TenantPage() {
 }
 
 export default TenantPage;
-
