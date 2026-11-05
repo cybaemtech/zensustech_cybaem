@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import jwt
+try:
+    import jwt
+except ImportError:
+    from jose import jwt  # fallback if python-jose is installed instead of pyjwt
 import bcrypt
 
 from app.core.config import settings
