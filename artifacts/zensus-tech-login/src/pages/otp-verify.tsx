@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { ShieldCheck, RefreshCw, ArrowLeft, Check } from 'lucide-react';
-import { verifyOtp, resendOtp } from '@/lib/auth-api';
+import { ShieldCheck, RefreshCw, ArrowLeft, Check, Mail, ChevronDown, ChevronUp, Copy } from 'lucide-react';
+import { verifyOtp, resendOtp, getLatestEmail, type HtmlEmailMessage } from '@/lib/auth-api';
 
 export function OtpVerifyPage() {
   const [, setLocation] = useLocation();
@@ -13,11 +13,31 @@ export function OtpVerifyPage() {
   const [isResending, setIsResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [emailPreview, setEmailPreview] = useState<HtmlEmailMessage | null>(null);
+  const [showEmailViewer, setShowEmailViewer] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Redirect if no email pending
+  // Fetch the latest normal HTML email from noreply@cybaemtech.com
   useEffect(() => {
-    if (!email) setLocation('/');
+    if (!email) {
+      setLocation('/');
+      return;
+    }
+    getLatestEmail(email)
+      .then((data) => setEmailPreview(data))
+      .catch(() => {
+        // Fallback email representation if offline or not yet stored
+        setEmailPreview({
+          to: email,
+          from: 'ZensusTech <noreply@cybaemtech.com>',
+          subject: 'Zensus - Email Verification Code',
+          html: '',
+          text: '',
+          otp: '',
+          created_at: new Date().toISOString(),
+        });
+      });
   }, [email, setLocation]);
 
   // OTP expiry countdown
@@ -110,6 +130,12 @@ export function OtpVerifyPage() {
       setResendCooldown(60);
       setOtp(Array(6).fill(''));
       inputRefs.current[0]?.focus();
+      try {
+        const updated = await getLatestEmail(email);
+        setEmailPreview(updated);
+      } catch {
+        // ignore
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
     } finally {
@@ -139,15 +165,77 @@ export function OtpVerifyPage() {
             <ShieldCheck className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-xl font-bold">Verify Your Email</h1>
-          <p className="text-blue-100 text-sm mt-1">
-            We've sent a 6-digit code to
+          <p className="text-blue-100 text-xs mt-1">
+            Verification email sent from <span className="font-semibold text-white">noreply@cybaemtech.com</span> to
           </p>
           <p className="text-white font-semibold text-sm mt-0.5 truncate">{email}</p>
         </div>
 
         <div className="p-6">
-          <div className="mb-4 text-center text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-xl p-3">
-            Please enter the 6-digit verification code sent to your email. Check your spam or promotions folder if it doesn't appear in your inbox.
+          {/* Normal HTML Email Viewer from noreply@cybaemtech.com */}
+          <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/70 overflow-hidden text-left transition-all">
+            <button
+              type="button"
+              onClick={() => setShowEmailViewer(!showEmailViewer)}
+              className="w-full p-3 flex items-center justify-between text-left hover:bg-blue-100/50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#008cff] text-white flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>Email from noreply@cybaemtech.com</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-1.5 py-0.5 rounded-full">Normal HTML</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Subject: Zensus - Email Verification Code
+                  </div>
+                </div>
+              </div>
+              <div className="text-slate-400">
+                {showEmailViewer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
+            </button>
+
+            {showEmailViewer && (
+              <div className="p-3 border-t border-blue-100 bg-white">
+                <div className="text-[11px] text-slate-500 mb-2 pb-2 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <div><strong>From:</strong> ZensusTech &lt;noreply@cybaemtech.com&gt;</div>
+                    <div><strong>To:</strong> {email}</div>
+                  </div>
+                  {emailPreview?.otp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (emailPreview?.otp) {
+                          setOtp(emailPreview.otp.split(''));
+                          setCopiedCode(true);
+                          setTimeout(() => setCopiedCode(false), 2000);
+                          handleVerify(emailPreview.otp);
+                        }
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-[#008cff] hover:bg-[#007be6] text-white rounded-md inline-flex items-center gap-1 cursor-pointer shadow-xs"
+                    >
+                      {copiedCode ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedCode ? 'Filled & Verifying' : 'Insert Code'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {emailPreview?.html ? (
+                  <div
+                    className="rounded-lg border border-slate-200 overflow-hidden text-xs max-h-72 overflow-y-auto"
+                    dangerouslySetInnerHTML={{ __html: emailPreview.html }}
+                  />
+                ) : (
+                  <div className="p-4 text-center text-xs text-slate-500">
+                    Normal HTML email dispatched from <strong>noreply@cybaemtech.com</strong>.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Success message */}

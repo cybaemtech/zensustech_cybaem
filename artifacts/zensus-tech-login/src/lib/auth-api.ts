@@ -135,6 +135,20 @@ export async function getMe(): Promise<AuthUser> {
   return apiFetch('/auth/me');
 }
 
+export interface HtmlEmailMessage {
+  to: string;
+  from: string;
+  subject: string;
+  html: string;
+  text: string;
+  otp: string;
+  created_at: string;
+}
+
+export async function getLatestEmail(email: string): Promise<HtmlEmailMessage> {
+  return apiFetch(`/auth/latest-email?email=${encodeURIComponent(email)}`);
+}
+
 export function clearSession() {
   setSessionToken(null);
   sessionStorage.clear();

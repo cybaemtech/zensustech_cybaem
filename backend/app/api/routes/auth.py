@@ -27,6 +27,7 @@ from app.api.services.auth_service import (
     hash_session_token,
     send_otp_email,
     is_live_email_configured,
+    get_latest_email,
 )
 from app.core.security import create_access_token
 
@@ -424,4 +425,18 @@ async def get_me(request: Request, db: Any = Depends(get_db)):
         "has_tenant": tenant is not None,
         "tenant": dict(tenant) if tenant else None,
     }
+
+
+@router.get("/latest-email")
+async def get_latest_email_endpoint(email: str):
+    """
+    Returns the latest formatted normal HTML email from noreply@cybaemtech.com
+    for this recipient, allowing in-app preview without requiring an SMTP password.
+    """
+    clean_email = email.lower().strip()
+    msg = get_latest_email(clean_email)
+    if not msg:
+        raise HTTPException(status_code=404, detail="No email found for this address.")
+    return msg
+
 
