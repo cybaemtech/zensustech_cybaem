@@ -56,36 +56,45 @@ def hash_session_token(token: str) -> str:
 
 # ─── Email ────────────────────────────────────────────────────────────────────
 
-MAIL_HOST = os.getenv("SMTP_HOST") or os.getenv("MAIL_HOST") or "smtp.gmail.com"
-MAIL_PORT = int(os.getenv("SMTP_PORT") or os.getenv("MAIL_PORT") or "587")
-MAIL_USER = os.getenv("SMTP_USER") or os.getenv("MAIL_USER") or ""
-MAIL_PASS = (
-    os.getenv("SMTP_PASS")
-    or os.getenv("SMTP_PASSWORD")
-    or os.getenv("MAIL_PASS")
-    or os.getenv("MAIL_PASSWORD")
-    or ""
-)
-MAIL_FROM = (
-    os.getenv("SMTP_FROM")
-    or os.getenv("MAIL_FROM")
-    or (f"ZensusTech <{MAIL_USER}>" if MAIL_USER else "no-reply@zensustech.com")
-)
+def get_smtp_config():
+    host = os.getenv("SMTP_HOST") or os.getenv("MAIL_HOST") or "smtp.gmail.com"
+    port = int(os.getenv("SMTP_PORT") or os.getenv("MAIL_PORT") or "587")
+    user = os.getenv("SMTP_USER") or os.getenv("MAIL_USER") or ""
+    password = (
+        os.getenv("SMTP_PASS")
+        or os.getenv("SMTP_PASSWORD")
+        or os.getenv("MAIL_PASS")
+        or os.getenv("MAIL_PASSWORD")
+        or ""
+    )
+    sender = (
+        os.getenv("SMTP_FROM")
+        or os.getenv("MAIL_FROM")
+        or (f"ZensusTech <{user}>" if user else "no-reply@zensustech.com")
+    )
+    return {
+        "host": host,
+        "port": port,
+        "user": user,
+        "password": password,
+        "sender": sender,
+        "is_configured": bool(user and password),
+    }
 
 
 def is_live_email_configured() -> bool:
-    return bool(MAIL_USER and MAIL_PASS)
+    return get_smtp_config()["is_configured"]
 
 
 def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
     """
-    Send the OTP verification email. Returns True on success, False on failure.
-    If MAIL_USER / MAIL_PASS are not configured the function logs and returns True
-    so the signup flow continues seamlessly in dev mode.
+    Send the OTP verification email strictly via SMTP.
+    The OTP is delivered to the user's inbox and never displayed on screen.
     """
-    if not is_live_email_configured():
-        print(f"[DEV OTP AUTH] >>> To: {to_email} | OTP Code: {otp} <<<")
-        return True
+    cfg = get_smtp_config()
+    if not cfg["is_configured"]:
+        print(f"[EMAIL CONFIG NOTICE] SMTP credentials not yet configured in environment. To receive actual emails, set SMTP_USER and SMTP_PASS in .env or Render environment variables.")
+        return False
 
     subject = "Zensus - Email Verification Code"
     html_body = f"""
@@ -118,15 +127,21 @@ def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = MAIL_FROM
+        msg["From"] = cfg["sender"]
         msg["To"] = to_email
         msg.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP(MAIL_HOST, MAIL_PORT, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(MAIL_USER, MAIL_PASS)
-            server.sendmail(MAIL_FROM, [to_email], msg.as_string())
+        if cfg["port"] == 465:
+            with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=12) as server:
+                server.login(cfg["user"], cfg["password"])
+                server.sendmail(cfg["sender"], [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(cfg["host"], cfg["port"], timeout=12) as server:
+                server.ehlo()
+                server.starttls()
+                server.login(cfg["user"], cfg["password"])
+                server.sendmail(cfg["sender"], [to_email], msg.as_string())
+
         print(f"[EMAIL SENT] Successfully dispatched OTP email to {to_email}")
         return True
     except Exception as exc:

@@ -31,7 +31,6 @@ export interface SignupResult {
   message: string;
   email: string;
   needs_verification: boolean;
-  dev_otp?: string | null;
 }
 
 export interface LoginResult {
@@ -42,7 +41,6 @@ export interface LoginResult {
   needs_verification?: boolean;
   redirect?: string;
   session_token?: string;
-  dev_otp?: string | null;
 }
 
 function getSessionToken(): string | null {
@@ -103,7 +101,7 @@ export async function verifyOtp(email: string, otp: string): Promise<LoginResult
   return data;
 }
 
-export async function resendOtp(email: string): Promise<{ message: string; dev_otp?: string | null }> {
+export async function resendOtp(email: string): Promise<{ message: string }> {
   return apiFetch('/auth/resend-otp', {
     method: 'POST',
     body: JSON.stringify({ email }),

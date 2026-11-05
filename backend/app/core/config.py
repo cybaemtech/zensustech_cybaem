@@ -2,6 +2,22 @@
 
 import os
 import secrets
+from pathlib import Path
+
+# Load .env file if present
+try:
+    from dotenv import load_dotenv
+    # Check current dir, backend dir, and root repo dir
+    for env_path in [
+        Path(".env"),
+        Path(__file__).resolve().parents[2] / ".env",
+        Path(__file__).resolve().parents[3] / ".env",
+    ]:
+        if env_path.is_file():
+            load_dotenv(env_path)
+            break
+except Exception:
+    pass
 
 
 class Settings:

@@ -186,18 +186,12 @@ async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
 
     # Fetch the new user to get its id
     user = await get_user_by_email(email, db)
-    otp = await _issue_otp(user["id"], email, full_name, db)
+    await _issue_otp(user["id"], email, full_name, db)
 
-    is_live = is_live_email_configured()
     return {
-        "message": (
-            "Account created. A verification code has been sent to your email."
-            if is_live
-            else f"Account created! (Dev Verification Code: {otp})"
-        ),
+        "message": "Account created. A verification code has been sent to your email address.",
         "email": email,
         "needs_verification": True,
-        "dev_otp": otp if not is_live else None,
     }
 
 
@@ -219,17 +213,11 @@ async def login(
     if not user["email_verified"]:
         # Re-send OTP if not yet verified
         full_name = user["full_name"]
-        otp = await _issue_otp(user["id"], email, full_name, db)
-        is_live = is_live_email_configured()
+        await _issue_otp(user["id"], email, full_name, db)
         return {
-            "message": (
-                "Email not yet verified. A new OTP has been sent."
-                if is_live
-                else f"Email not yet verified. (Dev Verification Code: {otp})"
-            ),
+            "message": "Email not yet verified. A new verification code has been sent to your email address.",
             "needs_verification": True,
             "email": email,
-            "dev_otp": otp if not is_live else None,
         }
 
     # Check for existing active tenant
@@ -363,15 +351,9 @@ async def resend_otp(payload: ResendOtpRequest, db: Any = Depends(get_db)):
                 detail=f"Please wait {wait} seconds before requesting a new OTP.",
             )
 
-    otp = await _issue_otp(user["id"], email, user["full_name"], db)
-    is_live = is_live_email_configured()
+    await _issue_otp(user["id"], email, user["full_name"], db)
     return {
-        "message": (
-            "A new OTP has been sent to your email address."
-            if is_live
-            else f"New OTP sent! (Dev Verification Code: {otp})"
-        ),
-        "dev_otp": otp if not is_live else None,
+        "message": "A new verification code has been sent to your email address.",
     }
 
 

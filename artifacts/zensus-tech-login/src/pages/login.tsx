@@ -26,9 +26,6 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
       if (res.needs_verification) {
         // Email not yet verified — go to OTP screen
         sessionStorage.setItem('pending_verification_email', userEmail);
-        if (res.dev_otp) {
-          sessionStorage.setItem('pending_dev_otp', res.dev_otp);
-        }
         setLocation('/otp-verify');
       } else if (res.has_tenant) {
         // Returning user with active tenant → straight to dashboard
@@ -76,9 +73,6 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
       });
       // Redirect to OTP verification
       sessionStorage.setItem('pending_verification_email', payload.email);
-      if (res.dev_otp) {
-        sessionStorage.setItem('pending_dev_otp', res.dev_otp);
-      }
       setLocation('/otp-verify');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
