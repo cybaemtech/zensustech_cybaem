@@ -71,9 +71,21 @@ def get_smtp_config():
     except Exception:
         pass
 
-    host = os.getenv("SMTP_HOST") or os.getenv("MAIL_HOST") or "smtp.gmail.com"
-    port = int(os.getenv("SMTP_PORT") or os.getenv("MAIL_PORT") or "587")
     user = os.getenv("SMTP_USER") or os.getenv("MAIL_USER") or ""
+    
+    # Auto-detect host based on email domain if not specified
+    if "@zensustech.com" in user.lower() or "@cybaemtech.com" in user.lower():
+        default_host = "smtp.office365.com"
+        default_port = 587
+    elif "@gmail.com" in user.lower():
+        default_host = "smtp.gmail.com"
+        default_port = 587
+    else:
+        default_host = "smtp.office365.com"
+        default_port = 587
+
+    host = os.getenv("SMTP_HOST") or os.getenv("MAIL_HOST") or default_host
+    port = int(os.getenv("SMTP_PORT") or os.getenv("MAIL_PORT") or str(default_port))
     password = (
         os.getenv("SMTP_PASS")
         or os.getenv("SMTP_PASSWORD")
@@ -84,7 +96,7 @@ def get_smtp_config():
     sender = (
         os.getenv("SMTP_FROM")
         or os.getenv("MAIL_FROM")
-        or "Zensus <noreply@zensus.com>"
+        or (f"ZensusTech <{user}>" if user else "ZensusTech <noreply@zensustech.com>")
     )
     is_configured = bool(user and password)
     return {
@@ -104,14 +116,17 @@ def is_live_email_configured() -> bool:
 def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
     """
     Send the OTP verification email strictly via SMTP.
-    Sender defaults to noreply@zensus.com.
+    Sender defaults to noreply@zensustech.com or noreply@cybaemtech.com.
     """
     cfg = get_smtp_config()
     if not cfg["is_configured"]:
         print(
-            f"[EMAIL CONFIG NOTICE] Cannot deliver email to {to_email}: "
-            f"SMTP_USER or SMTP_PASS is missing in your .env file. "
-            f"To send live emails from {cfg['sender']}, please provide SMTP credentials in .env or Render environment variables."
+            f"[EMAIL CONFIG NOTICE] Cannot deliver OTP to {to_email}. "
+            f"SMTP_USER or SMTP_PASS is missing in your .env file or Render environment variables.\n"
+            f"To send emails from {cfg['sender']}, configure:\n"
+            f"  SMTP_USER={cfg['user'] or 'noreply@zensustech.com'}\n"
+            f"  SMTP_PASS=<your_password>\n"
+            f"in d:\\ZensusTech-Login\\.env (locally) and under Environment Variables on Render."
         )
         return False
 
