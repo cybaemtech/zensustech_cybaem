@@ -57,7 +57,6 @@ export function ZohoAuthCard({
   const [signInErrors, setSignInErrors] = useState<{ email?: string; password?: string }>({});
 
   // Sign Up state
-  const [accountType, setAccountType] = useState<'END_CUSTOMER' | 'VENDOR'>('END_CUSTOMER');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [orgName, setOrgName] = useState('');
@@ -172,7 +171,7 @@ export function ZohoAuthCard({
         lastName: lastName.trim(),
         email: signUpEmail.trim(),
         password: signUpPassword,
-        role: accountType,
+        role: vendorCode ? 'VENDOR' : 'END_CUSTOMER',
         phone: phone.trim() || undefined,
         organization: orgName.trim() || undefined,
         customer: customer.trim() || undefined,
@@ -436,32 +435,6 @@ export function ZohoAuthCard({
                   <p className="text-slate-500 text-xs mt-0.5">
                     Start your enterprise cloud journey with ZensusTech
                   </p>
-                </div>
-
-                {/* Account Type Selector (End Customer vs Vendor) */}
-                <div className="flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setAccountType('END_CUSTOMER')}
-                    className={`flex-1 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
-                      accountType === 'END_CUSTOMER'
-                        ? 'bg-white text-[#008cff] shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    End Customer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAccountType('VENDOR')}
-                    className={`flex-1 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
-                      accountType === 'VENDOR'
-                        ? 'bg-white text-[#008cff] shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    Vendor
-                  </button>
                 </div>
 
                 <form onSubmit={handleSignUpSubmit} noValidate className="space-y-2.5">
