@@ -15,6 +15,7 @@ export interface SignUpPayload {
   lastName: string;
   email: string;
   password: string;
+  role?: string;
   phone?: string;
   organization?: string;
   customer?: string;

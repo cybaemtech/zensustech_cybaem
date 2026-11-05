@@ -1484,6 +1484,14 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: true,
     proxy: {
+      '/api/v1/auth': {
+        target: 'http://127.0.0.1:8010',
+        changeOrigin: true,
+      },
+      '/api/v1/tenants': {
+        target: 'http://127.0.0.1:8010',
+        changeOrigin: true,
+      },
       '/api/v1/database': {
         target: 'http://127.0.0.1:8010',
         changeOrigin: true,

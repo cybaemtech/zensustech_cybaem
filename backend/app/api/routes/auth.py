@@ -4,8 +4,9 @@ Auth routes: signup, login, verify-email, resend-otp, forgot/reset password, log
 from __future__ import annotations
 
 import asyncio
+import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Any
 
 import aiosqlite
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -25,6 +26,7 @@ from app.api.services.auth_service import (
     create_session_token,
     hash_session_token,
     send_otp_email,
+    is_live_email_configured,
 )
 from app.core.security import create_access_token
 
@@ -84,9 +86,15 @@ def _now_plus(minutes: int = 0, hours: int = 0) -> str:
     return (datetime.now(timezone.utc) + timedelta(minutes=minutes, hours=hours)).isoformat()
 
 
-def _is_expired(ts: str) -> bool:
+def _is_expired(ts: Any) -> bool:
     try:
-        return datetime.fromisoformat(ts) < datetime.now(timezone.utc)
+        if isinstance(ts, datetime):
+            dt = ts
+        else:
+            dt = datetime.fromisoformat(str(ts))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt < datetime.now(timezone.utc)
     except Exception:
         return True
 
@@ -148,7 +156,7 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Con
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/signup")
-async def signup(payload: SignupRequest, db: aiosqlite.Connection = Depends(get_db)):
+async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
     email = payload.email.lower().strip()
     existing = await get_user_by_email(email, db)
     if existing:
@@ -160,15 +168,16 @@ async def signup(payload: SignupRequest, db: aiosqlite.Connection = Depends(get_
 
     full_name = f"{payload.first_name.strip()} {payload.last_name.strip()}"
     pw_hash = hash_password(payload.password)
+    user_id_str = f"usr-{secrets.token_hex(6)}"
 
     await db.execute(
         """
         INSERT INTO users
-            (full_name, email, password_hash, role, phone, organization, customer, vendor_code)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (user_id, full_name, email, password_hash, role, phone, organization, customer, vendor_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            full_name, email, pw_hash, role,
+            user_id_str, full_name, email, pw_hash, role,
             payload.phone, payload.organization,
             payload.customer, payload.vendor_code,
         ),
@@ -177,12 +186,18 @@ async def signup(payload: SignupRequest, db: aiosqlite.Connection = Depends(get_
 
     # Fetch the new user to get its id
     user = await get_user_by_email(email, db)
-    await _issue_otp(user["id"], email, full_name, db)
+    otp = await _issue_otp(user["id"], email, full_name, db)
 
+    is_live = is_live_email_configured()
     return {
-        "message": "Account created. Please check your email for the verification OTP.",
+        "message": (
+            "Account created. A verification code has been sent to your email."
+            if is_live
+            else f"Account created! (Dev Verification Code: {otp})"
+        ),
         "email": email,
         "needs_verification": True,
+        "dev_otp": otp if not is_live else None,
     }
 
 
@@ -190,7 +205,7 @@ async def signup(payload: SignupRequest, db: aiosqlite.Connection = Depends(get_
 async def login(
     payload: LoginRequest,
     response: Response,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: Any = Depends(get_db),
 ):
     email = payload.email.lower().strip()
     user = await get_user_by_email(email, db)
@@ -204,11 +219,17 @@ async def login(
     if not user["email_verified"]:
         # Re-send OTP if not yet verified
         full_name = user["full_name"]
-        await _issue_otp(user["id"], email, full_name, db)
+        otp = await _issue_otp(user["id"], email, full_name, db)
+        is_live = is_live_email_configured()
         return {
-            "message": "Email not yet verified. A new OTP has been sent.",
+            "message": (
+                "Email not yet verified. A new OTP has been sent."
+                if is_live
+                else f"Email not yet verified. (Dev Verification Code: {otp})"
+            ),
             "needs_verification": True,
             "email": email,
+            "dev_otp": otp if not is_live else None,
         }
 
     # Check for existing active tenant
@@ -243,7 +264,7 @@ async def login(
 async def verify_email(
     payload: VerifyOtpRequest,
     response: Response,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: Any = Depends(get_db),
 ):
     email = payload.email.lower().strip()
     user = await get_user_by_email(email, db)
@@ -281,7 +302,7 @@ async def verify_email(
         (now, otp_record["id"]),
     )
     await db.execute(
-        "UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?",
+        "UPDATE users SET email_verified = TRUE, updated_at = ? WHERE id = ?",
         (now, user["id"]),
     )
     await db.commit()
@@ -315,7 +336,7 @@ async def verify_email(
 
 
 @router.post("/resend-otp")
-async def resend_otp(payload: ResendOtpRequest, db: aiosqlite.Connection = Depends(get_db)):
+async def resend_otp(payload: ResendOtpRequest, db: Any = Depends(get_db)):
     email = payload.email.lower().strip()
     user = await get_user_by_email(email, db)
     if not user:
@@ -327,7 +348,11 @@ async def resend_otp(payload: ResendOtpRequest, db: aiosqlite.Connection = Depen
     # Enforce 60-second cooldown
     otp_record = await get_pending_otp(user["id"], db)
     if otp_record:
-        created = datetime.fromisoformat(otp_record["created_at"])
+        raw_created = otp_record["created_at"]
+        if isinstance(raw_created, datetime):
+            created = raw_created
+        else:
+            created = datetime.fromisoformat(str(raw_created))
         if created.tzinfo is None:
             created = created.replace(tzinfo=timezone.utc)
         elapsed = (datetime.now(timezone.utc) - created).total_seconds()
@@ -338,29 +363,36 @@ async def resend_otp(payload: ResendOtpRequest, db: aiosqlite.Connection = Depen
                 detail=f"Please wait {wait} seconds before requesting a new OTP.",
             )
 
-    await _issue_otp(user["id"], email, user["full_name"], db)
-    return {"message": "A new OTP has been sent to your email address."}
+    otp = await _issue_otp(user["id"], email, user["full_name"], db)
+    is_live = is_live_email_configured()
+    return {
+        "message": (
+            "A new OTP has been sent to your email address."
+            if is_live
+            else f"New OTP sent! (Dev Verification Code: {otp})"
+        ),
+        "dev_otp": otp if not is_live else None,
+    }
 
 
 @router.post("/forgot-password")
-async def forgot_password(payload: ForgotPasswordRequest, db: aiosqlite.Connection = Depends(get_db)):
+async def forgot_password(payload: ForgotPasswordRequest, db: Any = Depends(get_db)):
     email = payload.email.lower().strip()
     user = await get_user_by_email(email, db)
-    # Always return the same message to prevent user enumeration
     if user:
         await _issue_otp(user["id"], email, user["full_name"], db)
     return {"message": "If that email is registered, a password reset OTP has been sent."}
 
 
 @router.post("/reset-password")
-async def reset_password(payload: ResetPasswordRequest, db: aiosqlite.Connection = Depends(get_db)):
+async def reset_password(payload: ResetPasswordRequest, db: Any = Depends(get_db)):
     email = payload.email.lower().strip()
     user = await get_user_by_email(email, db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
     otp_record = await get_pending_otp(user["id"], db)
-    if not otp_record or _is_expired(otp_record["expires_at"]):
+    if not otp_record or _is_expired(str(otp_record["expires_at"])):
         raise HTTPException(status_code=400, detail="OTP expired or not found. Please request a new one.")
 
     if not verify_otp_hash(payload.otp.strip(), otp_record["otp_hash"]):
@@ -381,7 +413,7 @@ async def reset_password(payload: ResetPasswordRequest, db: aiosqlite.Connection
 
 
 @router.post("/logout")
-async def logout(request: Request, response: Response, db: aiosqlite.Connection = Depends(get_db)):
+async def logout(request: Request, response: Response, db: Any = Depends(get_db)):
     token = request.cookies.get("zt_session") or request.headers.get("X-ZT-Session")
     if token:
         token_hash = hash_session_token(token)
@@ -395,7 +427,7 @@ async def logout(request: Request, response: Response, db: aiosqlite.Connection 
 
 
 @router.get("/me")
-async def get_me(request: Request, db: aiosqlite.Connection = Depends(get_db)):
+async def get_me(request: Request, db: Any = Depends(get_db)):
     user_id = await _get_session_user(request, db)
     user = await get_user_by_id(user_id, db)
     if not user:

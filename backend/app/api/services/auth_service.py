@@ -56,22 +56,35 @@ def hash_session_token(token: str) -> str:
 
 # ─── Email ────────────────────────────────────────────────────────────────────
 
-MAIL_HOST = os.getenv("MAIL_HOST", "smtp.gmail.com")
-MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
-MAIL_USER = os.getenv("MAIL_USER", "")
-MAIL_PASS = os.getenv("MAIL_PASS", "")
-MAIL_FROM = os.getenv("MAIL_FROM", "no-reply@zensustech.com")
+MAIL_HOST = os.getenv("SMTP_HOST") or os.getenv("MAIL_HOST") or "smtp.gmail.com"
+MAIL_PORT = int(os.getenv("SMTP_PORT") or os.getenv("MAIL_PORT") or "587")
+MAIL_USER = os.getenv("SMTP_USER") or os.getenv("MAIL_USER") or ""
+MAIL_PASS = (
+    os.getenv("SMTP_PASS")
+    or os.getenv("SMTP_PASSWORD")
+    or os.getenv("MAIL_PASS")
+    or os.getenv("MAIL_PASSWORD")
+    or ""
+)
+MAIL_FROM = (
+    os.getenv("SMTP_FROM")
+    or os.getenv("MAIL_FROM")
+    or (f"ZensusTech <{MAIL_USER}>" if MAIL_USER else "no-reply@zensustech.com")
+)
+
+
+def is_live_email_configured() -> bool:
+    return bool(MAIL_USER and MAIL_PASS)
 
 
 def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
     """
     Send the OTP verification email. Returns True on success, False on failure.
-    If MAIL_USER / MAIL_PASS are not configured the function logs and returns False
-    without raising so the signup flow can still continue in dev.
+    If MAIL_USER / MAIL_PASS are not configured the function logs and returns True
+    so the signup flow continues seamlessly in dev mode.
     """
-    if not MAIL_USER or not MAIL_PASS:
-        # Dev mode: log the OTP to stdout so developers can test without SMTP
-        print(f"[DEV OTP] To: {to_email}  OTP: {otp}")
+    if not is_live_email_configured():
+        print(f"[DEV OTP AUTH] >>> To: {to_email} | OTP Code: {otp} <<<")
         return True
 
     subject = "Zensus - Email Verification Code"
@@ -109,11 +122,12 @@ def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
         msg["To"] = to_email
         msg.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP(MAIL_HOST, MAIL_PORT) as server:
+        with smtplib.SMTP(MAIL_HOST, MAIL_PORT, timeout=10) as server:
             server.ehlo()
             server.starttls()
             server.login(MAIL_USER, MAIL_PASS)
             server.sendmail(MAIL_FROM, [to_email], msg.as_string())
+        print(f"[EMAIL SENT] Successfully dispatched OTP email to {to_email}")
         return True
     except Exception as exc:
         print(f"[EMAIL ERROR] Failed to send OTP to {to_email}: {exc}")
@@ -122,21 +136,21 @@ def send_otp_email(to_email: str, otp: str, full_name: str = "User") -> bool:
 
 # ─── DB helpers ───────────────────────────────────────────────────────────────
 
-async def get_user_by_email(email: str, db: aiosqlite.Connection):
+async def get_user_by_email(email: str, db: Any):
     async with db.execute(
         "SELECT * FROM users WHERE email = ?", (email.lower().strip(),)
     ) as cur:
         return await cur.fetchone()
 
 
-async def get_user_by_id(user_id: int, db: aiosqlite.Connection):
+async def get_user_by_id(user_id: int, db: Any):
     async with db.execute(
         "SELECT * FROM users WHERE id = ?", (user_id,)
     ) as cur:
         return await cur.fetchone()
 
 
-async def get_active_tenant_for_user(user_id: int, db: aiosqlite.Connection):
+async def get_active_tenant_for_user(user_id: int, db: Any):
     """Return the first active tenant record associated with this user, or None."""
     async with db.execute(
         """
@@ -151,7 +165,7 @@ async def get_active_tenant_for_user(user_id: int, db: aiosqlite.Connection):
         return await cur.fetchone()
 
 
-async def get_pending_otp(user_id: int, db: aiosqlite.Connection):
+async def get_pending_otp(user_id: int, db: Any):
     """Return the latest unused OTP record for this user."""
     async with db.execute(
         """

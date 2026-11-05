@@ -3,10 +3,9 @@ Tenant connection and management routes.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-import aiosqlite
 
 from app.db.database import get_db
 from app.api.routes.auth import _get_session_user, _now_utc
@@ -27,7 +26,7 @@ class TenantConnectRequest(BaseModel):
 async def connect_tenant(
     payload: TenantConnectRequest,
     request: Request,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: Any = Depends(get_db),
 ):
     user_id = await _get_session_user(request, db)
 
@@ -93,7 +92,7 @@ async def connect_tenant(
 
     if not link:
         await db.execute(
-            "INSERT INTO user_tenants (user_id, tenant_id, is_primary) VALUES (?, ?, 1)",
+            "INSERT INTO user_tenants (user_id, tenant_id, is_primary) VALUES (?, ?, TRUE)",
             (user_id, tenant_db_id),
         )
         await db.commit()
@@ -116,7 +115,7 @@ async def connect_tenant(
 
 
 @router.get("/my-tenants")
-async def my_tenants(request: Request, db: aiosqlite.Connection = Depends(get_db)):
+async def my_tenants(request: Request, db: Any = Depends(get_db)):
     user_id = await _get_session_user(request, db)
     async with db.execute(
         """
@@ -135,7 +134,7 @@ async def my_tenants(request: Request, db: aiosqlite.Connection = Depends(get_db
 async def get_tenant(
     tenant_db_id: int,
     request: Request,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: Any = Depends(get_db),
 ):
     user_id = await _get_session_user(request, db)
     async with db.execute(
@@ -157,7 +156,7 @@ async def update_tenant(
     tenant_db_id: int,
     payload: TenantConnectRequest,
     request: Request,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: Any = Depends(get_db),
 ):
     user_id = await _get_session_user(request, db)
     # Verify ownership
@@ -193,7 +192,7 @@ async def update_tenant(
 async def reconnect_tenant(
     tenant_db_id: int,
     request: Request,
-    db: aiosqlite.Connection = Depends(get_db),
+    db: Any = Depends(get_db),
 ):
     user_id = await _get_session_user(request, db)
     async with db.execute(

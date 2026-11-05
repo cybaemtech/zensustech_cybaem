@@ -27,6 +27,13 @@ export interface SignupPayload {
   vendor_code?: string;
 }
 
+export interface SignupResult {
+  message: string;
+  email: string;
+  needs_verification: boolean;
+  dev_otp?: string | null;
+}
+
 export interface LoginResult {
   message: string;
   user?: AuthUser;
@@ -35,6 +42,7 @@ export interface LoginResult {
   needs_verification?: boolean;
   redirect?: string;
   session_token?: string;
+  dev_otp?: string | null;
 }
 
 function getSessionToken(): string | null {
@@ -70,7 +78,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   return data;
 }
 
-export async function signup(payload: SignupPayload): Promise<{ message: string; email: string; needs_verification: boolean }> {
+export async function signup(payload: SignupPayload): Promise<SignupResult> {
   return apiFetch('/auth/signup', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -95,7 +103,7 @@ export async function verifyOtp(email: string, otp: string): Promise<LoginResult
   return data;
 }
 
-export async function resendOtp(email: string): Promise<{ message: string }> {
+export async function resendOtp(email: string): Promise<{ message: string; dev_otp?: string | null }> {
   return apiFetch('/auth/resend-otp', {
     method: 'POST',
     body: JSON.stringify({ email }),

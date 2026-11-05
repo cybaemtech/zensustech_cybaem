@@ -13,6 +13,7 @@ export function OtpVerifyPage() {
   const [isResending, setIsResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [devOtp, setDevOtp] = useState<string | null>(() => sessionStorage.getItem('pending_dev_otp'));
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Redirect if no email pending
@@ -105,7 +106,11 @@ export function OtpVerifyPage() {
     setIsResending(true);
     setError('');
     try {
-      await resendOtp(email);
+      const res = await resendOtp(email);
+      if (res.dev_otp) {
+        setDevOtp(res.dev_otp);
+        sessionStorage.setItem('pending_dev_otp', res.dev_otp);
+      }
       setTimeLeft(300);
       setResendCooldown(60);
       setOtp(Array(6).fill(''));
@@ -146,6 +151,26 @@ export function OtpVerifyPage() {
         </div>
 
         <div className="p-6">
+          {/* Dev mode OTP banner (when SMTP is not configured) */}
+          {devOtp && (
+            <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+              <div>
+                <span className="font-bold">Dev Verification Code:</span>{' '}
+                <span className="font-mono font-extrabold text-blue-600 tracking-wider text-sm">{devOtp}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOtp(devOtp.split(''));
+                  handleVerify(devOtp);
+                }}
+                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-md text-[11px] cursor-pointer"
+              >
+                Auto-fill
+              </button>
+            </div>
+          )}
+
           {/* Success message */}
           {success && (
             <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2">
