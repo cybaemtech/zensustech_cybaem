@@ -85,6 +85,27 @@ export function TenantPage() {
       if (orgDetails) {
         sessionStorage.setItem('azure_org_details', JSON.stringify(orgDetails));
       }
+
+      // Persist tenant association to backend DB if logged in
+      const ztSession = sessionStorage.getItem('zt_session');
+      if (ztSession) {
+        try {
+          await fetch('/api/v1/tenants/connect', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-ZT-Session': ztSession,
+            },
+            body: JSON.stringify({
+              tenant_id: tenantId.trim(),
+              tenant_name: orgDetails?.displayName || 'Azure Tenant',
+              provider_type: 'cloud',
+              provider_name: 'azure',
+              subscription_plan: 'Trial',
+            }),
+          });
+        } catch {}
+      }
       
       setLocation('/dashboard');
     } catch (err: any) {

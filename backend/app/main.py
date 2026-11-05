@@ -145,6 +145,14 @@ app.include_router(api_router, prefix="/backend-api" + settings.API_V1_STR)
 
 @app.on_event("startup")
 async def on_startup():
+    # Initialize SQLite auth database
+    try:
+        from app.db.database import init_db
+        await init_db()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Auth DB init note: {e}")
+    # Existing database service check
     try:
         from app.services.database_service import db_service
         db_service.ensure_ready()

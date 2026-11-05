@@ -10,9 +10,21 @@ import {
   X
 } from 'lucide-react';
 
+export interface SignUpPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phone?: string;
+  organization?: string;
+  customer?: string;
+  vendorCode?: string;
+}
+
 export interface ZohoAuthCardProps {
   initialMode?: 'signin' | 'signup';
   onSignInSuccess: (email: string, password?: string) => void;
+  onSignUp?: (payload: SignUpPayload) => void;
   onAzureSSO: () => void;
   isSubmitting?: boolean;
 }
@@ -30,6 +42,7 @@ const VENDOR_OPTIONS: { value: VendorCode; label: string }[] = [
 export function ZohoAuthCard({
   initialMode = 'signin',
   onSignInSuccess,
+  onSignUp,
   onAzureSSO,
   isSubmitting = false,
 }: ZohoAuthCardProps) {
@@ -43,6 +56,7 @@ export function ZohoAuthCard({
   const [signInErrors, setSignInErrors] = useState<{ email?: string; password?: string }>({});
 
   // Sign Up state
+  const [accountType, setAccountType] = useState<'END_CUSTOMER' | 'VENDOR'>('END_CUSTOMER');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [orgName, setOrgName] = useState('');
@@ -150,6 +164,23 @@ export function ZohoAuthCard({
     e.preventDefault();
     if (!validateSignUp()) return;
 
+    // If parent provided onSignUp handler, delegate entirely (real API flow)
+    if (onSignUp) {
+      onSignUp({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: signUpEmail.trim(),
+        password: signUpPassword,
+        role: accountType,
+        phone: phone.trim() || undefined,
+        organization: orgName.trim() || undefined,
+        customer: customer.trim() || undefined,
+        vendorCode: vendorCode || undefined,
+      });
+      return;
+    }
+
+    // Fallback: local-only registration (dev / no-backend mode)
     try {
       const newUser = {
         firstName: firstName.trim(),
@@ -396,7 +427,7 @@ export function ZohoAuthCard({
             {/* VIEW B: SIGN UP FORM (Compact Static Grid Layout)     */}
             {/* ----------------------------------------------------- */}
             {mode === 'signup' && (
-              <div className="space-y-3 animate-fadeIn">
+              <div className="space-y-2.5 animate-fadeIn">
                 <div>
                   <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                     Sign up
@@ -404,6 +435,32 @@ export function ZohoAuthCard({
                   <p className="text-slate-500 text-xs mt-0.5">
                     Start your enterprise cloud journey with ZensusTech
                   </p>
+                </div>
+
+                {/* Account Type Selector (End Customer vs Vendor) */}
+                <div className="flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('END_CUSTOMER')}
+                    className={`flex-1 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
+                      accountType === 'END_CUSTOMER'
+                        ? 'bg-white text-[#008cff] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    End Customer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('VENDOR')}
+                    className={`flex-1 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
+                      accountType === 'VENDOR'
+                        ? 'bg-white text-[#008cff] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Vendor
+                  </button>
                 </div>
 
                 <form onSubmit={handleSignUpSubmit} noValidate className="space-y-2.5">

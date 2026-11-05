@@ -14,14 +14,21 @@ import { Microsoft0365Page } from '@/pages/microsoft0365';
 import { DatabasePage } from '@/pages/database';
 import CostDashboard from '@/pages/CostDashboard';
 import NotFound from '@/pages/not-found';
+import { OtpVerifyPage } from '@/pages/otp-verify';
+import { ConnectTenantPage } from '@/pages/connect-tenant';
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const [, setLocation] = useLocation();
+  // Check both old Azure-token-based auth AND new email/password session auth
   const isAuthenticated =
-    sessionStorage.getItem('is_authenticated') === 'true' &&
-    Boolean(sessionStorage.getItem('graph_token') || sessionStorage.getItem('mgmt_token'));
+    (sessionStorage.getItem('is_authenticated') === 'true' &&
+      Boolean(
+        sessionStorage.getItem('zt_session') ||
+        sessionStorage.getItem('graph_token') ||
+        sessionStorage.getItem('mgmt_token')
+      ));
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -61,6 +68,12 @@ function Router() {
         {/* Tenant Verification Page (tent.tsx / tenant.tsx) */}
         <Route path="/tent" component={TenantPage} />
         <Route path="/tenant" component={TenantPage} />
+
+        {/* OTP Verification Page */}
+        <Route path="/otp-verify" component={OtpVerifyPage} />
+
+        {/* Connect Tenant Page */}
+        <Route path="/connect-tenant" component={ConnectTenantPage} />
 
         {/* Main Dashboard (dashboard.tsx) */}
         <Route path="/dashboard">

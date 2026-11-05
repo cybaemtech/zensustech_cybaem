@@ -1,26 +1,85 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { ZohoAuthCard } from '@/components/ZohoAuthCard';
+import { login, signup } from '@/lib/auth-api';
 
 export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 'signup' } = {}) {
   const [location, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Determine initial mode based on current URL or props
   const initialMode = propMode || (location === '/signup' ? 'signup' : 'signin');
 
-  const handleSignInSuccess = (userEmail: string, userPassword?: string) => {
+  /**
+   * Called by ZohoAuthCard when "Sign in" is submitted (email + password).
+   */
+  const handleSignInSuccess = async (userEmail: string, userPassword?: string) => {
     setIsSubmitting(true);
-    sessionStorage.setItem('auth_email', userEmail);
-    if (userPassword && userPassword !== 'google-oauth') {
-      sessionStorage.setItem('has_session_pass', 'true');
-    }
-    
-    // Direct smoothly to Azure Tenant verification page
-    setTimeout(() => {
+    try {
+      const res = await login(userEmail, userPassword || '');
+
+      // Store basic user info for ProtectedRoute checks
+      if (res.user) {
+        sessionStorage.setItem('auth_user', JSON.stringify(res.user));
+        sessionStorage.setItem('is_authenticated', 'true');
+      }
+
+      if (res.needs_verification) {
+        // Email not yet verified — go to OTP screen
+        sessionStorage.setItem('pending_verification_email', userEmail);
+        setLocation('/otp-verify');
+      } else if (res.has_tenant) {
+        // Returning user with active tenant → straight to dashboard
+        setLocation('/dashboard');
+      } else {
+        // Verified but no tenant yet
+        setLocation('/connect-tenant');
+      }
+    } catch (err: unknown) {
+      // Surface the error back to ZohoAuthCard via thrown error
+      // The card itself handles global errors via alert for now
+      const msg = err instanceof Error ? err.message : 'Sign-in failed. Please check your credentials.';
+      alert(msg);
+    } finally {
       setIsSubmitting(false);
-      setLocation('/tent');
-    }, 400);
+    }
+  };
+
+  /**
+   * Called by ZohoAuthCard when the Sign Up form is submitted.
+   */
+  const handleSignUp = async (payload: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    role?: string;
+    phone?: string;
+    organization?: string;
+    customer?: string;
+    vendorCode?: string;
+  }) => {
+    setIsSubmitting(true);
+    try {
+      await signup({
+        first_name: payload.firstName,
+        last_name: payload.lastName,
+        email: payload.email,
+        password: payload.password,
+        phone: payload.phone,
+        organization: payload.organization,
+        customer: payload.customer,
+        vendor_code: payload.vendorCode,
+        role: payload.role || 'END_CUSTOMER',
+      });
+      // Redirect to OTP verification
+      sessionStorage.setItem('pending_verification_email', payload.email);
+      setLocation('/otp-verify');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      alert(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAzureSSO = () => {
@@ -32,10 +91,10 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
       initialMode={initialMode}
       isSubmitting={isSubmitting}
       onSignInSuccess={handleSignInSuccess}
+      onSignUp={handleSignUp}
       onAzureSSO={handleAzureSSO}
     />
   );
 }
 
 export default LoginPage;
-
