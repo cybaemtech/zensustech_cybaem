@@ -171,11 +171,7 @@ export function ZohoAuthCard({
         lastName: lastName.trim(),
         email: signUpEmail.trim(),
         password: signUpPassword,
-        role: vendorCode ? 'VENDOR' : 'END_CUSTOMER',
-        phone: phone.trim() || undefined,
-        organization: orgName.trim() || undefined,
-        customer: customer.trim() || undefined,
-        vendorCode: vendorCode || undefined,
+        role: 'END_CUSTOMER',
       });
       return;
     }
@@ -491,134 +487,65 @@ export function ZohoAuthCard({
                     </div>
                   </div>
 
-                  {/* Row 2: Organization Name & Customer */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                        Organization Name
-                      </label>
-                      <input
-                        type="text"
-                        value={orgName}
-                        onChange={(e) => setOrgName(e.target.value)}
-                        placeholder="e.g. ZensusTech Ltd"
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20 focus:outline-none transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                        Customer
-                      </label>
-                      <input
-                        type="text"
-                        value={customer}
-                        onChange={(e) => setCustomer(e.target.value)}
-                        placeholder="e.g. Primary / Client ID"
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20 focus:outline-none transition-all"
-                      />
-                    </div>
+                  {/* Row 2: Email * */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                      Email <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={signUpEmail}
+                      onChange={(e) => {
+                        setSignUpEmail(e.target.value);
+                        if (signUpErrors.email) setSignUpErrors((p) => ({ ...p, email: '' }));
+                      }}
+                      placeholder="name@company.com"
+                      className={`w-full px-2.5 py-1.5 rounded-lg border text-xs text-slate-900 bg-white focus:outline-none transition-all ${
+                        signUpErrors.email
+                          ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                          : 'border-slate-300 focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20'
+                      }`}
+                    />
+                    {signUpErrors.email && (
+                      <p className="text-[10px] text-rose-500 mt-0.5 font-medium leading-none">
+                        {signUpErrors.email}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Row 3: Email * & Vendor Code (DDL) */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                        Email <span className="text-rose-500">*</span>
-                      </label>
+                  {/* Row 3: Password * */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                      Password <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
                       <input
-                        type="email"
-                        value={signUpEmail}
+                        type={showSignUpPassword ? 'text' : 'password'}
+                        value={signUpPassword}
                         onChange={(e) => {
-                          setSignUpEmail(e.target.value);
-                          if (signUpErrors.email) setSignUpErrors((p) => ({ ...p, email: '' }));
+                          setSignUpPassword(e.target.value);
+                          if (signUpErrors.password) setSignUpErrors((p) => ({ ...p, password: '' }));
                         }}
-                        placeholder="name@company.com"
-                        className={`w-full px-2.5 py-1.5 rounded-lg border text-xs text-slate-900 bg-white focus:outline-none transition-all ${
-                          signUpErrors.email
+                        placeholder="At least 8 characters"
+                        className={`w-full pl-2.5 pr-8 py-1.5 rounded-lg border text-xs text-slate-900 bg-white focus:outline-none transition-all ${
+                          signUpErrors.password
                             ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                             : 'border-slate-300 focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20'
                         }`}
                       />
-                      {signUpErrors.email && (
-                        <p className="text-[10px] text-rose-500 mt-0.5 font-medium leading-none">
-                          {signUpErrors.email}
-                        </p>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showSignUpPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
                     </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                        Vendor Code
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={vendorCode}
-                          onChange={(e) => setVendorCode(e.target.value as VendorCode)}
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20 focus:outline-none appearance-none cursor-pointer transition-all"
-                        >
-                          <option value="">Select Vendor Code</option>
-                          {VENDOR_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">
-                          ▼
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Row 4: Phone No. & Password * */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                        Phone No.
-                      </label>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+91 9823101112"
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20 focus:outline-none transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                        Password <span className="text-rose-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showSignUpPassword ? 'text' : 'password'}
-                          value={signUpPassword}
-                          onChange={(e) => {
-                            setSignUpPassword(e.target.value);
-                            if (signUpErrors.password) setSignUpErrors((p) => ({ ...p, password: '' }));
-                          }}
-                          placeholder="At least 8 characters"
-                          className={`w-full pl-2.5 pr-8 py-1.5 rounded-lg border text-xs text-slate-900 bg-white focus:outline-none transition-all ${
-                            signUpErrors.password
-                              ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
-                              : 'border-slate-300 focus:border-[#008cff] focus:ring-1 focus:ring-[#008cff]/20'
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSignUpPassword(!showSignUpPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                        >
-                          {showSignUpPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                      {signUpErrors.password && (
-                        <p className="text-[10px] text-rose-500 mt-0.5 font-medium leading-none">
-                          {signUpErrors.password}
-                        </p>
-                      )}
-                    </div>
+                    {signUpErrors.password && (
+                      <p className="text-[10px] text-rose-500 mt-0.5 font-medium leading-none">
+                        {signUpErrors.password}
+                      </p>
+                    )}
                   </div>
 
                   {/* Row 5: Terms Checkbox */}
