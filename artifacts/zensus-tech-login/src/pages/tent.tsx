@@ -98,6 +98,8 @@ export function TenantPage() {
             },
             body: JSON.stringify({
               tenant_id: tenantId.trim(),
+              client_id: clientId.trim(),
+              client_secret: clientSecret.trim(),
               tenant_name: orgDetails?.displayName || 'Azure Tenant',
               provider_type: 'cloud',
               provider_name: 'azure',

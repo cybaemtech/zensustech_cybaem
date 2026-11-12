@@ -31,8 +31,6 @@ export interface SignupResult {
   message: string;
   email: string;
   needs_verification: boolean;
-  email_delivered?: boolean;
-  fallback_otp?: string | null;
 }
 
 export interface LoginResult {
@@ -43,12 +41,15 @@ export interface LoginResult {
   needs_verification?: boolean;
   redirect?: string;
   session_token?: string;
-  email_delivered?: boolean;
-  fallback_otp?: string | null;
   tenant?: {
     tenant_id: string;
+    client_id?: string;
     tenant_name?: string;
     provider_name?: string;
+  } | null;
+  tokens?: {
+    graph_token?: string | null;
+    mgmt_token?: string | null;
   } | null;
 }
 

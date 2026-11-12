@@ -28,9 +28,20 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
         sessionStorage.setItem('pending_verification_email', userEmail);
         setLocation('/otp-verify');
       } else if (res.has_tenant && res.tenant) {
-        // Returning user with existing tenant – skip /tent, go straight to dashboard
+        // Returning user with existing tenant – 2nd attempt:
+        // No need to enter tenant ID, client ID, client secret!
+        // Directly pre-load credentials and redirect to /dashboard
         sessionStorage.setItem('auth_email', userEmail);
         sessionStorage.setItem('azure_tenant_id', res.tenant.tenant_id);
+        if (res.tenant.client_id) {
+          sessionStorage.setItem('azure_client_id', res.tenant.client_id);
+        }
+        if (res.tokens?.mgmt_token) {
+          sessionStorage.setItem('mgmt_token', res.tokens.mgmt_token);
+        }
+        if (res.tokens?.graph_token) {
+          sessionStorage.setItem('graph_token', res.tokens.graph_token);
+        }
         if (res.tenant.tenant_name) {
           sessionStorage.setItem(
             'azure_org_details',

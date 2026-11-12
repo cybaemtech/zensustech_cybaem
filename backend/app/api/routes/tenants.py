@@ -16,9 +16,11 @@ router = APIRouter(prefix="/tenants", tags=["00b · Tenant Management"])
 
 class TenantConnectRequest(BaseModel):
     tenant_id: str
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
     tenant_name: Optional[str] = None
-    provider_type: str          # cloud | office365
-    provider_name: Optional[str] = None   # azure | gcp | aws | native_cloud
+    provider_type: str = "cloud"          # cloud | office365
+    provider_name: Optional[str] = "azure"   # azure | gcp | aws | native_cloud
     subscription_plan: str = "Trial"      # Trial | Bronze | Silver | Gold
 
 
@@ -31,7 +33,7 @@ async def connect_tenant(
     user_id = await _get_session_user(request, db)
 
     provider_type = payload.provider_type.lower()
-    provider_name = (payload.provider_name or "").lower()
+    provider_name = (payload.provider_name or "azure").lower()
 
     # Upsert tenant record
     async with db.execute(
@@ -51,21 +53,33 @@ async def connect_tenant(
             """
             UPDATE tenants
             SET tenant_name=?, provider_name=?, subscription_plan=?,
+                client_id=COALESCE(?, client_id),
+                client_secret=COALESCE(?, client_secret),
                 connection_status='active', updated_at=?
             WHERE id=?
             """,
-            (payload.tenant_name, provider_name, payload.subscription_plan, now, tenant_db_id),
+            (
+                payload.tenant_name,
+                provider_name,
+                payload.subscription_plan,
+                payload.client_id,
+                payload.client_secret,
+                now,
+                tenant_db_id,
+            ),
         )
     else:
         await db.execute(
             """
             INSERT INTO tenants
-                (tenant_id, tenant_name, provider_type, provider_name, subscription_plan, connection_status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
+                (tenant_id, tenant_name, client_id, client_secret, provider_type, provider_name, subscription_plan, connection_status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
             """,
             (
                 payload.tenant_id,
                 payload.tenant_name,
+                payload.client_id,
+                payload.client_secret,
                 provider_type,
                 provider_name,
                 payload.subscription_plan,

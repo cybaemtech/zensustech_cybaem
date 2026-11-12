@@ -145,7 +145,7 @@ app.include_router(api_router, prefix="/backend-api" + settings.API_V1_STR)
 
 @app.on_event("startup")
 async def on_startup():
-    # Initialize SQLite auth database
+    # Initialize unified PostgreSQL auth database (with SQLite fallback)
     try:
         from app.db.database import init_db
         await init_db()

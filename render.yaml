@@ -11,29 +11,6 @@ services:
         fromDatabase:
           name: zensustech-db
           property: connectionString
-      - key: SMTP_HOST
-        value: webmail.cybaemtech.com
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USER
-        value: noreply@cybaemtech.com
-      - key: SMTP_PASS
-        value: "Cybaem@26#"
-      - key: SMTP_FROM
-        value: ZensusTech <noreply@cybaemtech.com>
-      - key: GRAPH_MAIL_SENDER
-        value: noreply@cybaemtech.com
-      - key: AZURE_SENDER_EMAIL
-        value: noreply@cybaemtech.com
-      # ── HTTPS Email APIs (port 443 — works on Render Free tier) ──────────────
-      # Sign up at https://resend.com (free: 100 emails/day) and paste key below
-      - key: RESEND_API_KEY
-        value: ""
-      - key: RESEND_FROM
-        value: "ZensusTech <noreply@cybaemtech.com>"
-      # OR sign up at https://app.brevo.com (free: 300 emails/day) and paste key
-      - key: BREVO_API_KEY
-        value: ""
 
 databases:
   - name: zensustech-db

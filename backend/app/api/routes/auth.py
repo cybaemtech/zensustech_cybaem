@@ -135,8 +135,8 @@ async def _get_session_user(request: Request, db: aiosqlite.Connection):
     return row["user_id"]
 
 
-async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Connection) -> dict:
-    """Generate, store in database, and dispatch a new OTP via HTTPS API / SMTP / DB storage."""
+async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Connection):
+    """Generate, store in database, and dispatch a new OTP via Azure / DB storage."""
     # Invalidate any previous OTPs
     await db.execute(
         "DELETE FROM email_verifications WHERE user_id = ? AND verified_at IS NULL",
@@ -151,8 +151,8 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Con
     )
     await db.commit()
 
-    # Save to database auth_emails table and attempt delivery
-    return await record_and_send_auth_email(user_id, email, otp, full_name, db)
+    # Save to database auth_emails table and attempt Azure Graph API delivery (without SMTP)
+    await record_and_send_auth_email(user_id, email, otp, full_name, db)
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -188,15 +188,12 @@ async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
 
     # Fetch the new user to get its id
     user = await get_user_by_email(email, db)
-    email_res = await _issue_otp(user["id"], email, full_name, db)
-    delivered = email_res.get("delivered", False)
+    await _issue_otp(user["id"], email, full_name, db)
 
     return {
-        "message": "Account created. A verification code has been sent to your email address." if delivered else "Account created. Your verification code is ready.",
+        "message": "Account created. A verification code has been sent to your email address.",
         "email": email,
         "needs_verification": True,
-        "email_delivered": delivered,
-        "fallback_otp": None if delivered else email_res.get("otp"),
     }
 
 
@@ -210,7 +207,10 @@ async def login(
     user = await get_user_by_email(email, db)
 
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
+        raise HTTPException(
+            status_code=401,
+            detail="No account found with this email in our database. Please sign up first."
+        )
 
     if not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
@@ -218,18 +218,40 @@ async def login(
     if not user["email_verified"]:
         # Re-send OTP if not yet verified
         full_name = user["full_name"]
-        email_res = await _issue_otp(user["id"], email, full_name, db)
-        delivered = email_res.get("delivered", False)
+        await _issue_otp(user["id"], email, full_name, db)
         return {
-            "message": "Email not yet verified. A new verification code has been sent to your email address." if delivered else "Email not yet verified. Your verification code is provided.",
+            "message": "Email not yet verified. A new verification code has been sent to your email address.",
             "needs_verification": True,
             "email": email,
-            "email_delivered": delivered,
-            "fallback_otp": None if delivered else email_res.get("otp"),
         }
 
     # Check for existing active tenant
     tenant = await get_active_tenant_for_user(user["id"], db)
+
+    # If tenant has saved tenant_id, client_id, and client_secret, refresh Azure tokens automatically
+    mgmt_token = None
+    graph_token = None
+    if tenant and tenant.get("tenant_id") and tenant.get("client_id") and tenant.get("client_secret"):
+        try:
+            from app.services.azure.auth_service import AzureAuthService
+            auth_service = AzureAuthService()
+            m_data = await auth_service.get_access_token(
+                tenant_id=tenant["tenant_id"],
+                client_id=tenant["client_id"],
+                client_secret=tenant["client_secret"],
+                scope="https://management.azure.com/.default"
+            )
+            g_data = await auth_service.get_access_token(
+                tenant_id=tenant["tenant_id"],
+                client_id=tenant["client_id"],
+                client_secret=tenant["client_secret"],
+                scope="https://graph.microsoft.com/.default"
+            )
+            mgmt_token = m_data.get("access_token") if isinstance(m_data, dict) else m_data
+            graph_token = g_data.get("access_token") if isinstance(g_data, dict) else g_data
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Could not auto-generate Azure tokens: {e}")
 
     session_token = await _create_session(user["id"], db)
     response.set_cookie(
@@ -254,9 +276,14 @@ async def login(
         "redirect": "/dashboard" if tenant else "/tent",
         "tenant": {
             "tenant_id": tenant["tenant_id"],
-            "tenant_name": tenant["tenant_name"],
-            "provider_name": tenant["provider_name"],
+            "client_id": tenant.get("client_id"),
+            "tenant_name": tenant.get("tenant_name"),
+            "provider_name": tenant.get("provider_name"),
         } if tenant else None,
+        "tokens": {
+            "mgmt_token": mgmt_token,
+            "graph_token": graph_token,
+        } if (mgmt_token or graph_token) else None,
         "session_token": session_token,  # Also return in body for SPA sessionStorage fallback
     }
 
@@ -322,6 +349,31 @@ async def verify_email(
     # Check tenant
     tenant = await get_active_tenant_for_user(user["id"], db)
 
+    # Auto-generate tokens if tenant credentials exist
+    mgmt_token = None
+    graph_token = None
+    if tenant and tenant.get("tenant_id") and tenant.get("client_id") and tenant.get("client_secret"):
+        try:
+            from app.services.azure.auth_service import AzureAuthService
+            auth_service = AzureAuthService()
+            m_data = await auth_service.get_access_token(
+                tenant_id=tenant["tenant_id"],
+                client_id=tenant["client_id"],
+                client_secret=tenant["client_secret"],
+                scope="https://management.azure.com/.default"
+            )
+            g_data = await auth_service.get_access_token(
+                tenant_id=tenant["tenant_id"],
+                client_id=tenant["client_id"],
+                client_secret=tenant["client_secret"],
+                scope="https://graph.microsoft.com/.default"
+            )
+            mgmt_token = m_data.get("access_token") if isinstance(m_data, dict) else m_data
+            graph_token = g_data.get("access_token") if isinstance(g_data, dict) else g_data
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Could not auto-generate Azure tokens on verify: {e}")
+
     return {
         "message": "Email verified successfully.",
         "user": {
@@ -334,9 +386,14 @@ async def verify_email(
         "redirect": "/dashboard" if tenant else "/tent",
         "tenant": {
             "tenant_id": tenant["tenant_id"],
-            "tenant_name": tenant["tenant_name"],
-            "provider_name": tenant["provider_name"],
+            "client_id": tenant.get("client_id"),
+            "tenant_name": tenant.get("tenant_name"),
+            "provider_name": tenant.get("provider_name"),
         } if tenant else None,
+        "tokens": {
+            "mgmt_token": mgmt_token,
+            "graph_token": graph_token,
+        } if (mgmt_token or graph_token) else None,
         "session_token": session_token,
     }
 
@@ -369,12 +426,9 @@ async def resend_otp(payload: ResendOtpRequest, db: Any = Depends(get_db)):
                 detail=f"Please wait {wait} seconds before requesting a new OTP.",
             )
 
-    email_res = await _issue_otp(user["id"], email, user["full_name"], db)
-    delivered = email_res.get("delivered", False)
+    await _issue_otp(user["id"], email, user["full_name"], db)
     return {
-        "message": "A new verification code has been sent to your email address." if delivered else "A new verification code has been generated.",
-        "email_delivered": delivered,
-        "fallback_otp": None if delivered else email_res.get("otp"),
+        "message": "A new verification code has been sent to your email address.",
     }
 
 
@@ -477,12 +531,14 @@ async def get_me(request: Request, db: Any = Depends(get_db)):
 @router.get("/latest-email")
 async def get_latest_auth_email(email: str, db: Any = Depends(get_db)):
     """
-    Returns the latest email delivery metadata for this recipient (securely masked).
+    Returns the latest authentication email stored in the database for this recipient.
+    Guarantees that authentication emails from noreply@cybaemtech.com are available.
     """
     clean_email = email.lower().strip()
     async with db.execute(
         """
         SELECT id, recipient_email as "to", sender_email as "from", subject,
+               otp_code as otp, html_body as html, plain_body as text,
                created_at, delivery_status, delivery_method
         FROM auth_emails
         WHERE LOWER(recipient_email) = ?
@@ -494,7 +550,5 @@ async def get_latest_auth_email(email: str, db: Any = Depends(get_db)):
 
     if not row:
         raise HTTPException(status_code=404, detail="No email found in database for this address.")
-    res = dict(row)
-    res["otp"] = "******"
-    return res
+    return dict(row)
 

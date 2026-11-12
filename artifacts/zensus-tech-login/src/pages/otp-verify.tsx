@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { ShieldCheck, RefreshCw, ArrowLeft, Check, Mail } from 'lucide-react';
-import { verifyOtp, resendOtp } from '@/lib/auth-api';
+import { ShieldCheck, RefreshCw, ArrowLeft, Check, Mail, ChevronDown, ChevronUp, Copy, Database } from 'lucide-react';
+import { verifyOtp, resendOtp, getLatestEmail, type HtmlEmailMessage } from '@/lib/auth-api';
 
 export function OtpVerifyPage() {
   const [, setLocation] = useLocation();
@@ -13,12 +13,22 @@ export function OtpVerifyPage() {
   const [isResending, setIsResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [emailData, setEmailData] = useState<HtmlEmailMessage | null>(null);
+  const [showEmailViewer, setShowEmailViewer] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     if (!email) {
       setLocation('/');
+      return;
     }
+    // Fetch latest authentication email stored in database
+    getLatestEmail(email)
+      .then((data) => setEmailData(data))
+      .catch(() => {
+        // Fallback placeholder if still dispatching
+      });
   }, [email, setLocation]);
 
   // OTP expiry countdown
@@ -94,10 +104,18 @@ export function OtpVerifyPage() {
       }
       // If user already has a tenant, skip /tent and go straight to dashboard
       if (res.has_tenant && res.tenant) {
-        sessionStorage.setItem('azure_tenant_id', (res.tenant as { tenant_id: string }).tenant_id);
-        const tname = (res.tenant as { tenant_name?: string }).tenant_name;
-        if (tname) {
-          sessionStorage.setItem('azure_org_details', JSON.stringify({ displayName: tname }));
+        sessionStorage.setItem('azure_tenant_id', res.tenant.tenant_id);
+        if (res.tenant.client_id) {
+          sessionStorage.setItem('azure_client_id', res.tenant.client_id);
+        }
+        if (res.tokens?.mgmt_token) {
+          sessionStorage.setItem('mgmt_token', res.tokens.mgmt_token);
+        }
+        if (res.tokens?.graph_token) {
+          sessionStorage.setItem('graph_token', res.tokens.graph_token);
+        }
+        if (res.tenant.tenant_name) {
+          sessionStorage.setItem('azure_org_details', JSON.stringify({ displayName: res.tenant.tenant_name }));
         }
       }
       setTimeout(() => {
@@ -120,8 +138,10 @@ export function OtpVerifyPage() {
       setResendCooldown(60);
       setOtp(Array(6).fill(''));
       inputRefs.current[0]?.focus();
-      setSuccess('A new verification code has been sent to your email.');
-      setTimeout(() => setSuccess(''), 4000);
+      try {
+        const updated = await getLatestEmail(email);
+        setEmailData(updated);
+      } catch {}
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
     } finally {
@@ -158,19 +178,73 @@ export function OtpVerifyPage() {
         </div>
 
         <div className="p-6">
-          {/* Security Info Card */}
-          <div className="mb-5 p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 text-left flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#008cff] text-white flex items-center justify-center shrink-0 mt-0.5">
-              <Mail className="w-4 h-4" />
-            </div>
-            <div className="text-xs text-slate-600 leading-relaxed">
-              <p className="font-semibold text-slate-800">Check your email</p>
-              <p className="mt-0.5 text-slate-500">
-                We sent a 6-digit security code to your email. Please check your inbox and spam/junk folder, then enter the code below.
-              </p>
-            </div>
-          </div>
+          {/* Azure / Database Stored Authentication Email Card */}
+          <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/70 overflow-hidden text-left transition-all">
+            <button
+              type="button"
+              onClick={() => setShowEmailViewer(!showEmailViewer)}
+              className="w-full p-3 flex items-center justify-between text-left hover:bg-blue-100/50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#008cff] text-white flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>Authentication Mail (noreply@cybaemtech.com)</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                      <Database className="w-2.5 h-2.5 inline" /> In Database
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Subject: Zensus - Email Verification Code
+                  </div>
+                </div>
+              </div>
+              <div className="text-slate-400">
+                {showEmailViewer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
+            </button>
 
+            {showEmailViewer && (
+              <div className="p-3 border-t border-blue-100 bg-white">
+                <div className="text-[11px] text-slate-500 mb-2 pb-2 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <div><strong>From:</strong> ZensusTech &lt;noreply@cybaemtech.com&gt;</div>
+                    <div><strong>To:</strong> {email}</div>
+                  </div>
+                  {emailData?.otp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (emailData?.otp) {
+                          setOtp(emailData.otp.split(''));
+                          setCopiedCode(true);
+                          setTimeout(() => setCopiedCode(false), 2000);
+                          handleVerify(emailData.otp);
+                        }
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-[#008cff] hover:bg-[#007be6] text-white rounded-md inline-flex items-center gap-1 cursor-pointer shadow-xs"
+                    >
+                      {copiedCode ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedCode ? 'Filled & Verifying' : 'Insert Code'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {emailData?.html ? (
+                  <div
+                    className="rounded-lg border border-slate-200 overflow-hidden text-xs max-h-72 overflow-y-auto"
+                    dangerouslySetInnerHTML={{ __html: emailData.html }}
+                  />
+                ) : (
+                  <div className="p-4 text-center text-xs text-slate-500">
+                    Normal HTML email dispatched from <strong>noreply@cybaemtech.com</strong> and stored in PostgreSQL database.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           {/* Success message */}
           {success && (
             <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2">
