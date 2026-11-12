@@ -21,13 +21,14 @@ const queryClient = new QueryClient();
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const [, setLocation] = useLocation();
   // Check both old Azure-token-based auth AND new email/password session auth
+  // zt_session alone is sufficient after email/password sign-in
   const isAuthenticated =
-    (sessionStorage.getItem('is_authenticated') === 'true' &&
-      Boolean(
-        sessionStorage.getItem('zt_session') ||
-        sessionStorage.getItem('graph_token') ||
-        sessionStorage.getItem('mgmt_token')
-      ));
+    sessionStorage.getItem('is_authenticated') === 'true' &&
+    Boolean(
+      sessionStorage.getItem('zt_session') ||
+      sessionStorage.getItem('graph_token') ||
+      sessionStorage.getItem('mgmt_token')
+    );
 
   useEffect(() => {
     if (!isAuthenticated) {

@@ -245,7 +245,12 @@ async def login(
         },
         "has_tenant": tenant is not None,
         "needs_tenant": tenant is None,
-        "redirect": "/dashboard" if tenant else "/connect-tenant",
+        "redirect": "/dashboard" if tenant else "/tent",
+        "tenant": {
+            "tenant_id": tenant["tenant_id"],
+            "tenant_name": tenant["tenant_name"],
+            "provider_name": tenant["provider_name"],
+        } if tenant else None,
         "session_token": session_token,  # Also return in body for SPA sessionStorage fallback
     }
 
@@ -320,7 +325,12 @@ async def verify_email(
             "role": user["role"],
         },
         "has_tenant": tenant is not None,
-        "redirect": "/dashboard" if tenant else "/connect-tenant",
+        "redirect": "/dashboard" if tenant else "/tent",
+        "tenant": {
+            "tenant_id": tenant["tenant_id"],
+            "tenant_name": tenant["tenant_name"],
+            "provider_name": tenant["provider_name"],
+        } if tenant else None,
         "session_token": session_token,
     }
 

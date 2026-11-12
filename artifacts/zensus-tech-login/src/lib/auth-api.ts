@@ -41,6 +41,11 @@ export interface LoginResult {
   needs_verification?: boolean;
   redirect?: string;
   session_token?: string;
+  tenant?: {
+    tenant_id: string;
+    tenant_name?: string;
+    provider_name?: string;
+  } | null;
 }
 
 function getSessionToken(): string | null {

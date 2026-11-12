@@ -26,7 +26,7 @@ export interface SignUpPayload {
 
 export interface ZohoAuthCardProps {
   initialMode?: 'signin' | 'signup';
-  onSignInSuccess: (email: string, password?: string) => void;
+  onSignInSuccess: (email: string, password?: string) => Promise<void> | void;
   onSignUp?: (payload: SignUpPayload) => void;
   onAzureSSO: () => void;
   isSubmitting?: boolean;
@@ -57,6 +57,7 @@ export function ZohoAuthCard({
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [signInStep, setSignInStep] = useState<'email' | 'password'>('email');
   const [signInErrors, setSignInErrors] = useState<{ email?: string; password?: string }>({});
+  const [signInApiError, setSignInApiError] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState('');
   const [forgotPasswordError, setForgotPasswordError] = useState('');
@@ -133,7 +134,7 @@ export function ZohoAuthCard({
     return Object.keys(errs).length === 0;
   };
 
-  const handleSignInNext = (e: React.FormEvent) => {
+  const handleSignInNext = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateSignIn()) return;
 
@@ -141,8 +142,14 @@ export function ZohoAuthCard({
       setSignInStep('password');
       setForgotPasswordMessage('');
       setForgotPasswordError('');
+      setSignInApiError('');
     } else {
-      onSignInSuccess(signInEmail.trim(), signInPassword);
+      setSignInApiError('');
+      try {
+        await onSignInSuccess(signInEmail.trim(), signInPassword);
+      } catch (err: unknown) {
+        setSignInApiError(err instanceof Error ? err.message : 'Sign-in failed. Please check your credentials.');
+      }
     }
   };
 
@@ -414,6 +421,7 @@ export function ZohoAuthCard({
                             onChange={(e) => {
                               setSignInPassword(e.target.value);
                               if (signInErrors.password) setSignInErrors({});
+                              if (signInApiError) setSignInApiError('');
                             }}
                             placeholder="Enter your password"
                             className={`w-full pl-3.5 pr-10 py-2.5 rounded-lg border text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none transition-all duration-150 ${
@@ -437,6 +445,14 @@ export function ZohoAuthCard({
                           </p>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* API-level sign-in error (wrong credentials etc.) */}
+                  {signInApiError && (
+                    <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-xs text-rose-700 font-medium">
+                      <X className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-500" />
+                      <span>{signInApiError}</span>
                     </div>
                   )}
 

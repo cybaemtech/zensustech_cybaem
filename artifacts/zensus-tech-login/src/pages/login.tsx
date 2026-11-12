@@ -24,19 +24,28 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
       }
 
       if (res.needs_verification) {
-        // Email not yet verified — go to OTP screen
+        // Email not yet verified – go to OTP screen
         sessionStorage.setItem('pending_verification_email', userEmail);
         setLocation('/otp-verify');
+      } else if (res.has_tenant && res.tenant) {
+        // Returning user with existing tenant – skip /tent, go straight to dashboard
+        sessionStorage.setItem('auth_email', userEmail);
+        sessionStorage.setItem('azure_tenant_id', res.tenant.tenant_id);
+        if (res.tenant.tenant_name) {
+          sessionStorage.setItem(
+            'azure_org_details',
+            JSON.stringify({ displayName: res.tenant.tenant_name })
+          );
+        }
+        setLocation('/dashboard');
       } else {
-        // Verified user (with or without tenant) → always go to /tent
+        // First-time user (no tenant yet) – go to /tent to connect Azure
         sessionStorage.setItem('auth_email', userEmail);
         setLocation('/tent');
       }
     } catch (err: unknown) {
-      // Surface the error back to ZohoAuthCard via thrown error
-      // The card itself handles global errors via alert for now
-      const msg = err instanceof Error ? err.message : 'Sign-in failed. Please check your credentials.';
-      alert(msg);
+      // Re-throw so ZohoAuthCard can display the error inline (no alert popup)
+      throw err;
     } finally {
       setIsSubmitting(false);
     }
@@ -58,7 +67,7 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
   }) => {
     setIsSubmitting(true);
     try {
-      const res = await signup({
+      await signup({
         first_name: payload.firstName,
         last_name: payload.lastName,
         email: payload.email,

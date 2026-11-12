@@ -102,9 +102,16 @@ export function OtpVerifyPage() {
         sessionStorage.setItem('is_authenticated', 'true');
         sessionStorage.setItem('auth_email', email);
       }
+      // If user already has a tenant, skip /tent and go straight to dashboard
+      if (res.has_tenant && res.tenant) {
+        sessionStorage.setItem('azure_tenant_id', (res.tenant as { tenant_id: string }).tenant_id);
+        const tname = (res.tenant as { tenant_name?: string }).tenant_name;
+        if (tname) {
+          sessionStorage.setItem('azure_org_details', JSON.stringify({ displayName: tname }));
+        }
+      }
       setTimeout(() => {
-        // Always go to /tent after OTP verification
-        setLocation('/tent');
+        setLocation(res.has_tenant ? '/dashboard' : '/tent');
       }, 1200);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Verification failed. Please try again.');
