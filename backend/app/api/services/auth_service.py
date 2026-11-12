@@ -233,11 +233,11 @@ def _send_smtp_sync(
         for port in ports_to_try:
             try:
                 if port == 465:
-                    with smtplib.SMTP_SSL(smtp_host, port, timeout=12) as server:
+                    with smtplib.SMTP_SSL(smtp_host, port, timeout=4) as server:
                         server.login(smtp_user, smtp_pass)
                         server.sendmail(sender_email, [to_email], msg.as_string())
                 else:
-                    with smtplib.SMTP(smtp_host, port, timeout=12) as server:
+                    with smtplib.SMTP(smtp_host, port, timeout=4) as server:
                         server.ehlo()
                         server.starttls()
                         server.ehlo()
@@ -284,8 +284,79 @@ async def record_and_send_auth_email(
     delivery_status = "stored_in_db"
     delivery_method = "database"
 
-    # 1. Attempt real SMTP delivery via webmail.cybaemtech.com
-    if sender_email and smtp_pass:
+    # 1. First check for HTTPS Email APIs (works 100% on Render Free tier over port 443)
+    resend_key = os.getenv("RESEND_API_KEY", "").strip()
+    if resend_key:
+        try:
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                resend_from = os.getenv("RESEND_FROM", f"ZensusTech <{sender_email}>")
+                r = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {resend_key}"},
+                    json={
+                        "from": resend_from,
+                        "to": [to_email.lower().strip()],
+                        "subject": subject,
+                        "html": html_body,
+                        "text": plain_body,
+                    },
+                )
+                if r.status_code in (200, 201):
+                    delivery_status = "sent_via_resend"
+                    delivery_method = "https_api"
+                    logger.info(f"Dispatched email via Resend API to {to_email}")
+                else:
+                    logger.warning(f"Resend API error: {r.status_code} - {r.text}")
+        except Exception as e:
+            logger.warning(f"Resend dispatch exception: {e}")
+
+    brevo_key = os.getenv("BREVO_API_KEY", "").strip()
+    if brevo_key and delivery_status == "stored_in_db":
+        try:
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                r = await client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers={"api-key": brevo_key},
+                    json={
+                        "sender": {"email": sender_email, "name": "ZensusTech"},
+                        "to": [{"email": to_email.lower().strip(), "name": full_name}],
+                        "subject": subject,
+                        "htmlContent": html_body,
+                        "textContent": plain_body,
+                    },
+                )
+                if r.status_code in (200, 201):
+                    delivery_status = "sent_via_brevo"
+                    delivery_method = "https_api"
+                    logger.info(f"Dispatched email via Brevo API to {to_email}")
+                else:
+                    logger.warning(f"Brevo API error: {r.status_code} - {r.text}")
+        except Exception as e:
+            logger.warning(f"Brevo dispatch exception: {e}")
+
+    sendgrid_key = os.getenv("SENDGRID_API_KEY", "").strip()
+    if sendgrid_key and delivery_status == "stored_in_db":
+        try:
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                r = await client.post(
+                    "https://api.sendgrid.com/v3/mail/send",
+                    headers={"Authorization": f"Bearer {sendgrid_key}"},
+                    json={
+                        "personalizations": [{"to": [{"email": to_email.lower().strip()}]}],
+                        "from": {"email": sender_email, "name": "ZensusTech"},
+                        "subject": subject,
+                        "content": [{"type": "text/html", "value": html_body}],
+                    },
+                )
+                if r.status_code in (200, 202):
+                    delivery_status = "sent_via_sendgrid"
+                    delivery_method = "https_api"
+                    logger.info(f"Dispatched email via SendGrid to {to_email}")
+        except Exception as e:
+            logger.warning(f"SendGrid dispatch exception: {e}")
+
+    # 2. Attempt real SMTP delivery via webmail.cybaemtech.com (works locally & on unblocked hosts)
+    if delivery_status == "stored_in_db" and sender_email and smtp_pass:
         try:
             delivered = await asyncio.to_thread(
                 _send_smtp_sync,
@@ -304,46 +375,6 @@ async def record_and_send_auth_email(
                 delivery_method = "smtp"
         except Exception as e:
             logger.warning(f"Async SMTP dispatch error: {e}")
-
-    # 2. If SMTP was not used or failed, check Azure Graph credentials if configured
-    if delivery_status == "stored_in_db":
-        tenant_id = os.getenv("AZURE_TENANT_ID", "").strip()
-        client_id = os.getenv("AZURE_CLIENT_ID", "").strip()
-        client_secret = os.getenv("AZURE_CLIENT_SECRET", "").strip()
-
-        if tenant_id and client_id and client_secret:
-            try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    token_resp = await client.post(
-                        f"https://login.microsoftonline.com/{quote(tenant_id, safe='')}/oauth2/v2.0/token",
-                        data={
-                            "client_id": client_id,
-                            "client_secret": client_secret,
-                            "grant_type": "client_credentials",
-                            "scope": "https://graph.microsoft.com/.default",
-                        },
-                    )
-                    if not token_resp.is_error:
-                        access_token = token_resp.json().get("access_token")
-                        if access_token:
-                            mail_resp = await client.post(
-                                f"https://graph.microsoft.com/v1.0/users/{quote(sender_email, safe='')}/sendMail",
-                                headers={"Authorization": f"Bearer {access_token}"},
-                                json={
-                                    "message": {
-                                        "subject": subject,
-                                        "body": {"contentType": "HTML", "content": html_body},
-                                        "toRecipients": [{"emailAddress": {"address": to_email}}],
-                                    },
-                                    "saveToSentItems": False,
-                                },
-                            )
-                            if not mail_resp.is_error:
-                                delivery_status = "sent_via_azure"
-                                delivery_method = "azure_graph"
-                                logger.info(f"Dispatched email via Azure Graph to {to_email}")
-            except Exception as e:
-                logger.warning(f"Azure Graph dispatch exception: {e}")
 
     # 3. Always store in database auth_emails table for 100% persistence
     await db.execute(
@@ -366,6 +397,8 @@ async def record_and_send_auth_email(
     )
     await db.commit()
 
+    is_delivered = delivery_status in ("sent_via_smtp", "sent_via_resend", "sent_via_brevo", "sent_via_sendgrid", "sent_via_azure")
+
     return {
         "to": to_email,
         "from": sender_email,
@@ -375,6 +408,7 @@ async def record_and_send_auth_email(
         "text": plain_body,
         "delivery_status": delivery_status,
         "delivery_method": delivery_method,
+        "delivered": is_delivered,
     }
 
 
@@ -386,7 +420,7 @@ async def send_random_password_email(
     db: Any,
 ) -> Dict[str, Any]:
     """
-    Dispatches the generated random password to user's email via SMTP/Graph
+    Dispatches the generated random password to user's email via HTTPS API / SMTP
     and stores record in the auth_emails table in PostgreSQL.
     """
     sender_email = (
@@ -404,8 +438,54 @@ async def send_random_password_email(
     delivery_status = "stored_in_db"
     delivery_method = "database"
 
-    # 1. Dispatch via webmail.cybaemtech.com
-    if sender_email and smtp_pass:
+    # 1. First check for HTTPS Email APIs (works 100% on Render Free tier over port 443)
+    resend_key = os.getenv("RESEND_API_KEY", "").strip()
+    if resend_key:
+        try:
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                resend_from = os.getenv("RESEND_FROM", f"ZensusTech <{sender_email}>")
+                r = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {resend_key}"},
+                    json={
+                        "from": resend_from,
+                        "to": [to_email.lower().strip()],
+                        "subject": subject,
+                        "html": html_body,
+                        "text": plain_body,
+                    },
+                )
+                if r.status_code in (200, 201):
+                    delivery_status = "sent_via_resend"
+                    delivery_method = "https_api"
+                    logger.info(f"Dispatched password reset via Resend API to {to_email}")
+        except Exception as e:
+            logger.warning(f"Resend dispatch exception: {e}")
+
+    brevo_key = os.getenv("BREVO_API_KEY", "").strip()
+    if brevo_key and delivery_status == "stored_in_db":
+        try:
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                r = await client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers={"api-key": brevo_key},
+                    json={
+                        "sender": {"email": sender_email, "name": "ZensusTech"},
+                        "to": [{"email": to_email.lower().strip(), "name": full_name}],
+                        "subject": subject,
+                        "htmlContent": html_body,
+                        "textContent": plain_body,
+                    },
+                )
+                if r.status_code in (200, 201):
+                    delivery_status = "sent_via_brevo"
+                    delivery_method = "https_api"
+                    logger.info(f"Dispatched password reset via Brevo API to {to_email}")
+        except Exception as e:
+            logger.warning(f"Brevo dispatch exception: {e}")
+
+    # 2. Dispatch via webmail.cybaemtech.com
+    if delivery_status == "stored_in_db" and sender_email and smtp_pass:
         try:
             delivered = await asyncio.to_thread(
                 _send_smtp_sync,

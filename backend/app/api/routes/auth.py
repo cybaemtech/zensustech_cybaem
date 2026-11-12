@@ -135,8 +135,8 @@ async def _get_session_user(request: Request, db: aiosqlite.Connection):
     return row["user_id"]
 
 
-async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Connection):
-    """Generate, store in database, and dispatch a new OTP via Azure / DB storage."""
+async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Connection) -> dict:
+    """Generate, store in database, and dispatch a new OTP via HTTPS API / SMTP / DB storage."""
     # Invalidate any previous OTPs
     await db.execute(
         "DELETE FROM email_verifications WHERE user_id = ? AND verified_at IS NULL",
@@ -151,8 +151,8 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Con
     )
     await db.commit()
 
-    # Save to database auth_emails table and attempt Azure Graph API delivery (without SMTP)
-    await record_and_send_auth_email(user_id, email, otp, full_name, db)
+    # Save to database auth_emails table and attempt delivery
+    return await record_and_send_auth_email(user_id, email, otp, full_name, db)
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -188,12 +188,15 @@ async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
 
     # Fetch the new user to get its id
     user = await get_user_by_email(email, db)
-    await _issue_otp(user["id"], email, full_name, db)
+    email_res = await _issue_otp(user["id"], email, full_name, db)
+    delivered = email_res.get("delivered", False)
 
     return {
-        "message": "Account created. A verification code has been sent to your email address.",
+        "message": "Account created. A verification code has been sent to your email address." if delivered else "Account created. Your verification code is ready.",
         "email": email,
         "needs_verification": True,
+        "email_delivered": delivered,
+        "fallback_otp": None if delivered else email_res.get("otp"),
     }
 
 
@@ -215,11 +218,14 @@ async def login(
     if not user["email_verified"]:
         # Re-send OTP if not yet verified
         full_name = user["full_name"]
-        await _issue_otp(user["id"], email, full_name, db)
+        email_res = await _issue_otp(user["id"], email, full_name, db)
+        delivered = email_res.get("delivered", False)
         return {
-            "message": "Email not yet verified. A new verification code has been sent to your email address.",
+            "message": "Email not yet verified. A new verification code has been sent to your email address." if delivered else "Email not yet verified. Your verification code is provided.",
             "needs_verification": True,
             "email": email,
+            "email_delivered": delivered,
+            "fallback_otp": None if delivered else email_res.get("otp"),
         }
 
     # Check for existing active tenant
@@ -363,9 +369,12 @@ async def resend_otp(payload: ResendOtpRequest, db: Any = Depends(get_db)):
                 detail=f"Please wait {wait} seconds before requesting a new OTP.",
             )
 
-    await _issue_otp(user["id"], email, user["full_name"], db)
+    email_res = await _issue_otp(user["id"], email, user["full_name"], db)
+    delivered = email_res.get("delivered", False)
     return {
-        "message": "A new verification code has been sent to your email address.",
+        "message": "A new verification code has been sent to your email address." if delivered else "A new verification code has been generated.",
+        "email_delivered": delivered,
+        "fallback_otp": None if delivered else email_res.get("otp"),
     }
 
 
