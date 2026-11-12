@@ -7,8 +7,10 @@ import {
   ArrowRight,
   Sparkles,
   Lock,
-  X
+  X,
+  Mail
 } from 'lucide-react';
+import { forgotPassword } from '@/lib/auth-api';
 
 export interface SignUpPayload {
   firstName: string;
@@ -55,6 +57,9 @@ export function ZohoAuthCard({
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [signInStep, setSignInStep] = useState<'email' | 'password'>('email');
   const [signInErrors, setSignInErrors] = useState<{ email?: string; password?: string }>({});
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState('');
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
 
   // Sign Up state
   const [firstName, setFirstName] = useState('');
@@ -134,8 +139,31 @@ export function ZohoAuthCard({
 
     if (signInStep === 'email') {
       setSignInStep('password');
+      setForgotPasswordMessage('');
+      setForgotPasswordError('');
     } else {
       onSignInSuccess(signInEmail.trim(), signInPassword);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const emailToUse = signInEmail.trim();
+    if (!emailToUse) {
+      setSignInErrors({ email: 'Please enter your email address first' });
+      setSignInStep('email');
+      return;
+    }
+    setIsResettingPassword(true);
+    setForgotPasswordMessage('');
+    setForgotPasswordError('');
+    try {
+      const res = await forgotPassword(emailToUse);
+      setForgotPasswordMessage(res.message || `A new temporary password has been sent to ${emailToUse}!`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No account found with this email address in our database.';
+      setForgotPasswordError(msg);
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -353,12 +381,32 @@ export function ZohoAuthCard({
                           </label>
                           <button
                             type="button"
-                            onClick={() => alert('Please contact your administrator or use Microsoft Entra ID SSO.')}
-                            className="text-xs text-[#008cff] font-medium hover:underline"
+                            onClick={handleForgotPassword}
+                            disabled={isResettingPassword}
+                            className="text-xs text-[#008cff] font-medium hover:underline cursor-pointer disabled:opacity-50"
                           >
-                            Forgot password?
+                            {isResettingPassword ? 'Sending random password...' : 'Forgot password?'}
                           </button>
                         </div>
+
+                        {forgotPasswordMessage && (
+                          <div className="mb-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-start gap-2">
+                            <Check className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                            <div className="flex-1 leading-relaxed">
+                              <span>{forgotPasswordMessage}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {forgotPasswordError && (
+                          <div className="mb-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2">
+                            <X className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
+                            <div className="flex-1 leading-relaxed">
+                              <span>{forgotPasswordError}</span>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="relative">
                           <input
                             type={showSignInPassword ? 'text' : 'password'}

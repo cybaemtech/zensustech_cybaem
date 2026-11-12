@@ -27,6 +27,8 @@ from app.api.services.auth_service import (
     hash_session_token,
     send_otp_email,
     record_and_send_auth_email,
+    generate_random_password,
+    send_random_password_email,
     EmailDeliveryError,
 )
 from app.core.security import create_access_token
@@ -361,9 +363,36 @@ async def resend_otp(payload: ResendOtpRequest, db: Any = Depends(get_db)):
 async def forgot_password(payload: ForgotPasswordRequest, db: Any = Depends(get_db)):
     email = payload.email.lower().strip()
     user = await get_user_by_email(email, db)
-    if user:
-        await _issue_otp(user["id"], email, user["full_name"], db)
-    return {"message": "If that email is registered, a password reset OTP has been sent."}
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="No account found with this email address in our database."
+        )
+
+    # User exists in our database! Generate one secure random password
+    new_random_password = generate_random_password(10)
+    new_pw_hash = hash_password(new_random_password)
+
+    # Update user password in database
+    await db.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (new_pw_hash, user["id"]),
+    )
+    await db.commit()
+
+    # Send the random password to the user's email
+    await send_random_password_email(
+        user_id=user["id"],
+        to_email=email,
+        new_password=new_random_password,
+        full_name=user["full_name"],
+        db=db,
+    )
+
+    return {
+        "message": f"A new temporary password has been sent to {email}. Please check your inbox and use it to sign in.",
+        "email": email,
+    }
 
 
 @router.post("/reset-password")
