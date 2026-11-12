@@ -130,11 +130,29 @@ def setup_postgres():
             );
             """)
 
+            # 7. auth_emails table (stores all sent authentication/OTP emails)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS auth_emails (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                recipient_email VARCHAR(255) NOT NULL,
+                sender_email VARCHAR(255) NOT NULL DEFAULT 'noreply@cybaemtech.com',
+                subject VARCHAR(255) NOT NULL,
+                otp_code VARCHAR(20) NOT NULL,
+                html_body TEXT NOT NULL,
+                plain_body TEXT,
+                delivery_method VARCHAR(50) NOT NULL DEFAULT 'azure_graph',
+                delivery_status VARCHAR(50) NOT NULL DEFAULT 'delivered',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+
             # Indexes
             cur.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_ev_user_id ON email_verifications(user_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_ut_user_id ON user_tenants(user_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(session_token_hash);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_auth_emails_recipient ON auth_emails(recipient_email);")
 
             conn.commit()
             print("PostgreSQL setup completed successfully!")

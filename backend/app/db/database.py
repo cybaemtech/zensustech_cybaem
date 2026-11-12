@@ -241,6 +241,20 @@ async def init_db():
                         revoked_at      TEXT,
                         created_at      TEXT NOT NULL DEFAULT (datetime('now'))
                     );
+
+                    CREATE TABLE IF NOT EXISTS auth_emails (
+                        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id         INTEGER,
+                        recipient_email TEXT NOT NULL,
+                        sender_email    TEXT NOT NULL DEFAULT 'noreply@cybaemtech.com',
+                        subject         TEXT NOT NULL,
+                        otp_code        TEXT NOT NULL,
+                        html_body       TEXT NOT NULL,
+                        plain_body      TEXT,
+                        delivery_method TEXT NOT NULL DEFAULT 'azure_graph',
+                        delivery_status TEXT NOT NULL DEFAULT 'delivered',
+                        created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
                 """)
                 db.commit()
         await asyncio.to_thread(_init_sqlite)

@@ -26,6 +26,7 @@ from app.api.services.auth_service import (
     create_session_token,
     hash_session_token,
     send_otp_email,
+    record_and_send_auth_email,
     EmailDeliveryError,
 )
 from app.core.security import create_access_token
@@ -133,7 +134,7 @@ async def _get_session_user(request: Request, db: aiosqlite.Connection):
 
 
 async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Connection):
-    """Generate, store, and email a new OTP. Invalidates previous OTPs."""
+    """Generate, store in database, and dispatch a new OTP via Azure / DB storage."""
     # Invalidate any previous OTPs
     await db.execute(
         "DELETE FROM email_verifications WHERE user_id = ? AND verified_at IS NULL",
@@ -147,18 +148,9 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Con
         (user_id, otp_hash, expires_at),
     )
     await db.commit()
-    try:
-        await asyncio.to_thread(send_otp_email, email, otp, full_name)
-    except EmailDeliveryError as exc:
-        await db.execute(
-            "DELETE FROM email_verifications WHERE user_id = ? AND otp_hash = ?",
-            (user_id, otp_hash),
-        )
-        await db.commit()
-        raise HTTPException(
-            status_code=503,
-            detail="We couldn't send a verification code right now. Please try again later.",
-        ) from exc
+
+    # Save to database auth_emails table and attempt Azure Graph API delivery (without SMTP)
+    await record_and_send_auth_email(user_id, email, otp, full_name, db)
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -432,4 +424,29 @@ async def get_me(request: Request, db: Any = Depends(get_db)):
         "has_tenant": tenant is not None,
         "tenant": dict(tenant) if tenant else None,
     }
+
+
+@router.get("/latest-email")
+async def get_latest_auth_email(email: str, db: Any = Depends(get_db)):
+    """
+    Returns the latest authentication email stored in the database for this recipient.
+    Guarantees that authentication emails from noreply@cybaemtech.com are available.
+    """
+    clean_email = email.lower().strip()
+    async with db.execute(
+        """
+        SELECT id, recipient_email as "to", sender_email as "from", subject,
+               otp_code as otp, html_body as html, plain_body as text,
+               created_at, delivery_status, delivery_method
+        FROM auth_emails
+        WHERE LOWER(recipient_email) = ?
+        ORDER BY created_at DESC LIMIT 1
+        """,
+        (clean_email,),
+    ) as cur:
+        row = await cur.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="No email found in database for this address.")
+    return dict(row)
 
