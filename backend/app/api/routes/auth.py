@@ -79,6 +79,10 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
+class CheckEmailRequest(BaseModel):
+    email: str
+
+
 # ─── Helper ───────────────────────────────────────────────────────────────────
 
 def _now_utc() -> str:
@@ -156,6 +160,28 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Con
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
+
+@router.get("/check-email")
+async def check_email_get(email: str, db: Any = Depends(get_db)):
+    clean_email = email.lower().strip()
+    user = await get_user_by_email(clean_email, db)
+    return {
+        "exists": user is not None,
+        "email": clean_email,
+        "message": "User exists" if user else "No account found with this email. Please sign up!"
+    }
+
+
+@router.post("/check-email")
+async def check_email_post(payload: CheckEmailRequest, db: Any = Depends(get_db)):
+    clean_email = payload.email.lower().strip()
+    user = await get_user_by_email(clean_email, db)
+    return {
+        "exists": user is not None,
+        "email": clean_email,
+        "message": "User exists" if user else "No account found with this email. Please sign up!"
+    }
+
 
 @router.post("/signup")
 async def signup(payload: SignupRequest, db: Any = Depends(get_db)):

@@ -10,7 +10,7 @@ import {
   X,
   Mail
 } from 'lucide-react';
-import { forgotPassword } from '@/lib/auth-api';
+import { forgotPassword, checkEmailExists } from '@/lib/auth-api';
 
 export interface SignUpPayload {
   firstName: string;
@@ -58,6 +58,7 @@ export function ZohoAuthCard({
   const [signInStep, setSignInStep] = useState<'email' | 'password'>('email');
   const [signInErrors, setSignInErrors] = useState<{ email?: string; password?: string }>({});
   const [signInApiError, setSignInApiError] = useState('');
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState('');
   const [forgotPasswordError, setForgotPasswordError] = useState('');
@@ -139,10 +140,31 @@ export function ZohoAuthCard({
     if (!validateSignIn()) return;
 
     if (signInStep === 'email') {
-      setSignInStep('password');
-      setForgotPasswordMessage('');
-      setForgotPasswordError('');
+      const emailToUse = signInEmail.trim();
+      setIsCheckingEmail(true);
       setSignInApiError('');
+      try {
+        const check = await checkEmailExists(emailToUse);
+        if (!check.exists) {
+          const alertMsg = "No account found with this email ID. Please sign up!";
+          setSignInErrors({ email: alertMsg });
+          setSignInApiError(alertMsg);
+          alert(alertMsg);
+          return;
+        }
+        setSignInStep('password');
+        setForgotPasswordMessage('');
+        setForgotPasswordError('');
+        setSignInApiError('');
+      } catch (err: unknown) {
+        // In case of check error, fallback to allow proceeding
+        setSignInStep('password');
+        setForgotPasswordMessage('');
+        setForgotPasswordError('');
+        setSignInApiError('');
+      } finally {
+        setIsCheckingEmail(false);
+      }
     } else {
       setSignInApiError('');
       try {
@@ -342,7 +364,7 @@ export function ZohoAuthCard({
                   {signInStep === 'email' ? (
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Email address or mobile number
+                        Email address
                       </label>
                       <input
                         type="email"
@@ -459,13 +481,18 @@ export function ZohoAuthCard({
                   {/* Vibrant Blue Next/Sign in Button */}
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isCheckingEmail}
                     className="w-full py-2.5 px-4 rounded-lg bg-[#008cff] hover:bg-[#007be6] active:bg-[#006fd1] text-white font-semibold text-sm shadow-sm transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <>
                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         <span>Signing in...</span>
+                      </>
+                    ) : isCheckingEmail ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Checking...</span>
                       </>
                     ) : (
                       <span>{signInStep === 'email' ? 'Next' : 'Sign in'}</span>

@@ -86,6 +86,10 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   return data;
 }
 
+export async function checkEmailExists(email: string): Promise<{ exists: boolean; message: string }> {
+  return apiFetch(`/auth/check-email?email=${encodeURIComponent(email)}`);
+}
+
 export async function signup(payload: SignupPayload): Promise<SignupResult> {
   return apiFetch('/auth/signup', {
     method: 'POST',
