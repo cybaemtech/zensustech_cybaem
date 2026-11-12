@@ -71,12 +71,14 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
         vendor_code: payload.vendorCode,
         role: payload.role || 'END_CUSTOMER',
       });
-      // Redirect to OTP verification
+      // Store user session email and redirect directly to /tent as requested
+      sessionStorage.setItem('auth_email', payload.email);
       sessionStorage.setItem('pending_verification_email', payload.email);
-      setLocation('/otp-verify');
+      sessionStorage.setItem('is_authenticated', 'true');
+      setLocation('/tent');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
-      alert(msg);
+      // Re-throw so ZohoAuthCard can display inline error (not alert)
+      throw err;
     } finally {
       setIsSubmitting(false);
     }

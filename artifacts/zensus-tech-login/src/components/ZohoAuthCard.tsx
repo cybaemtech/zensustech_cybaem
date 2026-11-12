@@ -68,6 +68,7 @@ export function ZohoAuthCard({
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [signUpErrors, setSignUpErrors] = useState<Record<string, string>>({});
+  const [signUpApiError, setSignUpApiError] = useState('');
   const [signUpSuccessMessage, setSignUpSuccessMessage] = useState('');
 
   // Right side auto-swipe authentication slides
@@ -160,19 +161,25 @@ export function ZohoAuthCard({
     return Object.keys(errs).length === 0;
   };
 
-  const handleSignUpSubmit = (e: React.FormEvent) => {
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateSignUp()) return;
+    setSignUpApiError('');
 
     // If parent provided onSignUp handler, delegate entirely (real API flow)
     if (onSignUp) {
-      onSignUp({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: signUpEmail.trim(),
-        password: signUpPassword,
-        role: 'END_CUSTOMER',
-      });
+      try {
+        await (onSignUp as any)({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: signUpEmail.trim(),
+          password: signUpPassword,
+          role: 'END_CUSTOMER',
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+        setSignUpApiError(msg);
+      }
       return;
     }
 
@@ -567,6 +574,14 @@ export function ZohoAuthCard({
                       </p>
                     )}
                   </div>
+
+                  {/* API Error banner (e.g. email already exists) */}
+                  {signUpApiError && (
+                    <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-xs text-rose-700 font-medium">
+                      <X className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-500" />
+                      <span>{signUpApiError}</span>
+                    </div>
+                  )}
 
                   {/* Row 6: Register Action Button (Fully Visible, No Scroll Required) */}
                   <button
