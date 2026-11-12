@@ -27,12 +27,10 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
         // Email not yet verified — go to OTP screen
         sessionStorage.setItem('pending_verification_email', userEmail);
         setLocation('/otp-verify');
-      } else if (res.has_tenant) {
-        // Returning user with active tenant → straight to dashboard
-        setLocation('/dashboard');
       } else {
-        // Verified but no tenant yet
-        setLocation('/connect-tenant');
+        // Verified user (with or without tenant) → always go to /tent
+        sessionStorage.setItem('auth_email', userEmail);
+        setLocation('/tent');
       }
     } catch (err: unknown) {
       // Surface the error back to ZohoAuthCard via thrown error

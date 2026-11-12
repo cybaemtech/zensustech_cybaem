@@ -100,9 +100,11 @@ export function OtpVerifyPage() {
       if (res.user) {
         sessionStorage.setItem('auth_user', JSON.stringify(res.user));
         sessionStorage.setItem('is_authenticated', 'true');
+        sessionStorage.setItem('auth_email', email);
       }
       setTimeout(() => {
-        setLocation(res.redirect || (res.has_tenant ? '/dashboard' : '/connect-tenant'));
+        // Always go to /tent after OTP verification
+        setLocation('/tent');
       }, 1200);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Verification failed. Please try again.');

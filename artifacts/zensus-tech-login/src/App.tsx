@@ -15,7 +15,6 @@ import { DatabasePage } from '@/pages/database';
 import CostDashboard from '@/pages/CostDashboard';
 import NotFound from '@/pages/not-found';
 import { OtpVerifyPage } from '@/pages/otp-verify';
-import { ConnectTenantPage } from '@/pages/connect-tenant';
 
 const queryClient = new QueryClient();
 
@@ -72,8 +71,7 @@ function Router() {
         {/* OTP Verification Page */}
         <Route path="/otp-verify" component={OtpVerifyPage} />
 
-        {/* Connect Tenant Page */}
-        <Route path="/connect-tenant" component={ConnectTenantPage} />
+        {/* /connect-tenant removed — all post-auth flows go to /tent */}
 
         {/* Main Dashboard (dashboard.tsx) */}
         <Route path="/dashboard">
