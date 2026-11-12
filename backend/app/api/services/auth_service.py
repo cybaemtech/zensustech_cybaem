@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Dict
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import email.utils
 from pathlib import Path
 
 import bcrypt
@@ -207,31 +208,52 @@ def _send_smtp_sync(
     smtp_user: str,
     smtp_pass: str,
 ) -> bool:
-    """Synchronous SMTP mail delivery."""
+    """Synchronous SMTP mail delivery with automatic port fallback (587 STARTTLS <-> 465 SSL)."""
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = f"ZensusTech <{sender_email}>"
         msg["To"] = to_email
-        msg.attach(MIMEText(plain_body, "plain"))
-        msg.attach(MIMEText(html_body, "html"))
+        msg["Reply-To"] = sender_email
+        msg["Date"] = email.utils.formatdate(localtime=True)
+        msg["Message-ID"] = email.utils.make_msgid(domain="cybaemtech.com")
+        msg["X-Mailer"] = "ZensusTech-Auth-Engine/1.0"
+        msg.attach(MIMEText(plain_body, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        if smtp_port == 465:
-            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=12) as server:
-                server.login(smtp_user, smtp_pass)
-                server.sendmail(sender_email, [to_email], msg.as_string())
-        else:
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=12) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(smtp_user, smtp_pass)
-                server.sendmail(sender_email, [to_email], msg.as_string())
+        ports_to_try = [smtp_port]
+        if smtp_port == 587 and 465 not in ports_to_try:
+            ports_to_try.append(465)
+        elif smtp_port == 465 and 587 not in ports_to_try:
+            ports_to_try.append(587)
+        elif 587 not in ports_to_try:
+            ports_to_try.extend([587, 465])
 
-        logger.info(f"Successfully delivered email via SMTP ({smtp_host}) to {to_email}")
-        return True
+        last_error = None
+        for port in ports_to_try:
+            try:
+                if port == 465:
+                    with smtplib.SMTP_SSL(smtp_host, port, timeout=12) as server:
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, [to_email], msg.as_string())
+                else:
+                    with smtplib.SMTP(smtp_host, port, timeout=12) as server:
+                        server.ehlo()
+                        server.starttls()
+                        server.ehlo()
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, [to_email], msg.as_string())
+
+                logger.info(f"Successfully delivered email via SMTP ({smtp_host}:{port}) to {to_email}")
+                return True
+            except Exception as exc:
+                last_error = exc
+                logger.warning(f"SMTP delivery attempt to {to_email} via {smtp_host}:{port} failed: {exc}")
+
+        logger.error(f"All SMTP delivery attempts to {to_email} via {smtp_host} failed: {last_error}")
+        return False
     except Exception as exc:
-        logger.warning(f"SMTP delivery failed to {to_email} via {smtp_host}:{smtp_port}: {exc}")
+        logger.error(f"Fatal error preparing/sending SMTP email to {to_email}: {exc}")
         return False
 
 

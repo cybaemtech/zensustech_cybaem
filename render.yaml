@@ -11,6 +11,20 @@ services:
         fromDatabase:
           name: zensustech-db
           property: connectionString
+      - key: SMTP_HOST
+        value: webmail.cybaemtech.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: noreply@cybaemtech.com
+      - key: SMTP_PASS
+        value: "Cybaem@26#"
+      - key: SMTP_FROM
+        value: ZensusTech <noreply@cybaemtech.com>
+      - key: GRAPH_MAIL_SENDER
+        value: noreply@cybaemtech.com
+      - key: AZURE_SENDER_EMAIL
+        value: noreply@cybaemtech.com
 
 databases:
   - name: zensustech-db

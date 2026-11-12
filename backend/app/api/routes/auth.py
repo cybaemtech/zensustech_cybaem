@@ -468,14 +468,12 @@ async def get_me(request: Request, db: Any = Depends(get_db)):
 @router.get("/latest-email")
 async def get_latest_auth_email(email: str, db: Any = Depends(get_db)):
     """
-    Returns the latest authentication email stored in the database for this recipient.
-    Guarantees that authentication emails from noreply@cybaemtech.com are available.
+    Returns the latest email delivery metadata for this recipient (securely masked).
     """
     clean_email = email.lower().strip()
     async with db.execute(
         """
         SELECT id, recipient_email as "to", sender_email as "from", subject,
-               otp_code as otp, html_body as html, plain_body as text,
                created_at, delivery_status, delivery_method
         FROM auth_emails
         WHERE LOWER(recipient_email) = ?
@@ -487,5 +485,7 @@ async def get_latest_auth_email(email: str, db: Any = Depends(get_db)):
 
     if not row:
         raise HTTPException(status_code=404, detail="No email found in database for this address.")
-    return dict(row)
+    res = dict(row)
+    res["otp"] = "******"
+    return res
 
