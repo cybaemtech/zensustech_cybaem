@@ -1,78 +1,33 @@
 """
-Auth service: OTP generation, hashing, email sending, user lookups.
-"""
-import secrets
-import hashlib
-import os
-import logging
-import html
-from urllib.parse import quote
-from datetime import datetime, timedelta, timezone
-
-import aiosqlite
-import bcrypt
-import httpx
-
-logger = logging.getLogger("auth_service")
-
-# ─── Password helpers ────────────────────────────────────────────────────────
-
-def hash_password(password: str) -> str:
-    # Truncate to 72 bytes if needed to adhere to bcrypt specification
-    pw_bytes = password.encode("utf-8")[:72]
-    return bcrypt.hashpw(pw_bytes, bcrypt.gensalt()).decode("utf-8")
-
-
-def verify_password(plain: str, hashed: str) -> bool:
-    try:
-        pw_bytes = plain.encode("utf-8")[:72]
-        return bcrypt.checkpw(pw_bytes, hashed.encode("utf-8"))
-    except Exception:
-        return False
-
-
-# ─── OTP helpers ─────────────────────────────────────────────────────────────
-
-def generate_otp() -> str:
-    """Return a secure 6-digit OTP string."""
-    return str(secrets.randbelow(900000) + 100000)
-
-
-def hash_otp(otp: str) -> str:
-    """SHA-256 hash of the OTP for secure storage (bcrypt is too slow for 5-attempt loops)."""
-    return hashlib.sha256(otp.encode()).hexdigest()
-
-
-def verify_otp_hash(otp: str, otp_hash: str) -> bool:
-    return hash_otp(otp) == otp_hash
-
-
-# ─── Session token ────────────────────────────────────────────────────────────
-
-def create_session_token() -> str:
-    return secrets.token_urlsafe(48)
-
-
-def hash_session_token(token: str) -> str:
-    return hashlib.sha256(token.encode()).hexdigest()
-
-
-"""
 Auth service: OTP generation, hashing, database storage of authentication emails,
-and Azure Microsoft Graph delivery (without SMTP).
+and real email dispatch via Cybaem SMTP (webmail.cybaemtech.com) & Azure Graph.
 """
+import asyncio
 import secrets
 import hashlib
 import os
+import smtplib
 import logging
 import html
 from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Dict
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from pathlib import Path
 
-import aiosqlite
 import bcrypt
 import httpx
+
+# Load local .env if available
+try:
+    from dotenv import load_dotenv
+    for p in [Path(".env"), Path("backend/.env"), Path(__file__).resolve().parents[3] / ".env"]:
+        if p.is_file():
+            load_dotenv(p, override=True)
+            break
+except Exception:
+    pass
 
 logger = logging.getLogger("auth_service")
 
@@ -100,7 +55,7 @@ def generate_otp() -> str:
 
 
 def hash_otp(otp: str) -> str:
-    """SHA-256 hash of the OTP for secure storage (bcrypt is too slow for 5-attempt loops)."""
+    """SHA-256 hash of the OTP for secure storage."""
     return hashlib.sha256(otp.encode()).hexdigest()
 
 
@@ -118,7 +73,7 @@ def hash_session_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-# ─── Email generation, Database storage, and Azure Graph delivery ───────────
+# ─── Email Content & Dispatch ────────────────────────────────────────────────
 
 class EmailDeliveryError(RuntimeError):
     """Raised when a verification email cannot be processed."""
@@ -173,6 +128,45 @@ Sent from {sender}
     return html_body, plain_body
 
 
+def _send_smtp_sync(
+    to_email: str,
+    subject: str,
+    html_body: str,
+    plain_body: str,
+    sender_email: str,
+    smtp_host: str,
+    smtp_port: int,
+    smtp_user: str,
+    smtp_pass: str,
+) -> bool:
+    """Synchronous SMTP mail delivery."""
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"ZensusTech <{sender_email}>"
+        msg["To"] = to_email
+        msg.attach(MIMEText(plain_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
+
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=12) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(sender_email, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=12) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(sender_email, [to_email], msg.as_string())
+
+        logger.info(f"Successfully delivered email via SMTP ({smtp_host}) to {to_email}")
+        return True
+    except Exception as exc:
+        logger.warning(f"SMTP delivery failed to {to_email} via {smtp_host}:{smtp_port}: {exc}")
+        return False
+
+
 async def record_and_send_auth_email(
     user_id: Optional[int],
     to_email: str,
@@ -182,56 +176,86 @@ async def record_and_send_auth_email(
 ) -> Dict[str, Any]:
     """
     1. Formats email from noreply@cybaemtech.com.
-    2. Stores email in the database (auth_emails table) for 100% certainty.
-    3. If Azure credentials (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
-       are present, sends via Microsoft Graph API (without SMTP).
+    2. Sends email using configured credentials (webmail.cybaemtech.com / Azure Graph).
+    3. Stores email and delivery status in PostgreSQL/database auth_emails table for 100% certainty.
     """
-    sender = os.getenv("AZURE_SENDER_EMAIL") or os.getenv("GRAPH_MAIL_SENDER") or "noreply@cybaemtech.com"
+    sender_email = (
+        os.getenv("SMTP_USER")
+        or os.getenv("AZURE_SENDER_EMAIL")
+        or os.getenv("GRAPH_MAIL_SENDER")
+        or "noreply@cybaemtech.com"
+    ).strip()
+    smtp_host = os.getenv("SMTP_HOST", "webmail.cybaemtech.com").strip()
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_pass = (os.getenv("SMTP_PASS") or os.getenv("SMTP_PASSWORD") or "Cybaem@26#").strip()
+
     subject = "Zensus - Email Verification Code"
-    html_body, plain_body = build_auth_email_content(otp, full_name, sender)
+    html_body, plain_body = build_auth_email_content(otp, full_name, sender_email)
     delivery_status = "stored_in_db"
-    delivery_method = "azure_graph"
+    delivery_method = "database"
 
-    tenant_id = os.getenv("AZURE_TENANT_ID", "").strip()
-    client_id = os.getenv("AZURE_CLIENT_ID", "").strip()
-    client_secret = os.getenv("AZURE_CLIENT_SECRET", "").strip()
-
-    if tenant_id and client_id and client_secret:
+    # 1. Attempt real SMTP delivery via webmail.cybaemtech.com
+    if sender_email and smtp_pass:
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                token_resp = await client.post(
-                    f"https://login.microsoftonline.com/{quote(tenant_id, safe='')}/oauth2/v2.0/token",
-                    data={
-                        "client_id": client_id,
-                        "client_secret": client_secret,
-                        "grant_type": "client_credentials",
-                        "scope": "https://graph.microsoft.com/.default",
-                    },
-                )
-                if not token_resp.is_error:
-                    access_token = token_resp.json().get("access_token")
-                    if access_token:
-                        mail_resp = await client.post(
-                            f"https://graph.microsoft.com/v1.0/users/{quote(sender, safe='')}/sendMail",
-                            headers={"Authorization": f"Bearer {access_token}"},
-                            json={
-                                "message": {
-                                    "subject": subject,
-                                    "body": {"contentType": "HTML", "content": html_body},
-                                    "toRecipients": [{"emailAddress": {"address": to_email}}],
-                                },
-                                "saveToSentItems": False,
-                            },
-                        )
-                        if not mail_resp.is_error:
-                            delivery_status = "sent_via_azure"
-                            logger.info(f"Dispatched email via Azure Graph to {to_email}")
-                        else:
-                            logger.warning(f"Azure Graph returned status {mail_resp.status_code}")
+            delivered = await asyncio.to_thread(
+                _send_smtp_sync,
+                to_email,
+                subject,
+                html_body,
+                plain_body,
+                sender_email,
+                smtp_host,
+                smtp_port,
+                sender_email,
+                smtp_pass,
+            )
+            if delivered:
+                delivery_status = "sent_via_smtp"
+                delivery_method = "smtp"
         except Exception as e:
-            logger.warning(f"Azure Graph dispatch exception: {e}")
+            logger.warning(f"Async SMTP dispatch error: {e}")
 
-    # Store in database
+    # 2. If SMTP was not used or failed, check Azure Graph credentials if configured
+    if delivery_status == "stored_in_db":
+        tenant_id = os.getenv("AZURE_TENANT_ID", "").strip()
+        client_id = os.getenv("AZURE_CLIENT_ID", "").strip()
+        client_secret = os.getenv("AZURE_CLIENT_SECRET", "").strip()
+
+        if tenant_id and client_id and client_secret:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    token_resp = await client.post(
+                        f"https://login.microsoftonline.com/{quote(tenant_id, safe='')}/oauth2/v2.0/token",
+                        data={
+                            "client_id": client_id,
+                            "client_secret": client_secret,
+                            "grant_type": "client_credentials",
+                            "scope": "https://graph.microsoft.com/.default",
+                        },
+                    )
+                    if not token_resp.is_error:
+                        access_token = token_resp.json().get("access_token")
+                        if access_token:
+                            mail_resp = await client.post(
+                                f"https://graph.microsoft.com/v1.0/users/{quote(sender_email, safe='')}/sendMail",
+                                headers={"Authorization": f"Bearer {access_token}"},
+                                json={
+                                    "message": {
+                                        "subject": subject,
+                                        "body": {"contentType": "HTML", "content": html_body},
+                                        "toRecipients": [{"emailAddress": {"address": to_email}}],
+                                    },
+                                    "saveToSentItems": False,
+                                },
+                            )
+                            if not mail_resp.is_error:
+                                delivery_status = "sent_via_azure"
+                                delivery_method = "azure_graph"
+                                logger.info(f"Dispatched email via Azure Graph to {to_email}")
+            except Exception as e:
+                logger.warning(f"Azure Graph dispatch exception: {e}")
+
+    # 3. Always store in database auth_emails table for 100% persistence
     await db.execute(
         """
         INSERT INTO auth_emails (
@@ -241,7 +265,7 @@ async def record_and_send_auth_email(
         (
             user_id,
             to_email.lower().strip(),
-            sender,
+            sender_email,
             subject,
             otp,
             html_body,
@@ -254,12 +278,13 @@ async def record_and_send_auth_email(
 
     return {
         "to": to_email,
-        "from": sender,
+        "from": sender_email,
         "subject": subject,
         "otp": otp,
         "html": html_body,
         "text": plain_body,
         "delivery_status": delivery_status,
+        "delivery_method": delivery_method,
     }
 
 
