@@ -25,6 +25,15 @@ services:
         value: noreply@cybaemtech.com
       - key: AZURE_SENDER_EMAIL
         value: noreply@cybaemtech.com
+      # ── HTTPS Email APIs (port 443 — works on Render Free tier) ──────────────
+      # Sign up at https://resend.com (free: 100 emails/day) and paste key below
+      - key: RESEND_API_KEY
+        value: ""
+      - key: RESEND_FROM
+        value: "ZensusTech <noreply@cybaemtech.com>"
+      # OR sign up at https://app.brevo.com (free: 300 emails/day) and paste key
+      - key: BREVO_API_KEY
+        value: ""
 
 databases:
   - name: zensustech-db
