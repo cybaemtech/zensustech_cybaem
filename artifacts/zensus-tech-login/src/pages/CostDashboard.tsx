@@ -71,8 +71,13 @@ export default function CostDashboard() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    const isAuth = sessionStorage.getItem('is_authenticated') === 'true' &&
-      Boolean(sessionStorage.getItem('graph_token') || sessionStorage.getItem('mgmt_token'));
+    const isAuth =
+      sessionStorage.getItem('is_authenticated') === 'true' &&
+      Boolean(
+        sessionStorage.getItem('zt_session') ||
+        sessionStorage.getItem('graph_token') ||
+        sessionStorage.getItem('mgmt_token')
+      );
     if (!isAuth) {
       setLocation('/');
     }

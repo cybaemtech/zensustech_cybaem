@@ -275,6 +275,16 @@ def _init_postgres_sync(url: str):
                 except Exception:
                     pass
 
+            try:
+                cur.execute("""
+                    UPDATE tenants t
+                    SET client_id = tc.client_id, client_secret = tc.client_secret
+                    FROM tenant_credentials tc
+                    WHERE t.tenant_id = tc.tenant_id AND (t.client_id IS NULL OR t.client_secret IS NULL);
+                """)
+            except Exception:
+                pass
+
             # 4. user_tenants table
             cur.execute("""
             CREATE TABLE IF NOT EXISTS user_tenants (

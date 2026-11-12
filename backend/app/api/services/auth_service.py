@@ -603,8 +603,12 @@ async def get_active_tenant_for_user(user_id: int, db: Any):
     """Return the first active tenant record associated with this user, or None."""
     async with db.execute(
         """
-        SELECT t.* FROM tenants t
+        SELECT t.*,
+               COALESCE(t.client_id, tc.client_id) as client_id,
+               COALESCE(t.client_secret, tc.client_secret) as client_secret
+        FROM tenants t
         JOIN user_tenants ut ON ut.tenant_id = t.id
+        LEFT JOIN tenant_credentials tc ON tc.tenant_id = t.tenant_id
         WHERE ut.user_id = ? AND t.connection_status = 'active'
         ORDER BY ut.is_primary DESC, ut.created_at DESC
         LIMIT 1
