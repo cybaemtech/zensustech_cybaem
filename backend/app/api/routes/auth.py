@@ -191,7 +191,7 @@ async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
     role = payload.role.upper()
-    if role not in ("VENDOR", "END_CUSTOMER", "SUPER_ADMIN"):
+    if role not in ("VENDOR", "END_CUSTOMER", "SUPER_ADMIN", "VENDOR_ADMIN"):
         role = "END_CUSTOMER"
 
     full_name = f"{payload.first_name.strip()} {payload.last_name.strip()}"
@@ -545,10 +545,17 @@ async def get_me(request: Request, db: Any = Depends(get_db)):
     tenant = await get_active_tenant_for_user(user_id, db)
     return {
         "id": user["id"],
+        "user_id": user.get("user_id"),
         "full_name": user["full_name"],
         "email": user["email"],
         "role": user["role"],
+        "phone": user.get("phone"),
+        "organization": user.get("organization"),
+        "customer": user.get("customer"),
+        "vendor_code": user.get("vendor_code"),
+        "account_status": user.get("account_status", "active"),
         "email_verified": bool(user["email_verified"]),
+        "created_at": str(user.get("created_at", "")),
         "has_tenant": tenant is not None,
         "tenant": dict(tenant) if tenant else None,
     }

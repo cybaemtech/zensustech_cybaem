@@ -322,16 +322,6 @@ export function ZohoAuthCard({
                   </span>
                 </div>
               </div>
-
-              {/* "Try smart sign-in" Pill Button */}
-              <button
-                type="button"
-                onClick={() => setShowSmartSignInModal(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-xs transition-all duration-200 cursor-pointer hover:shadow hover:scale-[1.02]"
-              >
-                <Sparkles className="w-3 h-3 text-amber-300" />
-                <span>Try smart sign-in</span>
-              </button>
             </div>
 
             {/* Success notification banner after sign-up */}
