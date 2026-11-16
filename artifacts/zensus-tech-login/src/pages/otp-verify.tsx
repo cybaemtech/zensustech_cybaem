@@ -156,9 +156,9 @@ export function OtpVerifyPage() {
           <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
             <ShieldCheck className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-xl font-bold">Verify Your Email</h1>
+          <h1 className="text-xl font-bold">One-Time Email Verification</h1>
           <p className="text-blue-100 text-xs mt-1">
-            Verification email sent from <span className="font-semibold text-white">noreply@cybaemtech.com</span> to
+            Sign-up verification email sent from <span className="font-semibold text-white">noreply@cybaemtech.com</span> to
           </p>
           <p className="text-white font-semibold text-sm mt-0.5 truncate">{email}</p>
         </div>
@@ -168,10 +168,10 @@ export function OtpVerifyPage() {
           <div className="mb-5 p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/70 text-center">
             <div className="flex items-center justify-center gap-1.5 text-xs text-slate-800 font-semibold">
               <Mail className="w-4 h-4 text-[#008cff]" />
-              <span>Check your email inbox</span>
+              <span>One-Time Email Verification</span>
             </div>
             <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-              We have securely dispatched a 6-digit verification code to <strong>{email}</strong>.
+              Enter the 6-digit one-time verification code sent to <strong>{email}</strong> to activate your account.
             </p>
             <div className="mt-2 text-[11px] text-amber-800 bg-amber-50 rounded-lg p-2 border border-amber-200/80">
               📌 <strong>Important:</strong> If not visible in your Primary Inbox, please check your <strong>Spam / Junk</strong> folder.

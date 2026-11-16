@@ -217,7 +217,7 @@ async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
     await _issue_otp(user["id"], email, full_name, db)
 
     return {
-        "message": "Account created. A verification code has been sent to your email address.",
+        "message": "Account created. A one-time email verification code has been sent to your email address.",
         "email": email,
         "needs_verification": True,
     }
@@ -246,7 +246,7 @@ async def login(
         full_name = user["full_name"]
         await _issue_otp(user["id"], email, full_name, db)
         return {
-            "message": "Email not yet verified. A new verification code has been sent to your email address.",
+            "message": "Email not yet verified. A one-time verification code has been sent to your email address.",
             "needs_verification": True,
             "email": email,
         }

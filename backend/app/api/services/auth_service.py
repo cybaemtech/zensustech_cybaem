@@ -99,14 +99,14 @@ def build_auth_email_content(otp: str, full_name: str, sender: str = "noreply@cy
     <html><body style="font-family:Inter,Segoe UI,-apple-system,sans-serif;background:#f8fafc;margin:0;padding:24px;">
       <div style="max-width:520px;margin:20px auto;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;padding:36px 32px;box-shadow:0 4px 12px rgba(15,23,42,0.05);">
         <div style="text-align:center;margin-bottom:24px;">
-          <h2 style="color:#0f172a;margin:0 0 6px;font-size:22px;font-weight:700;">Zensus Verification Code</h2>
+          <h2 style="color:#0f172a;margin:0 0 6px;font-size:22px;font-weight:700;">Zensus One-Time Email Verification</h2>
           <p style="color:#64748b;margin:0;font-size:13px;">Enterprise Cloud Operations & Identity Management</p>
         </div>
         <p style="color:#334155;margin:0 0 16px;font-size:15px;line-height:1.5;">
           Hello <strong>{safe_name}</strong>,
         </p>
         <p style="color:#475569;margin:0 0 24px;font-size:14px;line-height:1.6;">
-          Thank you for registering with Zensus. Your email verification code is:
+          Thank you for registering with Zensus. Your one-time email verification code is:
         </p>
         <div style="text-align:center;margin:28px 0;">
           <div style="display:inline-block;font-size:38px;font-weight:800;letter-spacing:10px;color:#008cff;background:#eff6ff;padding:16px 28px;border-radius:10px;border:2px dashed #93c5fd;font-family:Consolas,monospace;">
@@ -114,7 +114,7 @@ def build_auth_email_content(otp: str, full_name: str, sender: str = "noreply@cy
           </div>
         </div>
         <p style="color:#64748b;font-size:13px;margin:0 0 10px;text-align:center;">
-          ⏰ This code is valid for <strong>5 minutes</strong>. Please do not share this code with anyone.
+          ⏰ This code is valid for <strong>5 minutes</strong>. Enter this code to verify your account once.
         </p>
         <p style="color:#94a3b8;font-size:12px;margin:0;text-align:center;">
           If you did not request this verification, please ignore this email.
@@ -130,9 +130,9 @@ def build_auth_email_content(otp: str, full_name: str, sender: str = "noreply@cy
     plain_body = f"""Hello {full_name},
 
 Thank you for registering with Zensus.
-Your email verification code is: {otp}
+Your one-time email verification code is: {otp}
 
-This code is valid for 5 minutes. Please do not share this code with anyone.
+This code is valid for 5 minutes. Enter this code to verify your account.
 If you did not request this verification, please ignore this email.
 
 Regards,
@@ -277,7 +277,7 @@ async def record_and_send_auth_email(
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
     smtp_pass = (os.getenv("SMTP_PASS") or os.getenv("SMTP_PASSWORD") or "Cybaem@26#").strip()
 
-    subject = "Zensus - Email Verification Code"
+    subject = "Zensus - One-Time Email Verification Code"
     html_body, plain_body = build_auth_email_content(otp, full_name, sender_email)
     delivery_status = "stored_in_db"
     delivery_method = "database"
