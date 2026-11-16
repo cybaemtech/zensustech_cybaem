@@ -89,11 +89,10 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
         vendor_code: payload.vendorCode,
         role: payload.role || 'END_CUSTOMER',
       });
-      // Store user session email and redirect directly to /tent as requested
-      sessionStorage.setItem('auth_email', payload.email);
+      // Store user verification email and redirect to /otp-verify to enter the email code
       sessionStorage.setItem('pending_verification_email', payload.email);
-      sessionStorage.setItem('is_authenticated', 'true');
-      setLocation('/tent');
+      sessionStorage.setItem('auth_email', payload.email);
+      setLocation('/otp-verify');
     } catch (err: unknown) {
       // Re-throw so ZohoAuthCard can display inline error (not alert)
       throw err;

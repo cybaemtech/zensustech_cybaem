@@ -668,9 +668,29 @@ export function ZohoAuthCard({
 
                   {/* API Error banner (e.g. email already exists) */}
                   {signUpApiError && (
-                    <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-xs text-rose-700 font-medium">
-                      <X className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-500" />
-                      <span>{signUpApiError}</span>
+                    <div className="flex flex-col gap-1.5 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700 font-medium">
+                      <div className="flex items-start gap-2">
+                        <X className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-500" />
+                        <span>{signUpApiError}</span>
+                      </div>
+                      {signUpApiError.toLowerCase().includes('already exists') && (
+                        <div className="pt-1.5 border-t border-rose-200/70 flex items-center justify-between text-[11px]">
+                          <span className="text-slate-600">Already have an account?</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSignInEmail(signUpEmail);
+                              setMode('signin');
+                              setSignInStep('password');
+                              setSignUpApiError('');
+                            }}
+                            className="text-[#008cff] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <span>Sign in with this email</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 

@@ -218,26 +218,24 @@ def _send_smtp_sync(
         msg["Date"] = email.utils.formatdate(localtime=True)
         msg["Message-ID"] = email.utils.make_msgid(domain="cybaemtech.com")
         msg["X-Mailer"] = "ZensusTech-Auth-Engine/1.0"
+        msg["Auto-Submitted"] = "auto-generated"
         msg.attach(MIMEText(plain_body, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        ports_to_try = [smtp_port]
-        if smtp_port == 587 and 465 not in ports_to_try:
-            ports_to_try.append(465)
-        elif smtp_port == 465 and 587 not in ports_to_try:
-            ports_to_try.append(587)
-        elif 587 not in ports_to_try:
-            ports_to_try.extend([587, 465])
+        ports_to_try = []
+        for p in [smtp_port, 465, 587]:
+            if p not in ports_to_try:
+                ports_to_try.append(p)
 
         last_error = None
         for port in ports_to_try:
             try:
                 if port == 465:
-                    with smtplib.SMTP_SSL(smtp_host, port, timeout=4) as server:
+                    with smtplib.SMTP_SSL(smtp_host, port, timeout=15) as server:
                         server.login(smtp_user, smtp_pass)
                         server.sendmail(sender_email, [to_email], msg.as_string())
                 else:
-                    with smtplib.SMTP(smtp_host, port, timeout=4) as server:
+                    with smtplib.SMTP(smtp_host, port, timeout=15) as server:
                         server.ehlo()
                         server.starttls()
                         server.ehlo()
