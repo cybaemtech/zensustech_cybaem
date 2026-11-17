@@ -64,6 +64,7 @@ export function ZohoAuthCard({
   const [forgotPasswordError, setForgotPasswordError] = useState('');
 
   // Sign Up state
+  const [accountType, setAccountType] = useState<'VENDOR' | 'END_CUSTOMER'>('VENDOR');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [orgName, setOrgName] = useState('');
@@ -231,7 +232,7 @@ export function ZohoAuthCard({
           lastName: lastName.trim(),
           email: signUpEmail.trim(),
           password: signUpPassword,
-          role: 'END_CUSTOMER',
+          role: accountType,
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
@@ -248,6 +249,7 @@ export function ZohoAuthCard({
         organization: orgName.trim() || 'ZensusTech Cloud',
         customer: customer.trim() || 'ZensusTech Primary',
         email: signUpEmail.trim(),
+        role: accountType,
         phone: phone.trim(),
         vendorCode,
         createdAt: new Date().toISOString(),
@@ -572,6 +574,42 @@ export function ZohoAuthCard({
                           {signUpErrors.lastName}
                         </p>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Row: Account Type Selection (Before Email) */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Select Your Account Type <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="space-y-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                      <label className="flex items-start gap-2 cursor-pointer text-slate-700 hover:text-slate-900 transition-colors">
+                        <input
+                          type="radio"
+                          name="accountType"
+                          value="VENDOR"
+                          checked={accountType === 'VENDOR'}
+                          onChange={() => setAccountType('VENDOR')}
+                          className="mt-0.5 text-[#008cff] focus:ring-[#008cff] w-3.5 h-3.5 cursor-pointer accent-[#008cff]"
+                        />
+                        <span className="text-[11px] leading-tight">
+                          <strong className="font-semibold text-slate-900">Vendor</strong> – I provide products or services to your organization.
+                        </span>
+                      </label>
+
+                      <label className="flex items-start gap-2 cursor-pointer text-slate-700 hover:text-slate-900 transition-colors">
+                        <input
+                          type="radio"
+                          name="accountType"
+                          value="END_CUSTOMER"
+                          checked={accountType === 'END_CUSTOMER'}
+                          onChange={() => setAccountType('END_CUSTOMER')}
+                          className="mt-0.5 text-[#008cff] focus:ring-[#008cff] w-3.5 h-3.5 cursor-pointer accent-[#008cff]"
+                        />
+                        <span className="text-[11px] leading-tight">
+                          <strong className="font-semibold text-slate-900">End Customer</strong> – I purchase or use your products or services.
+                        </span>
+                      </label>
                     </div>
                   </div>
 
