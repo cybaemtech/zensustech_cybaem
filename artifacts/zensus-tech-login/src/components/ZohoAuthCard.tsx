@@ -593,7 +593,7 @@ export function ZohoAuthCard({
                           className="mt-0.5 text-[#008cff] focus:ring-[#008cff] w-3.5 h-3.5 cursor-pointer accent-[#008cff]"
                         />
                         <span className="text-[11px] leading-tight">
-                          <strong className="font-semibold text-slate-900">Vendor</strong> – I provide products or services to your organization.
+                          <strong className="font-semibold text-slate-900">Vendor</strong> – I provide products or services to other organizations.
                         </span>
                       </label>
 
