@@ -64,7 +64,7 @@ export function ZohoAuthCard({
   const [forgotPasswordError, setForgotPasswordError] = useState('');
 
   // Sign Up state
-  const [accountType, setAccountType] = useState<'VENDOR' | 'END_CUSTOMER'>('VENDOR');
+  const [accountType, setAccountType] = useState<'VENDOR' | 'END_CUSTOMER' | ''>('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [orgName, setOrgName] = useState('');
@@ -200,6 +200,7 @@ export function ZohoAuthCard({
   // Validation for Sign Up
   const validateSignUp = () => {
     const errs: Record<string, string> = {};
+    if (!accountType) errs.accountType = 'Please select your account type';
     if (!firstName.trim()) errs.firstName = 'First name is required';
     if (!lastName.trim()) errs.lastName = 'Last name is required';
     if (!signUpEmail.trim()) {
@@ -582,14 +583,19 @@ export function ZohoAuthCard({
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       Select Your Account Type <span className="text-rose-500">*</span>
                     </label>
-                    <div className="space-y-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                    <div className={`space-y-1.5 p-2 rounded-lg bg-slate-50 border transition-all ${
+                      signUpErrors.accountType ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200'
+                    }`}>
                       <label className="flex items-start gap-2 cursor-pointer text-slate-700 hover:text-slate-900 transition-colors">
                         <input
                           type="radio"
                           name="accountType"
                           value="VENDOR"
                           checked={accountType === 'VENDOR'}
-                          onChange={() => setAccountType('VENDOR')}
+                          onChange={() => {
+                            setAccountType('VENDOR');
+                            if (signUpErrors.accountType) setSignUpErrors((p) => ({ ...p, accountType: '' }));
+                          }}
                           className="mt-0.5 text-[#008cff] focus:ring-[#008cff] w-3.5 h-3.5 cursor-pointer accent-[#008cff]"
                         />
                         <span className="text-[11px] leading-tight">
@@ -603,7 +609,10 @@ export function ZohoAuthCard({
                           name="accountType"
                           value="END_CUSTOMER"
                           checked={accountType === 'END_CUSTOMER'}
-                          onChange={() => setAccountType('END_CUSTOMER')}
+                          onChange={() => {
+                            setAccountType('END_CUSTOMER');
+                            if (signUpErrors.accountType) setSignUpErrors((p) => ({ ...p, accountType: '' }));
+                          }}
                           className="mt-0.5 text-[#008cff] focus:ring-[#008cff] w-3.5 h-3.5 cursor-pointer accent-[#008cff]"
                         />
                         <span className="text-[11px] leading-tight">
@@ -611,6 +620,11 @@ export function ZohoAuthCard({
                         </span>
                       </label>
                     </div>
+                    {signUpErrors.accountType && (
+                      <p className="text-[10px] text-rose-500 mt-1 font-medium leading-none">
+                        {signUpErrors.accountType}
+                      </p>
+                    )}
                   </div>
 
                   {/* Row 2: Email * */}
