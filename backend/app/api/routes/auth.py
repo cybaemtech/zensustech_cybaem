@@ -610,6 +610,20 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             u.updated_at,
             t.tenant_name,
             t.tenant_id as azure_tenant_id,
+            o.display_name as org_display_name,
+            o.primary_domain as org_domain,
+            o.phone_number as org_phone,
+            o.email as org_email,
+            o.city as org_city,
+            o.state as org_state,
+            o.country as org_country,
+            o.street as org_street,
+            o.license as org_license,
+            o.license_exp_date as org_license_exp_date,
+            o.users_count as org_users_count,
+            o.groups_count as org_groups_count,
+            o.apps_count as org_apps_count,
+            o.devices_count as org_devices_count,
             ev.verified_at,
             ev.attempts as verification_attempts,
             (SELECT COUNT(*) FROM login_sessions s WHERE s.user_id = u.id AND s.revoked_at IS NULL) as active_sessions_count,
@@ -617,6 +631,7 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
         FROM users u
         LEFT JOIN user_tenants ut ON ut.user_id = u.id
         LEFT JOIN tenants t ON t.id = ut.tenant_id
+        LEFT JOIN organizations o ON o.tenant_id = t.tenant_id
         LEFT JOIN email_verifications ev ON ev.user_id = u.id
         ORDER BY u.id DESC
         """
@@ -661,13 +676,19 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
         updated_dt = r.get("updated_at")
         verified_dt = r.get("verified_at")
 
+        # Prefer org phone if tenant verified
+        org_phone = r.get("org_phone")
+        display_phone = org_phone or r.get("phone") or None
+        org_license_raw = r.get("org_license_exp_date")
+        org_license_exp = org_license_raw.isoformat() if hasattr(org_license_raw, "isoformat") else str(org_license_raw) if org_license_raw else None
+
         users_list.append({
             "id": uid,
             "user_id": r.get("user_id") or f"usr-{uid}",
             "full_name": r.get("full_name") or "User",
             "email": r.get("email"),
             "role": role_str,
-            "phone": r.get("phone") or "—",
+            "phone": display_phone or "—",
             "organization": r.get("organization") or "—",
             "customer": r.get("customer"),
             "vendor_code": r.get("vendor_code") or "—",
@@ -681,8 +702,23 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             "azure_tenant_id": r.get("azure_tenant_id"),
             "active_sessions_count": sessions_cnt,
             "emails_sent_count": int(r.get("emails_sent_count") or 0),
-            "plan_tier": "Cloud - Azure (Gold)",
-            "license_exp_date": "2027-11-11",
+            "plan_tier": r.get("org_license") or "—",
+            "license_exp_date": org_license_exp or "—",
+            # Organization enrichment from Azure Entra ID / tenant
+            "org_display_name": r.get("org_display_name"),
+            "org_domain": r.get("org_domain"),
+            "org_phone": r.get("org_phone"),
+            "org_email": r.get("org_email"),
+            "org_city": r.get("org_city"),
+            "org_state": r.get("org_state"),
+            "org_country": r.get("org_country"),
+            "org_street": r.get("org_street"),
+            "org_license": r.get("org_license"),
+            "org_license_exp_date": org_license_exp or None,
+            "org_users_count": r.get("org_users_count"),
+            "org_groups_count": r.get("org_groups_count"),
+            "org_apps_count": r.get("org_apps_count"),
+            "org_devices_count": r.get("org_devices_count"),
         })
 
     return {

@@ -45,6 +45,21 @@ interface AdminUser {
   emails_sent_count?: number;
   plan_tier?: string;
   license_exp_date?: string;
+  // Org enrichment from organizations table (tenant-linked)
+  org_display_name?: string | null;
+  org_domain?: string | null;
+  org_phone?: string | null;
+  org_email?: string | null;
+  org_city?: string | null;
+  org_state?: string | null;
+  org_country?: string | null;
+  org_street?: string | null;
+  org_license?: string | null;
+  org_license_exp_date?: string | null;
+  org_users_count?: number | null;
+  org_groups_count?: number | null;
+  org_apps_count?: number | null;
+  org_devices_count?: number | null;
 }
 
 interface AdminStats {
@@ -482,14 +497,20 @@ export const AdminUsersPage: React.FC = () => {
 
                       {/* Plan & Renewal */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10px] bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                          Cloud · Azure (Gold)
-                        </span>
-                        <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 font-mono">
-                          <Calendar className="w-2.5 h-2.5 text-slate-400" />
-                          <span>2027-11-11</span>
-                        </div>
+                        {user.plan_tier && user.plan_tier !== '—' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10px] bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            {user.plan_tier}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-[10px]">—</span>
+                        )}
+                        {user.license_exp_date && user.license_exp_date !== '—' && (
+                          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 font-mono">
+                            <Calendar className="w-2.5 h-2.5 text-slate-400" />
+                            <span>{user.license_exp_date}</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Registered Date */}
@@ -628,12 +649,18 @@ export const AdminUsersPage: React.FC = () => {
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Cloud Plan Tier</span>
-                    <span className="font-bold text-amber-700 dark:text-amber-300">Cloud - Azure (Gold)</span>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Cloud Plan / License</span>
+                    <span className="font-bold text-amber-700 dark:text-amber-300">
+                      {selectedUser.plan_tier && selectedUser.plan_tier !== '—' ? selectedUser.plan_tier : '—'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-bold">License Expiration</span>
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">2027-11-11 (Active / Renewed)</span>
+                    <span className={`font-mono font-bold ${selectedUser.license_exp_date && selectedUser.license_exp_date !== '—' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                      {selectedUser.license_exp_date && selectedUser.license_exp_date !== '—'
+                        ? `${selectedUser.license_exp_date} (Active / Renewed)`
+                        : '—'}
+                    </span>
                   </div>
                   {selectedUser.tenant_name && (
                     <div className="sm:col-span-2">
@@ -643,6 +670,90 @@ export const AdminUsersPage: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* Linked Organization — only shown when tenant verified */}
+              {selectedUser.azure_tenant_id && selectedUser.org_display_name && (
+                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 space-y-2.5">
+                  <h4 className="font-bold text-emerald-900 dark:text-emerald-300 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+                    Linked Organization
+                    <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-700 ml-1">
+                      LIVE AZURE ENTRA ID
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+                    {selectedUser.org_display_name && (
+                      <div>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">Organization Name</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{selectedUser.org_display_name}</span>
+                      </div>
+                    )}
+                    {selectedUser.org_domain && (
+                      <div>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">Primary Domain</span>
+                        <span className="font-mono text-slate-800 dark:text-slate-200">{selectedUser.org_domain}</span>
+                      </div>
+                    )}
+                    {selectedUser.org_phone && (
+                      <div>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">Org Phone</span>
+                        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{selectedUser.org_phone}</span>
+                      </div>
+                    )}
+                    {selectedUser.org_email && (
+                      <div>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">Org Email (Admin)</span>
+                        <span className="font-mono text-slate-800 dark:text-slate-200">{selectedUser.org_email}</span>
+                      </div>
+                    )}
+                    {(selectedUser.org_city || selectedUser.org_country) && (
+                      <div>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">City / Country</span>
+                        <span className="text-slate-800 dark:text-slate-200">
+                          {[selectedUser.org_city, selectedUser.org_state, selectedUser.org_country].filter(Boolean).join(', ')}
+                        </span>
+                      </div>
+                    )}
+                    {selectedUser.org_street && (
+                      <div>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">Street Address</span>
+                        <span className="text-slate-800 dark:text-slate-200">{selectedUser.org_street}</span>
+                      </div>
+                    )}
+                    {selectedUser.org_license && (
+                      <div>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">License Plan</span>
+                        <span className="font-semibold text-amber-700 dark:text-amber-300">{selectedUser.org_license}</span>
+                      </div>
+                    )}
+                    {selectedUser.org_license_exp_date && (
+                      <div>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">License Expiry</span>
+                        <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{selectedUser.org_license_exp_date}</span>
+                      </div>
+                    )}
+                    {/* Stats row */}
+                    <div className="sm:col-span-2 mt-1 pt-2 border-t border-emerald-200 dark:border-emerald-800/60 grid grid-cols-4 gap-2">
+                      {[
+                        { label: 'Users', value: selectedUser.org_users_count, icon: '👥' },
+                        { label: 'Groups', value: selectedUser.org_groups_count, icon: '🏷️' },
+                        { label: 'Apps', value: selectedUser.org_apps_count, icon: '📦' },
+                        { label: 'Devices', value: selectedUser.org_devices_count, icon: '💻' },
+                      ].map((stat) => (
+                        <div key={stat.label} className="text-center p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800/60">
+                          <div className="text-base">{stat.icon}</div>
+                          <div className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">{stat.value ?? '—'}</div>
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">Azure Tenant ID</span>
+                      <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300 break-all">{selectedUser.azure_tenant_id}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
@@ -660,3 +771,4 @@ export const AdminUsersPage: React.FC = () => {
     </div>
   );
 };
+
