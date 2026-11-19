@@ -21,3 +21,4 @@ for u in users:
 print("\n--- Raw plan/tier/has_tenant fields for all users ---")
 for u in users:
     print(f"  id={u['id']} has_tenant={u.get('has_tenant')} azure_tenant_id={u.get('azure_tenant_id')} plan={u.get('plan')!r} tier={u.get('tier')!r} exp={u.get('license_exp_date')!r}")
+

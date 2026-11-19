@@ -1194,10 +1194,10 @@ class DatabaseService:
                                             org_json.get("street", "Flora Residency Flat no B4"),
                                             org_json.get("license", "Microsoft 365 Business Essentials"),
                                             org_json.get("license_exp_date") or org_json.get("licenseExpDate") or "2027-11-11 00:00:00+00",
-                                            org_json.get("usersCount", 14),
-                                            org_json.get("groupsCount", 9),
-                                            org_json.get("appsCount", 4),
-                                            org_json.get("devicesCount", 6),
+                                            org_json.get("usersCount") or org_json.get("users_count") or 19,
+                                            org_json.get("groupsCount") or org_json.get("groups_count") or 9,
+                                            org_json.get("appsCount") or org_json.get("apps_count") or 5,
+                                            org_json.get("devicesCount") or org_json.get("devices_count") or 6,
                                             json.dumps(org_json),
                                         ))
                                         migrated_counts["organizations"] += 1

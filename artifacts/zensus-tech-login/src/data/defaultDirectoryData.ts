@@ -279,16 +279,16 @@ export const DEFAULT_ORG_DATA = {
   state: 'Maharashtra',
   street: 'Baner',
   license: 'Microsoft Entra ID P1 / Microsoft 365 Business Standard',
-  usersCount: 14,
+  usersCount: 19,
   groupsCount: 9,
   appsCount: 5,
   devicesCount: 6
 };
 
 export const DEFAULT_DASHBOARD_STATS = {
-  totalUsers: 14,
-  standardUsers: 9,
-  globalAdmins: 4,
+  totalUsers: 19,
+  standardUsers: 14,
+  globalAdmins: 5,
   totalApps: 5,
   totalGroups: 9,
   totalDevices: 6,

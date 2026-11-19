@@ -771,7 +771,7 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             "org_street": r.get("org_street") if has_tenant else None,
             "org_license": r.get("org_license") if has_tenant else None,
             "org_license_exp_date": clean_exp_date if (has_tenant and r.get("org_license_exp_date")) else None,
-            "org_users_count": (r.get("org_users_count") or r.get("customer_licenses_count")) if has_tenant else None,
+            "org_users_count": r.get("org_users_count") if has_tenant else None,
             "org_groups_count": r.get("org_groups_count") if has_tenant else None,
             "org_apps_count": r.get("org_apps_count") if has_tenant else None,
             "org_devices_count": r.get("org_devices_count") if has_tenant else None,

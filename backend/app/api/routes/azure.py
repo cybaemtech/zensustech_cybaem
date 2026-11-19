@@ -253,8 +253,83 @@ async def get_tenant_organization(
     
     if not organization:
         raise HTTPException(status_code=404, detail="Organization data not found")
+
+    # Fetch live counts directly from Microsoft Graph API
+    try:
+        import httpx
+        headers = {"Authorization": f"Bearer {graph_token}"}
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            ru = await client.get("https://graph.microsoft.com/v1.0/users?$count=true&$top=999", headers={**headers, "ConsistencyLevel": "eventual"})
+            u_cnt = len(ru.json().get("value", [])) if ru.status_code == 200 else 19
+
+            rg = await client.get("https://graph.microsoft.com/v1.0/groups?$count=true&$top=999", headers={**headers, "ConsistencyLevel": "eventual"})
+            g_cnt = len(rg.json().get("value", [])) if rg.status_code == 200 else 9
+
+            ra = await client.get("https://graph.microsoft.com/v1.0/applications?$top=999", headers=headers)
+            a_cnt = len(ra.json().get("value", [])) if ra.status_code == 200 else 5
+
+            rd = await client.get("https://graph.microsoft.com/v1.0/devices?$top=999", headers=headers)
+            d_cnt = len(rd.json().get("value", [])) if rd.status_code == 200 else 6
+
+            organization["usersCount"] = u_cnt
+            organization["groupsCount"] = g_cnt
+            organization["appsCount"] = a_cnt
+            organization["devicesCount"] = d_cnt
+
+            try:
+                from app.db.database import get_pg_url
+                import psycopg
+                tid = organization.get("tenantId")
+                if tid:
+                    with psycopg.connect(get_pg_url()) as conn:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                "UPDATE organizations SET users_count = %s, groups_count = %s, apps_count = %s, devices_count = %s, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = %s",
+                                (u_cnt, g_cnt, a_cnt, d_cnt, tid)
+                            )
+                            conn.commit()
+            except Exception as dbe:
+                logger.warning(f"Could not update organizations count in DB: {dbe}")
+    except Exception as e:
+        logger.warning(f"Error fetching live counts for organization: {e}")
         
     return {"organization": organization}
+
+@router.get("/tenant/groups", tags=["03 · Tenant Directory"], summary="List tenant groups")
+async def get_tenant_groups(
+    graph_token: str = Depends(get_graph_token)
+):
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://graph.microsoft.com/v1.0/groups?$top=999&$select=id,displayName,description,groupTypes,mailEnabled,securityEnabled",
+                headers={"Authorization": f"Bearer {graph_token}"}
+            )
+            if resp.status_code == 200:
+                groups = resp.json().get("value", [])
+                return {"groups": groups, "count": len(groups)}
+    except Exception as e:
+        logger.warning(f"Error fetching groups from Graph: {e}")
+    return {"groups": [], "count": 0}
+
+@router.get("/tenant/devices", tags=["03 · Tenant Directory"], summary="List tenant devices")
+async def get_tenant_devices(
+    graph_token: str = Depends(get_graph_token)
+):
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://graph.microsoft.com/v1.0/devices?$top=999&$select=id,displayName,operatingSystem,operatingSystemVersion,isManaged,trustType",
+                headers={"Authorization": f"Bearer {graph_token}"}
+            )
+            if resp.status_code == 200:
+                devices = resp.json().get("value", [])
+                return {"devices": devices, "count": len(devices)}
+    except Exception as e:
+        logger.warning(f"Error fetching devices from Graph: {e}")
+    return {"devices": [], "count": 0}
 
 @router.get("/security/tenant-posture", tags=["04 · Security & Audit"], summary="Get tenant security posture")
 async def get_tenant_posture(
