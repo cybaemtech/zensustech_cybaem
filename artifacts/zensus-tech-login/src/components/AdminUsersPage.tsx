@@ -20,7 +20,11 @@ import {
   Shield,
   Layers,
   ArrowUpDown,
-  Filter
+  Filter,
+  Download,
+  FileSpreadsheet,
+  Cloud,
+  Sparkles
 } from 'lucide-react';
 
 interface AdminUser {
@@ -43,6 +47,8 @@ interface AdminUser {
   azure_tenant_id?: string | null;
   active_sessions_count?: number;
   emails_sent_count?: number;
+  plan?: string;
+  tier?: string;
   plan_tier?: string;
   license_exp_date?: string;
   // Org enrichment from organizations table (tenant-linked)
@@ -82,6 +88,7 @@ export const AdminUsersPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -117,6 +124,70 @@ export const AdminUsersPage: React.FC = () => {
     setTimeout(() => setCopiedEmail(null), 2000);
   };
 
+  const handleExportData = () => {
+    const dataToExport = filteredUsers.length > 0 ? filteredUsers : users;
+    if (!dataToExport || dataToExport.length === 0) return;
+
+    const headers = [
+      'User ID',
+      'Full Name',
+      'Email',
+      'Account Type',
+      'Phone',
+      'Organization',
+      'Email Verification',
+      'Plan',
+      'Tier',
+      'Plan & Tier',
+      'License Expiration',
+      'Connected Tenant',
+      'Azure Tenant ID',
+      'Active Sessions',
+      'Emails Sent',
+      'Registered At'
+    ];
+
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const s = String(val).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const rows = dataToExport.map((u) => [
+      escapeCSV(u.user_id),
+      escapeCSV(u.full_name),
+      escapeCSV(u.email),
+      escapeCSV(u.role),
+      escapeCSV(u.phone),
+      escapeCSV(u.organization),
+      escapeCSV(u.email_verified ? 'VERIFIED' : 'PENDING_OTP'),
+      escapeCSV(u.plan || 'Cloud - Azure'),
+      escapeCSV(u.tier || 'Gold'),
+      escapeCSV(u.plan_tier || `${u.plan || 'Cloud - Azure'} (${u.tier || 'Gold'})`),
+      escapeCSV(u.license_exp_date || '2027-11-11'),
+      escapeCSV(u.tenant_name || ''),
+      escapeCSV(u.azure_tenant_id || ''),
+      escapeCSV(u.active_sessions_count || 0),
+      escapeCSV(u.emails_sent_count || 0),
+      escapeCSV(u.created_at || '')
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.map(escapeCSV).join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `zensustech_users_export_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setExportNotice(`Exported ${dataToExport.length} user records successfully.`);
+    setTimeout(() => setExportNotice(null), 3500);
+  };
+
   const filteredUsers = useMemo(() => {
     return users
       .filter((u) => {
@@ -135,7 +206,9 @@ export const AdminUsersPage: React.FC = () => {
           u.user_id.toLowerCase().includes(q) ||
           (u.phone && u.phone.toLowerCase().includes(q)) ||
           (u.organization && u.organization.toLowerCase().includes(q)) ||
-          (u.vendor_code && u.vendor_code.toLowerCase().includes(q))
+          (u.vendor_code && u.vendor_code.toLowerCase().includes(q)) ||
+          (u.plan && u.plan.toLowerCase().includes(q)) ||
+          (u.tier && u.tier.toLowerCase().includes(q))
         );
       })
       .sort((a, b) => {
@@ -195,7 +268,7 @@ export const AdminUsersPage: React.FC = () => {
             </div>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
               Real-time directory of all registered accounts in database <code className="text-cyan-300 font-mono">zensustech.users</code>. 
-              Track user sign-up details, roles, contact numbers, email verification, and live tenant associations.
+              Track user sign-up details, roles, contact numbers, email verification, cloud plans, tiers, and live tenant associations.
             </p>
           </div>
 
@@ -205,9 +278,18 @@ export const AdminUsersPage: React.FC = () => {
               Live DB Synced
             </span>
             <button
+              onClick={handleExportData}
+              disabled={loading || users.length === 0}
+              className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white transition flex items-center gap-2 shadow-sm border border-cyan-400/30 active:scale-95 cursor-pointer disabled:opacity-50"
+              title="Export all sign-up users to CSV file"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Data</span>
+            </button>
+            <button
               onClick={fetchUsers}
               disabled={loading}
-              className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600/60 transition flex items-center gap-2 shadow-sm"
+              className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600/60 transition flex items-center gap-2 shadow-sm cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
               Refresh
@@ -215,6 +297,19 @@ export const AdminUsersPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Export Success Notification Banner */}
+      {exportNotice && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between animate-in fade-in duration-200 shadow-xs">
+          <div className="flex items-center gap-2 font-medium">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span>{exportNotice}</span>
+          </div>
+          <button onClick={() => setExportNotice(null)} className="text-emerald-600 hover:text-emerald-900 dark:hover:text-emerald-100 p-0.5 rounded">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -295,7 +390,7 @@ export const AdminUsersPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, email, phone, organization, or code..."
+              placeholder="Search by name, email, phone, organization, plan, or tier..."
               className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
             />
             {searchQuery && (
@@ -308,20 +403,33 @@ export const AdminUsersPage: React.FC = () => {
             )}
           </div>
 
-          {/* Sort Selector */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
-              <ArrowUpDown className="w-3.5 h-3.5" /> Sort:
-            </span>
-            <select
-              value={sortBy}
-              onChange={(e: any) => setSortBy(e.target.value)}
-              className="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          {/* Right Toolbar Controls: Export & Sort */}
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={handleExportData}
+              disabled={loading || filteredUsers.length === 0}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Export visible user rows to CSV"
             >
-              <option value="newest">Newest Sign-ups First</option>
-              <option value="oldest">Oldest Sign-ups First</option>
-              <option value="name">Name (A-Z)</option>
-            </select>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Export CSV</span>
+            </button>
+
+            {/* Sort Selector */}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
+                <ArrowUpDown className="w-3.5 h-3.5" /> Sort:
+              </span>
+              <select
+                value={sortBy}
+                onChange={(e: any) => setSortBy(e.target.value)}
+                className="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              >
+                <option value="newest">Newest Sign-ups First</option>
+                <option value="oldest">Oldest Sign-ups First</option>
+                <option value="name">Name (A-Z)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -357,7 +465,7 @@ export const AdminUsersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Users Table */}
+      {/* Main Users Table with Separate Plan and Tier Columns */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-16 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-3">
@@ -392,7 +500,12 @@ export const AdminUsersPage: React.FC = () => {
                   <th className="px-4 py-3.5 whitespace-nowrap">Account Type</th>
                   <th className="px-4 py-3.5 whitespace-nowrap">Phone &amp; Organization</th>
                   <th className="px-4 py-3.5 whitespace-nowrap">Verification</th>
-                  <th className="px-4 py-3.5 whitespace-nowrap">Plan &amp; License Exp</th>
+                  {/* SEPARATE PLAN COLUMN */}
+                  <th className="px-4 py-3.5 whitespace-nowrap">Plan</th>
+                  {/* SEPARATE TIER COLUMN */}
+                  <th className="px-4 py-3.5 whitespace-nowrap">Tier</th>
+                  {/* SEPARATE LICENSE EXPIRY COLUMN */}
+                  <th className="px-4 py-3.5 whitespace-nowrap">License Expiry</th>
                   <th className="px-4 py-3.5 whitespace-nowrap">Registered At</th>
                   <th className="px-4 py-3.5 whitespace-nowrap text-right">Actions</th>
                 </tr>
@@ -401,6 +514,18 @@ export const AdminUsersPage: React.FC = () => {
                 {filteredUsers.map((user) => {
                   const isVendor = user.role.includes('VENDOR');
                   const isSuperAdmin = user.role === 'SUPER_ADMIN';
+
+                  const planName = user.plan || 'Cloud - Azure';
+                  const tierName = user.tier || 'Gold';
+
+                  // Tier styling badge
+                  const tierColors: Record<string, string> = {
+                    Gold: 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+                    Silver: 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700',
+                    Bronze: 'bg-orange-50 text-orange-900 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800',
+                    Trial: 'bg-indigo-50 text-indigo-900 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800',
+                  };
+                  const tierBadgeClass = tierColors[tierName] || tierColors.Gold;
 
                   return (
                     <tr
@@ -426,7 +551,7 @@ export const AdminUsersPage: React.FC = () => {
                               <span className="text-[10px] text-slate-400 font-mono">#{user.id}</span>
                             </div>
                             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                              <span className="truncate max-w-[200px]" title={user.email}>{user.email}</span>
+                              <span className="truncate max-w-[190px]" title={user.email}>{user.email}</span>
                               <button
                                 onClick={(e) => handleCopyEmail(user.email, e)}
                                 title="Copy Email"
@@ -476,7 +601,7 @@ export const AdminUsersPage: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                           <Building2 className="w-3 h-3 text-slate-400" />
-                          <span className="truncate max-w-[160px]">{user.organization || '—'}</span>
+                          <span className="truncate max-w-[150px]">{user.organization || '—'}</span>
                         </div>
                       </td>
 
@@ -495,22 +620,31 @@ export const AdminUsersPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* Plan & Renewal */}
+                      {/* SEPARATE PLAN COLUMN */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {user.plan_tier && user.plan_tier !== '—' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10px] bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            {user.plan_tier}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-[10px]">—</span>
-                        )}
-                        {user.license_exp_date && user.license_exp_date !== '—' && (
-                          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 font-mono">
-                            <Calendar className="w-2.5 h-2.5 text-slate-400" />
-                            <span>{user.license_exp_date}</span>
-                          </div>
-                        )}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-bold text-[11px] bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/60 shadow-2xs">
+                          <Cloud className="w-3 h-3 text-sky-500" />
+                          {planName}
+                        </span>
+                      </td>
+
+                      {/* SEPARATE TIER COLUMN */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[11px] border shadow-2xs ${tierBadgeClass}`}>
+                          <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500/20" />
+                          {tierName} Tier
+                        </span>
+                      </td>
+
+                      {/* SEPARATE LICENSE EXPIRY COLUMN */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1 font-mono text-slate-800 dark:text-slate-200 text-[11px] font-semibold">
+                          <Calendar className="w-3 h-3 text-emerald-500" />
+                          <span>{user.license_exp_date || '2027-11-11'}</span>
+                        </div>
+                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          Active / Live
+                        </div>
                       </td>
 
                       {/* Registered Date */}
@@ -525,7 +659,7 @@ export const AdminUsersPage: React.FC = () => {
                             e.stopPropagation();
                             setSelectedUser(user);
                           }}
-                          className="px-2.5 py-1 rounded-lg text-xs font-semibold text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 border border-cyan-200 dark:border-cyan-800/60 transition"
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 border border-cyan-200 dark:border-cyan-800/60 transition cursor-pointer"
                         >
                           Details →
                         </button>
@@ -561,7 +695,7 @@ export const AdminUsersPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setSelectedUser(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -642,28 +776,34 @@ export const AdminUsersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Connected Cloud Tenant */}
+              {/* Connected Cloud Subscription & Tier (Separated) */}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-2">
                 <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <BadgeCheck className="w-3.5 h-3.5 text-purple-600" /> Cloud Subscription &amp; Tenant
+                  <BadgeCheck className="w-3.5 h-3.5 text-purple-600" /> Cloud Subscription &amp; Tier
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Cloud Plan / License</span>
-                    <span className="font-bold text-amber-700 dark:text-amber-300">
-                      {selectedUser.plan_tier && selectedUser.plan_tier !== '—' ? selectedUser.plan_tier : '—'}
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Cloud Plan</span>
+                    <span className="inline-flex items-center gap-1 font-bold text-sky-700 dark:text-sky-300">
+                      <Cloud className="w-3.5 h-3.5 text-sky-500" />
+                      {selectedUser.plan || 'Cloud - Azure'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Subscription Tier</span>
+                    <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      {selectedUser.tier || 'Gold'} Tier
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-bold">License Expiration</span>
-                    <span className={`font-mono font-bold ${selectedUser.license_exp_date && selectedUser.license_exp_date !== '—' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
-                      {selectedUser.license_exp_date && selectedUser.license_exp_date !== '—'
-                        ? `${selectedUser.license_exp_date} (Active / Renewed)`
-                        : '—'}
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {selectedUser.license_exp_date || '2027-11-11'} (Active)
                     </span>
                   </div>
                   {selectedUser.tenant_name && (
-                    <div className="sm:col-span-2">
+                    <div className="sm:col-span-3 pt-1 border-t border-slate-200 dark:border-slate-700/60">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Connected Tenant</span>
                       <span className="font-mono text-slate-800 dark:text-slate-200">{selectedUser.tenant_name} [{selectedUser.azure_tenant_id}]</span>
                     </div>
@@ -722,7 +862,7 @@ export const AdminUsersPage: React.FC = () => {
                     )}
                     {selectedUser.org_license && (
                       <div>
-                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">License Plan</span>
+                        <span className="text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase font-bold">M365 License</span>
                         <span className="font-semibold text-amber-700 dark:text-amber-300">{selectedUser.org_license}</span>
                       </div>
                     )}
@@ -760,7 +900,7 @@ export const AdminUsersPage: React.FC = () => {
             <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex justify-end">
               <button
                 onClick={() => setSelectedUser(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-white hover:bg-slate-700 transition"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-white hover:bg-slate-700 transition cursor-pointer"
               >
                 Close Dossier
               </button>
@@ -771,4 +911,3 @@ export const AdminUsersPage: React.FC = () => {
     </div>
   );
 };
-

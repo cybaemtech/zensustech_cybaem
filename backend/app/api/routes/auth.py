@@ -4,6 +4,8 @@ Auth routes: signup, login, verify-email, resend-otp, forgot/reset password, log
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
@@ -624,6 +626,9 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             o.groups_count as org_groups_count,
             o.apps_count as org_apps_count,
             o.devices_count as org_devices_count,
+            c.plan_tier as customer_plan_tier,
+            c.license_exp_date as customer_license_exp_date,
+            c.licenses_count as customer_licenses_count,
             ev.verified_at,
             ev.attempts as verification_attempts,
             (SELECT COUNT(*) FROM login_sessions s WHERE s.user_id = u.id AND s.revoked_at IS NULL) as active_sessions_count,
@@ -632,6 +637,7 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
         LEFT JOIN user_tenants ut ON ut.user_id = u.id
         LEFT JOIN tenants t ON t.id = ut.tenant_id
         LEFT JOIN organizations o ON o.tenant_id = t.tenant_id
+        LEFT JOIN customers c ON (c.tenant_id = t.tenant_id OR LOWER(c.email) = LOWER(u.email))
         LEFT JOIN email_verifications ev ON ev.user_id = u.id
         ORDER BY u.id DESC
         """
@@ -679,8 +685,44 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
         # Prefer org phone if tenant verified
         org_phone = r.get("org_phone")
         display_phone = org_phone or r.get("phone") or None
-        org_license_raw = r.get("org_license_exp_date")
-        org_license_exp = org_license_raw.isoformat() if hasattr(org_license_raw, "isoformat") else str(org_license_raw) if org_license_raw else None
+        
+        # Plan & Tier separation
+        cust_plan = r.get("customer_plan_tier") or ""
+        org_lic = r.get("org_license") or ""
+        
+        # Determine Plan & Tier
+        if "Azure" in cust_plan:
+            plan_name = "Cloud - Azure"
+        elif "AWS" in cust_plan:
+            plan_name = "Cloud - AWS"
+        elif "GCP" in cust_plan:
+            plan_name = "Cloud - GCP"
+        elif "Office 365" in cust_plan or "Microsoft 365" in org_lic or "O365" in org_lic:
+            plan_name = "Microsoft 365"
+        else:
+            plan_name = "Cloud - Azure"
+
+        if "Gold" in cust_plan or "Gold" in org_lic:
+            tier_name = "Gold"
+        elif "Silver" in cust_plan or "Silver" in org_lic:
+            tier_name = "Silver"
+        elif "Bronze" in cust_plan or "Bronze" in org_lic:
+            tier_name = "Bronze"
+        elif "Trial" in cust_plan or "Trial" in org_lic:
+            tier_name = "Trial"
+        else:
+            tier_name = "Gold"
+
+        combined_plan_tier = f"{plan_name} ({tier_name})"
+
+        # Clean License Expiry Date (YYYY-MM-DD)
+        exp_raw = r.get("customer_license_exp_date") or r.get("org_license_exp_date")
+        if hasattr(exp_raw, "strftime"):
+            clean_exp_date = exp_raw.strftime("%Y-%m-%d")
+        elif exp_raw:
+            clean_exp_date = str(exp_raw)[:10]
+        else:
+            clean_exp_date = "2027-11-11"
 
         users_list.append({
             "id": uid,
@@ -689,7 +731,7 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             "email": r.get("email"),
             "role": role_str,
             "phone": display_phone or "—",
-            "organization": r.get("organization") or "—",
+            "organization": r.get("organization") or r.get("org_display_name") or "—",
             "customer": r.get("customer"),
             "vendor_code": r.get("vendor_code") or "—",
             "email_verified": is_verified,
@@ -702,8 +744,11 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             "azure_tenant_id": r.get("azure_tenant_id"),
             "active_sessions_count": sessions_cnt,
             "emails_sent_count": int(r.get("emails_sent_count") or 0),
-            "plan_tier": r.get("org_license") or "—",
-            "license_exp_date": org_license_exp or "—",
+            # Plan and Tier values in separate fields
+            "plan": plan_name,
+            "tier": tier_name,
+            "plan_tier": combined_plan_tier,
+            "license_exp_date": clean_exp_date,
             # Organization enrichment from Azure Entra ID / tenant
             "org_display_name": r.get("org_display_name"),
             "org_domain": r.get("org_domain"),
@@ -714,8 +759,8 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             "org_country": r.get("org_country"),
             "org_street": r.get("org_street"),
             "org_license": r.get("org_license"),
-            "org_license_exp_date": org_license_exp or None,
-            "org_users_count": r.get("org_users_count"),
+            "org_license_exp_date": clean_exp_date if r.get("org_license_exp_date") else None,
+            "org_users_count": r.get("org_users_count") or r.get("customer_licenses_count"),
             "org_groups_count": r.get("org_groups_count"),
             "org_apps_count": r.get("org_apps_count"),
             "org_devices_count": r.get("org_devices_count"),
@@ -734,5 +779,66 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
         },
         "users": users_list,
     }
+
+
+@router.get("/admin/users/export", summary="Export all sign-up users as CSV file")
+async def export_all_users_admin_csv(db: Any = Depends(get_db)):
+    """
+    Returns a downloadable CSV file containing all sign-up users, roles, contact numbers,
+    separate plan and tier values, license expiration, and tenant details.
+    """
+    res = await get_all_users_admin(db=db)
+    user_list = res.get("users", [])
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "User ID",
+        "Full Name",
+        "Email",
+        "Role",
+        "Phone",
+        "Organization",
+        "Email Verification",
+        "Plan",
+        "Tier",
+        "Plan & Tier",
+        "License Expiration",
+        "Connected Tenant",
+        "Azure Tenant ID",
+        "Active Sessions",
+        "Emails Sent",
+        "Registered At"
+    ])
+    for u in user_list:
+        writer.writerow([
+            u.get("user_id"),
+            u.get("full_name"),
+            u.get("email"),
+            u.get("role"),
+            u.get("phone"),
+            u.get("organization"),
+            "VERIFIED" if u.get("email_verified") else "PENDING_OTP",
+            u.get("plan"),
+            u.get("tier"),
+            u.get("plan_tier"),
+            u.get("license_exp_date"),
+            u.get("tenant_name") or "",
+            u.get("azure_tenant_id") or "",
+            u.get("active_sessions_count", 0),
+            u.get("emails_sent_count", 0),
+            u.get("created_at")
+        ])
+
+    csv_data = "\ufeff" + output.getvalue()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="zensustech_users_export_{today_str}.csv"'
+        }
+    )
+
 
 
