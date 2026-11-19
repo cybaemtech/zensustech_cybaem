@@ -807,11 +807,16 @@ export function AdminDatabaseModal({ isOpen, onClose, onStatusChange }: AdminDat
 
                   <div className="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700/60">
                     <div className="flex items-center gap-1.5 text-slate-400 mb-0.5">
-                      <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                      <Calendar className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Customer License Expiry</span>
                     </div>
-                    <div className="text-xs font-bold text-amber-300 font-mono">2026-11-11</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">O365 Business Essentials</div>
+                    <div className="text-xs font-bold text-emerald-300 font-mono">
+                      {status?.summary?.license_exp_date || (tableData[0]?.license_exp_date ? String(tableData[0].license_exp_date).split('T')[0] : '2027-11-11')}
+                    </div>
+                    <div className="text-[10px] text-emerald-400 mt-0.5 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                      O365 Business Essentials (Active / Renewed)
+                    </div>
                   </div>
                 </div>
               </div>
@@ -821,7 +826,8 @@ export function AdminDatabaseModal({ isOpen, onClose, onStatusChange }: AdminDat
                   <span className="text-xs font-medium text-slate-400">Select Table:</span>
                   <div className="flex flex-wrap gap-1">
                     {[
-                      { id: 'customers', label: 'customers' },
+                      { id: 'vendors', label: 'vendors' },
+                      { id: 'end_customers', label: 'end_customers' },
                       { id: 'organizations', label: 'organizations' },
                       { id: 'm365_licenses', label: 'm365_licenses' },
                       { id: 'azure_subscriptions', label: 'azure_subscriptions' },
@@ -899,10 +905,10 @@ export function AdminDatabaseModal({ isOpen, onClose, onStatusChange }: AdminDat
                                   <Mail className="w-3 h-3" />
                                   {col}
                                 </span>
-                              ) : col === 'plan_tier' ? (
+                              ) : col === 'plan_tier' || col === 'plan' ? (
                                 <span className="flex items-center gap-1 text-purple-400">
                                   <BadgeCheck className="w-3 h-3" />
-                                  {col}
+                                  PLAN / TIER
                                 </span>
                               ) : (
                                 col
@@ -918,15 +924,15 @@ export function AdminDatabaseModal({ isOpen, onClose, onStatusChange }: AdminDat
                               const isExpDate = col === 'license_exp_date' || col === 'expiration_date';
                               const isPhone = col === 'phone' || col === 'phone_number';
                               const isEmail = col === 'email' || col === 'technical_email';
-                              const isTier = col === 'plan_tier';
+                              const isTier = col === 'plan_tier' || col === 'plan';
                               const isStatus = col === 'status' || col === 'state';
 
                               return (
                                 <td key={col} className="px-3 py-2 whitespace-nowrap max-w-xs truncate text-[11px]">
                                   {isExpDate && val ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold text-[11px] bg-amber-950/40 text-amber-300 border border-amber-600/30">
-                                      <Calendar className="w-3 h-3 text-amber-400" />
-                                      {String(val).split('T')[0]}
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold text-[11px] bg-emerald-950/40 text-emerald-300 border border-emerald-600/30">
+                                      <Calendar className="w-3 h-3 text-emerald-400" />
+                                      {String(val).split('T')[0].split(' ')[0]}
                                     </span>
                                   ) : isPhone && val ? (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold text-[11px] bg-emerald-950/40 text-emerald-300 border border-emerald-600/30">
@@ -939,15 +945,43 @@ export function AdminDatabaseModal({ isOpen, onClose, onStatusChange }: AdminDat
                                       {String(val)}
                                     </span>
                                   ) : isTier && val ? (
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded font-bold text-[10px] uppercase tracking-wide border ${
-                                      val === 'Gold'
-                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                                        : val === 'Silver'
-                                        ? 'bg-slate-500/20 text-slate-300 border-slate-500/30'
-                                        : 'bg-orange-500/20 text-orange-300 border-orange-500/30'
-                                    }`}>
-                                      {String(val)} Tier
-                                    </span>
+                                    (() => {
+                                      const str = String(val);
+                                      const isGold = /gold/i.test(str);
+                                      const isSilver = /silver/i.test(str);
+                                      const isBronze = /bronze/i.test(str);
+                                      const isTrial = /trial/i.test(str);
+
+                                      let badgeClass = 'bg-slate-800 text-slate-300 border-slate-700';
+                                      let dotClass = 'bg-slate-400';
+
+                                      if (isGold) {
+                                        badgeClass = 'bg-amber-950/50 text-amber-300 border-amber-500/40 font-bold';
+                                        dotClass = 'bg-amber-400';
+                                      } else if (isSilver) {
+                                        badgeClass = 'bg-slate-800/80 text-slate-200 border-slate-500/40 font-bold';
+                                        dotClass = 'bg-slate-300';
+                                      } else if (isBronze) {
+                                        badgeClass = 'bg-orange-950/50 text-orange-300 border-orange-500/40 font-bold';
+                                        dotClass = 'bg-orange-400';
+                                      } else if (isTrial) {
+                                        badgeClass = 'bg-sky-950/50 text-sky-300 border-sky-500/40 font-bold';
+                                        dotClass = 'bg-sky-400';
+                                      }
+
+                                      let displayLabel = str;
+                                      if (!str.includes('(') && (isGold || isSilver || isBronze || isTrial)) {
+                                        const tier = isGold ? 'Gold' : isSilver ? 'Silver' : isBronze ? 'Bronze' : 'Trial';
+                                        displayLabel = `Cloud - Azure (${tier})`;
+                                      }
+
+                                      return (
+                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] border ${badgeClass}`}>
+                                          <span className={`w-1.5 h-1.5 rounded-full ${dotClass} inline-block`} />
+                                          <span>{displayLabel}</span>
+                                        </span>
+                                      );
+                                    })()
                                   ) : isStatus && val ? (
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold text-[10px] uppercase border ${
                                       val === 'Enabled' || val === 'Active' || val === 'success'

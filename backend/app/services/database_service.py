@@ -120,6 +120,21 @@ class DatabaseService:
                 );
                 """)
                 cur.execute("""
+                CREATE TABLE IF NOT EXISTS vendors (
+                    vendor_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    code TEXT,
+                    contact_email TEXT,
+                    phone TEXT,
+                    organization TEXT,
+                    plan_tier TEXT DEFAULT 'Cloud - Azure (Gold)',
+                    license_exp_date TEXT,
+                    status TEXT DEFAULT 'Active',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """)
+                cur.execute("""
                 CREATE TABLE IF NOT EXISTS customers (
                     customer_id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
@@ -198,7 +213,7 @@ class DatabaseService:
                 "9414ece9-9039-40b7-a6a7-7ecbe7409245", "ZensusTech", "zensustech.com",
                 "+91 9823101112", "vinayak.salunkhe@zensustech.com", "vinayak.salunkhe@zensustech.com",
                 "IN", "Pune", "MH", "Flora Residency Flat no B4",
-                "Microsoft 365 Business Essentials", "2026-11-11 00:00:00+00",
+                "Microsoft 365 Business Essentials", "2027-11-11 00:00:00+00",
                 14, 9, 4, 6, "{}"
             ))
 
@@ -212,7 +227,19 @@ class DatabaseService:
                 "***** [PROTECTED]", "", "", "{}"
             ))
 
-            # 3. Customers — only real Azure-verified tenants are written to DB
+            # 3. Vendors
+            vendors_seed = [
+                ("vendor-lt", "Larsen & Toubro (L&T)", "LT", "admin@lt.com", "+91 22 6752 5656", "L&T Infotech", "Cloud - Azure (Gold)", "2027-11-11 00:00:00+00", "Active"),
+                ("vendor-tata", "Tata Consultancy Services (TATA)", "TATA", "admin@tata.com", "+91 22 6778 9999", "Tata Group", "Cloud - AWS (Silver)", "2027-11-11 00:00:00+00", "Active"),
+            ]
+            for v in vendors_seed:
+                cur.execute("""
+                INSERT OR REPLACE INTO vendors (
+                    vendor_id, name, code, contact_email, phone, organization, plan_tier, license_exp_date, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, v)
+
+            # 4. Customers — only real Azure-verified tenants are written to DB
             raw_customers = extra_customers or [
                 {
                     "id": "cust-1",
@@ -222,9 +249,9 @@ class DatabaseService:
                     "clientId": "0ffa2118-1e76-4537-b0d4-0ad853240893",
                     "phone": "+91 9823101112",
                     "email": "vinayak.salunkhe@zensustech.com",
-                    "planTier": "Gold",
+                    "planTier": "Cloud - Azure (Gold)",
                     "licensesCount": 4,
-                    "licenseExpDate": "2026-11-11 00:00:00+00",
+                    "licenseExpDate": "2027-11-11 00:00:00+00",
                     "categories": {}
                 },
             ]
@@ -244,15 +271,15 @@ class DatabaseService:
                     c.get("clientId", ""),
                     c.get("phone", "+91 9823101112"),
                     c.get("email", "contact@customer.com"),
-                    c.get("planTier", "Silver"),
+                    c.get("planTier", "Cloud - Azure (Gold)"),
                     c.get("licensesCount", 4),
-                    c.get("licenseExpDate", "2026-11-11 00:00:00+00"),
+                    c.get("licenseExpDate", "2027-11-11 00:00:00+00"),
                     json.dumps(c.get("categories", {}))
                 ))
 
-            # 4. M365 Licenses
+            # 5. M365 Licenses
             m365_list = [
-                ("9414ece9-9039-40b7-a6a7-7ecbe7409245", "3b555118-da6a-4418-894f-7df1e2096870", "Microsoft 365 Business Basic / Essentials (O365_BUSINESS_ESSENTIALS)", "Enabled", 4, 4, "2026-11-11 00:00:00+00"),
+                ("9414ece9-9039-40b7-a6a7-7ecbe7409245", "3b555118-da6a-4418-894f-7df1e2096870", "Microsoft 365 Business Basic / Essentials (O365_BUSINESS_ESSENTIALS)", "Enabled", 4, 4, "2027-11-11 00:00:00+00"),
                 ("9414ece9-9039-40b7-a6a7-7ecbe7409245", "a403ebcc-fae0-4ca2-8c8c-7a907fd6c235", "Power BI Standard / Pro (POWER_BI_STANDARD)", "Enabled", 2, 1000000, "2027-01-25 00:00:00+00"),
                 ("9414ece9-9039-40b7-a6a7-7ecbe7409245", "f30db892-07e9-47e9-837c-80727f46fd3d", "Microsoft Power Automate Free (FLOW_FREE)", "Enabled", 1, 10000, "2027-01-25 00:00:00+00"),
             ]
@@ -319,11 +346,12 @@ class DatabaseService:
 
     def _get_sqlite_table_preview(self, table_name: str, limit: int = 50) -> Dict[str, Any]:
         self._ensure_sqlite_ready()
+        target_table = "customers" if table_name == "end_customers" else table_name
         try:
             with sqlite3.connect(SQLITE_DB_PATH) as conn:
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute(f"SELECT * FROM {table_name} LIMIT ?;", (limit,))
+                cur.execute(f"SELECT * FROM {target_table} LIMIT ?;", (limit,))
                 rows = cur.fetchall()
                 cleaned = []
                 for r in rows:
@@ -820,6 +848,7 @@ class DatabaseService:
 
         table_counts: Dict[str, int] = {}
         tracked_tables = [
+            "vendors",
             "customers",
             "organizations",
             "m365_licenses",
@@ -828,6 +857,17 @@ class DatabaseService:
             "audit_logs",
             "db_settings",
         ]
+
+        summary = {
+            "total_customers": 0,
+            "total_vendors": 0,
+            "customer_phone": "+91 9823101112",
+            "customer_email": "vinayak.salunkhe@zensustech.com",
+            "license_exp_date": "2027-11-11",
+            "license_name": "Microsoft 365 Business Essentials",
+            "license_status": "Active (Renewed)",
+            "plan_tier": "Cloud - Azure (Gold)",
+        }
 
         # For PostgreSQL:
         if engine in ("postgresql", "azure_postgresql"):
@@ -842,6 +882,22 @@ class DatabaseService:
                             except Exception:
                                 table_counts[tbl] = 0
                                 conn.rollback()
+
+                        try:
+                            cur.execute("SELECT phone, email, plan_tier, license_exp_date FROM customers ORDER BY 1 LIMIT 1;")
+                            crow = cur.fetchone()
+                            if crow:
+                                if crow.get("phone"):
+                                    summary["customer_phone"] = crow["phone"]
+                                if crow.get("email"):
+                                    summary["customer_email"] = crow["email"]
+                                if crow.get("plan_tier"):
+                                    summary["plan_tier"] = crow["plan_tier"]
+                                if crow.get("license_exp_date"):
+                                    exp = crow["license_exp_date"]
+                                    summary["license_exp_date"] = exp.strftime("%Y-%m-%d") if hasattr(exp, "strftime") else str(exp).split("T")[0].split(" ")[0]
+                        except Exception:
+                            conn.rollback()
             except Exception as e:
                 logger.warning(f"Error fetching table counts: {e}")
 
@@ -863,7 +919,10 @@ class DatabaseService:
                 except Exception as me:
                     logger.warning(f"Auto-migration on initial connection: {me}")
 
-        total_rows = sum(table_counts.values())
+        summary["total_customers"] = table_counts.get("customers", 0)
+        summary["total_vendors"] = table_counts.get("vendors", 0)
+        table_counts["end_customers"] = table_counts.get("customers", 0)
+        total_rows = sum(v for k, v in table_counts.items() if k != "end_customers")
 
         return {
             "connected": True,
@@ -877,6 +936,7 @@ class DatabaseService:
             "masked_url": test_result.get("masked_url"),
             "tables": table_counts,
             "total_records": total_rows,
+            "summary": summary,
             "is_fallback": False,
         }
 
@@ -928,6 +988,28 @@ class DatabaseService:
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS vendors (
+                vendor_id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                code VARCHAR(50),
+                contact_email VARCHAR(255),
+                phone VARCHAR(50),
+                organization VARCHAR(255),
+                plan_tier VARCHAR(100) DEFAULT 'Cloud - Azure (Gold)',
+                license_exp_date TIMESTAMP WITH TIME ZONE,
+                status VARCHAR(50) DEFAULT 'Active',
+                categories_json JSONB,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            ALTER TABLE vendors ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+            ALTER TABLE vendors ADD COLUMN IF NOT EXISTS organization VARCHAR(255);
+            ALTER TABLE vendors ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(100) DEFAULT 'Cloud - Azure (Gold)';
+            ALTER TABLE vendors ADD COLUMN IF NOT EXISTS license_exp_date TIMESTAMP WITH TIME ZONE;
+            ALTER TABLE vendors ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active';
+            ALTER TABLE vendors ADD COLUMN IF NOT EXISTS categories_json JSONB;
+            ALTER TABLE vendors ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
             CREATE TABLE IF NOT EXISTS customers (
                 customer_id VARCHAR(100) PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -936,7 +1018,7 @@ class DatabaseService:
                 client_id VARCHAR(100),
                 phone VARCHAR(50),
                 email VARCHAR(255),
-                plan_tier VARCHAR(50) DEFAULT 'Silver',
+                plan_tier VARCHAR(100) DEFAULT 'Cloud - Azure (Gold)',
                 licenses_count INTEGER DEFAULT 1,
                 license_exp_date TIMESTAMP WITH TIME ZONE,
                 categories_json JSONB,
@@ -945,7 +1027,8 @@ class DatabaseService:
             );
             ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
             ALTER TABLE customers ADD COLUMN IF NOT EXISTS email VARCHAR(255);
-            ALTER TABLE customers ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(50) DEFAULT 'Silver';
+            ALTER TABLE customers ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(100) DEFAULT 'Cloud - Azure (Gold)';
+            ALTER TABLE customers ALTER COLUMN plan_tier TYPE VARCHAR(100);
             ALTER TABLE customers ADD COLUMN IF NOT EXISTS licenses_count INTEGER DEFAULT 1;
             ALTER TABLE customers ADD COLUMN IF NOT EXISTS license_exp_date TIMESTAMP WITH TIME ZONE;
 
@@ -998,7 +1081,7 @@ class DatabaseService:
                     "success": True,
                     "engine": engine,
                     "message": "Tables created successfully in PostgreSQL/Azure PostgreSQL",
-                    "tables_created": ["db_settings", "organizations", "sessions", "customers", "m365_licenses", "azure_subscriptions", "audit_logs"],
+                    "tables_created": ["db_settings", "vendors", "organizations", "sessions", "customers", "m365_licenses", "azure_subscriptions", "audit_logs"],
                 }
             except Exception as e:
                 return {"success": False, "error": str(e)}
@@ -1007,7 +1090,7 @@ class DatabaseService:
             "success": True,
             "engine": engine,
             "message": f"Schema definition generated for {engine.upper()}",
-            "tables_created": ["organizations", "sessions", "customers", "m365_licenses", "azure_subscriptions", "audit_logs"],
+            "tables_created": ["vendors", "organizations", "sessions", "customers", "m365_licenses", "azure_subscriptions", "audit_logs"],
         }
 
     def migrate_data(self, extra_customers: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
@@ -1017,7 +1100,7 @@ class DatabaseService:
         url = self.get_connection_url()
 
         self.init_schema(engine=engine)
-        migrated_counts = {"organizations": 0, "sessions": 0, "customers": 0, "m365_licenses": 0, "azure_subscriptions": 0, "audit_logs": 0}
+        migrated_counts = {"vendors": 0, "organizations": 0, "sessions": 0, "customers": 0, "m365_licenses": 0, "azure_subscriptions": 0, "audit_logs": 0}
 
         if engine in ("postgresql", "azure_postgresql"):
             try:
@@ -1096,7 +1179,7 @@ class DatabaseService:
                                             org_json.get("state", "MH"),
                                             org_json.get("street", "Flora Residency Flat no B4"),
                                             org_json.get("license", "Microsoft 365 Business Essentials"),
-                                            "2026-11-11 00:00:00+00",
+                                            org_json.get("license_exp_date") or org_json.get("licenseExpDate") or "2027-11-11 00:00:00+00",
                                             org_json.get("usersCount", 14),
                                             org_json.get("groupsCount", 9),
                                             org_json.get("appsCount", 4),
@@ -1106,6 +1189,48 @@ class DatabaseService:
                                         migrated_counts["organizations"] += 1
                             except Exception as e:
                                 logger.error(f"Error migrating sessions: {e}")
+
+                        # Seed / migrate Vendors (Image 2: Cloud - Azure Gold, Cloud - AWS Silver)
+                        vendors_to_insert = [
+                            {
+                                "vendor_id": "vendor-lt",
+                                "name": "Larsen & Toubro (L&T)",
+                                "code": "LT",
+                                "contact_email": "admin@lt.com",
+                                "phone": "+91 22 6752 5656",
+                                "organization": "L&T Infotech",
+                                "plan_tier": "Cloud - Azure (Gold)",
+                                "license_exp_date": "2027-11-11 00:00:00+00",
+                                "status": "Active"
+                            },
+                            {
+                                "vendor_id": "vendor-tata",
+                                "name": "Tata Consultancy Services (TATA)",
+                                "code": "TATA",
+                                "contact_email": "admin@tata.com",
+                                "phone": "+91 22 6778 9999",
+                                "organization": "Tata Group",
+                                "plan_tier": "Cloud - AWS (Silver)",
+                                "license_exp_date": "2027-11-11 00:00:00+00",
+                                "status": "Active"
+                            }
+                        ]
+                        for v in vendors_to_insert:
+                            cur.execute("""
+                                INSERT INTO vendors (vendor_id, name, code, contact_email, phone, organization, plan_tier, license_exp_date, status, updated_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                                ON CONFLICT (vendor_id) DO UPDATE SET
+                                    name = EXCLUDED.name,
+                                    code = EXCLUDED.code,
+                                    contact_email = EXCLUDED.contact_email,
+                                    phone = EXCLUDED.phone,
+                                    organization = EXCLUDED.organization,
+                                    plan_tier = EXCLUDED.plan_tier,
+                                    license_exp_date = EXCLUDED.license_exp_date,
+                                    status = EXCLUDED.status,
+                                    updated_at = CURRENT_TIMESTAMP;
+                            """, (v["vendor_id"], v["name"], v["code"], v["contact_email"], v["phone"], v["organization"], v["plan_tier"], v["license_exp_date"], v["status"]))
+                            migrated_counts["vendors"] += 1
 
                         # 2. Customers & Subscriptions — only real Azure-verified tenants
                         raw_customers = extra_customers or [
@@ -1117,9 +1242,9 @@ class DatabaseService:
                                 "clientId": "0ffa2118-1e76-4537-b0d4-0ad853240893",
                                 "phone": "+91 9823101112",
                                 "email": "vinayak.salunkhe@zensustech.com",
-                                "planTier": "Gold",
+                                "planTier": "Cloud - Azure (Gold)",
                                 "licensesCount": 4,
-                                "licenseExpDate": "2026-11-11 00:00:00+00",
+                                "licenseExpDate": "2027-11-11 00:00:00+00",
                                 "categories": {
                                     "office365": {"enabled": True, "tier": "Gold"},
                                     "azure": {
@@ -1144,9 +1269,9 @@ class DatabaseService:
                             clid = cust.get("clientId", "")
                             phone = cust.get("phone", "+91 9823101112")
                             email = cust.get("email", "contact@customer.com")
-                            plan_tier = cust.get("planTier", "Silver")
+                            plan_tier = cust.get("planTier") or cust.get("plan_tier") or "Cloud - Azure (Gold)"
                             licenses_count = cust.get("licensesCount", 4)
-                            license_exp_date = cust.get("licenseExpDate", "2026-11-11 00:00:00+00")
+                            license_exp_date = cust.get("licenseExpDate") or cust.get("license_exp_date") or "2027-11-11 00:00:00+00"
                             cats = cust.get("categories", {})
 
                             cur.execute("""
@@ -1193,7 +1318,7 @@ class DatabaseService:
                                 "status": "Enabled",
                                 "consumed_units": 4,
                                 "prepaid_units": 4,
-                                "expiration_date": "2026-11-11 00:00:00+00"
+                                "expiration_date": "2027-11-11 00:00:00+00"
                             },
                             {
                                 "tenant_id": "9414ece9-9039-40b7-a6a7-7ecbe7409245",
@@ -1392,15 +1517,16 @@ GO
 
     def get_table_preview(self, table_name: str, limit: int = 50) -> Dict[str, Any]:
         """Returns rows from connected PostgreSQL or SQLite fallback."""
-        allowed_tables = {"customers", "organizations", "m365_licenses", "azure_subscriptions", "sessions", "audit_logs", "db_settings"}
+        allowed_tables = {"vendors", "end_customers", "customers", "organizations", "m365_licenses", "azure_subscriptions", "sessions", "audit_logs", "db_settings"}
         if table_name not in allowed_tables:
             return {"error": f"Invalid table: {table_name}"}
 
+        target_table = "customers" if table_name == "end_customers" else table_name
         url = self.get_connection_url()
         try:
             with psycopg.connect(url, connect_timeout=4, row_factory=dict_row) as conn:
                 with conn.cursor() as cur:
-                    cur.execute(f"SELECT * FROM {table_name} ORDER BY 1 LIMIT %s;", (limit,))
+                    cur.execute(f"SELECT * FROM {target_table} ORDER BY 1 LIMIT %s;", (limit,))
                     rows = cur.fetchall()
                     if rows:
                         cleaned = []
@@ -1417,11 +1543,13 @@ GO
                                     item[k] = v
                             cleaned.append(item)
                         return {"table": table_name, "count": len(cleaned), "rows": cleaned}
+                    else:
+                        return {"table": table_name, "count": 0, "rows": []}
         except Exception as e:
             logger.info(f"PostgreSQL fetch fallback to SQLite: {e}")
 
         # Fallback to embedded SQLite
-        return self._get_sqlite_table_preview(table_name=table_name, limit=limit)
+        return self._get_sqlite_table_preview(table_name=target_table, limit=limit)
 
 
 db_service = DatabaseService()
