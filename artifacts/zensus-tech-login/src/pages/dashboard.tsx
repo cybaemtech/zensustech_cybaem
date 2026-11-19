@@ -59,6 +59,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { getLiveApiHeaders, ensureLiveApiTokens, LIVE_API_BASE } from '@/lib/live-api';
 import { DatabaseSettingsPage } from '@/components/DatabaseSettingsPage';
+import { AdminUsersPage } from '@/components/AdminUsersPage';
 import {
   DEFAULT_USERS,
   DEFAULT_APPLICATIONS,
@@ -98,6 +99,7 @@ const SIDEBAR_ITEMS = [
   { id: 'identity', label: 'Identity & Access', subLabel: 'Organization Entra ID', icon: Fingerprint, group: 'core' },
   { id: 'm365', label: 'Microsoft O365', subLabel: 'Licenses & Usage', icon: PanelsTopLeft, group: 'core' },
   { id: 'database', label: 'Database Connect', subLabel: 'Multi-DB Settings & Migration', icon: Database, group: 'core' },
+  { id: 'admin_users', label: 'Admin', subLabel: 'Sign-up Users & Details', icon: ShieldCheck, group: 'core' },
   { id: 'backups', label: 'Backups & DR', subLabel: 'Azure Recovery Vaults', icon: DatabaseBackup, group: 'operations' },
   { id: 'patch', label: 'Patch Compliance', subLabel: 'Intune Managed Devices', icon: ShieldCheck, group: 'operations' },
   { id: 'asset', label: 'Cloud Inventory', subLabel: 'Apps & Service Principals', icon: Boxes, group: 'operations' },
@@ -1361,6 +1363,11 @@ export default function Dashboard() {
               <DatabaseSettingsPage onStatusChange={(connected) => setIsDbConnected(connected)} />
             )}
 
+            {/* TAB: ADMIN USERS DIRECTORY VIEW */}
+            {activeTab === 'admin_users' && (
+              <AdminUsersPage />
+            )}
+
             {/* TAB: AUDIT LOGS FULL PAGE VIEW */}
             {activeTab === 'audit-logs' && (
               <div className="h-[calc(100vh-10rem)] min-h-[700px] flex flex-col">
@@ -1373,7 +1380,7 @@ export default function Dashboard() {
             )}
 
             {/* Organization Info Banner Card */}
-            {activeTab !== 'database' && activeTab !== 'audit-logs' && (
+            {activeTab !== 'database' && activeTab !== 'audit-logs' && activeTab !== 'admin_users' && (
             <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
                 <div className="flex items-center gap-4">

@@ -79,7 +79,7 @@ export function AdminDatabaseModal({ isOpen, onClose, onStatusChange }: AdminDat
   const [migrationError, setMigrationError] = useState<string | null>(null);
 
   // Table preview states
-  const [selectedTable, setSelectedTable] = useState<string>('customers');
+  const [selectedTable, setSelectedTable] = useState<string>('end_customers');
   const [tableData, setTableData] = useState<any[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [tableError, setTableError] = useState<string | null>(null);

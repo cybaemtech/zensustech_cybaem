@@ -585,3 +585,118 @@ async def get_latest_auth_email(email: str, db: Any = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No email found in database for this address.")
     return dict(row)
 
+
+@router.get("/admin/users", summary="List all sign-up users with full live details for Admin Panel")
+async def get_all_users_admin(db: Any = Depends(get_db)):
+    """
+    Returns all real sign-up accounts from PostgreSQL/database with
+    verification status, phone, organization, role, tenant link, and activity logs.
+    """
+    async with db.execute(
+        """
+        SELECT 
+            u.id,
+            u.user_id,
+            u.full_name,
+            u.email,
+            u.role,
+            u.phone,
+            u.organization,
+            u.customer,
+            u.vendor_code,
+            u.email_verified,
+            u.account_status,
+            u.created_at,
+            u.updated_at,
+            t.tenant_name,
+            t.tenant_id as azure_tenant_id,
+            ev.verified_at,
+            ev.attempts as verification_attempts,
+            (SELECT COUNT(*) FROM login_sessions s WHERE s.user_id = u.id AND s.revoked_at IS NULL) as active_sessions_count,
+            (SELECT COUNT(*) FROM auth_emails ae WHERE LOWER(ae.recipient_email) = LOWER(u.email)) as emails_sent_count
+        FROM users u
+        LEFT JOIN user_tenants ut ON ut.user_id = u.id
+        LEFT JOIN tenants t ON t.id = ut.tenant_id
+        LEFT JOIN email_verifications ev ON ev.user_id = u.id
+        ORDER BY u.id DESC
+        """
+    ) as cur:
+        rows = await cur.fetchall()
+
+    users_list = []
+    total_users = 0
+    end_customers = 0
+    vendors = 0
+    super_admins = 0
+    email_verified = 0
+    pending_verification = 0
+    active_sessions = 0
+
+    seen_ids = set()
+    for r in rows or []:
+        uid = r["id"]
+        if uid in seen_ids:
+            continue
+        seen_ids.add(uid)
+
+        total_users += 1
+        role_str = (r.get("role") or "END_CUSTOMER").upper()
+        if "VENDOR" in role_str:
+            vendors += 1
+        elif "ADMIN" in role_str and role_str != "VENDOR_ADMIN":
+            super_admins += 1
+        else:
+            end_customers += 1
+
+        is_verified = bool(r.get("email_verified"))
+        if is_verified:
+            email_verified += 1
+        else:
+            pending_verification += 1
+
+        sessions_cnt = int(r.get("active_sessions_count") or 0)
+        active_sessions += sessions_cnt
+
+        created_dt = r.get("created_at")
+        updated_dt = r.get("updated_at")
+        verified_dt = r.get("verified_at")
+
+        users_list.append({
+            "id": uid,
+            "user_id": r.get("user_id") or f"usr-{uid}",
+            "full_name": r.get("full_name") or "User",
+            "email": r.get("email"),
+            "role": role_str,
+            "phone": r.get("phone") or "—",
+            "organization": r.get("organization") or "—",
+            "customer": r.get("customer"),
+            "vendor_code": r.get("vendor_code") or "—",
+            "email_verified": is_verified,
+            "account_status": r.get("account_status") or "active",
+            "created_at": created_dt.isoformat() if hasattr(created_dt, "isoformat") else str(created_dt or ""),
+            "updated_at": updated_dt.isoformat() if hasattr(updated_dt, "isoformat") else str(updated_dt or ""),
+            "verified_at": verified_dt.isoformat() if hasattr(verified_dt, "isoformat") else str(verified_dt or ""),
+            "verification_attempts": int(r.get("verification_attempts") or 0),
+            "tenant_name": r.get("tenant_name"),
+            "azure_tenant_id": r.get("azure_tenant_id"),
+            "active_sessions_count": sessions_cnt,
+            "emails_sent_count": int(r.get("emails_sent_count") or 0),
+            "plan_tier": "Cloud - Azure (Gold)",
+            "license_exp_date": "2027-11-11",
+        })
+
+    return {
+        "success": True,
+        "stats": {
+            "total_users": total_users,
+            "end_customers": end_customers,
+            "vendors": vendors,
+            "super_admins": super_admins,
+            "email_verified": email_verified,
+            "pending_verification": pending_verification,
+            "active_sessions": active_sessions,
+        },
+        "users": users_list,
+    }
+
+

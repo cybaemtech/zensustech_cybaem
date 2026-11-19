@@ -140,7 +140,7 @@ export function DatabaseSettingsPage({ onStatusChange }: DatabaseSettingsPagePro
   const [migrationError, setMigrationError] = useState<string | null>(null);
 
   // Tables
-  const [selectedTable, setSelectedTable] = useState<string>('customers');
+  const [selectedTable, setSelectedTable] = useState<string>('end_customers');
   const [tableData, setTableData] = useState<any[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [tableError, setTableError] = useState<string | null>(null);
@@ -996,7 +996,14 @@ export function DatabaseSettingsPage({ onStatusChange }: DatabaseSettingsPagePro
             </div>
           ) : tableData.length === 0 ? (
             <div className="p-12 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
-              No records found in table <code className="text-cyan-700 font-bold">{selectedTable}</code>.
+              {selectedTable === 'vendors' ? (
+                <div className="space-y-1">
+                  <p className="font-semibold text-slate-700">No vendor partner accounts registered in PostgreSQL yet.</p>
+                  <p className="text-slate-400">Users who register with &ldquo;Vendor&rdquo; account type during sign-up will appear here automatically with full details.</p>
+                </div>
+              ) : (
+                <div>No records found in table <code className="text-cyan-700 font-bold">{selectedTable}</code>.</div>
+              )}
             </div>
           ) : (
             <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">

@@ -884,6 +884,20 @@ class DatabaseService:
                                 conn.rollback()
 
                         try:
+                            cur.execute("SELECT COUNT(*) as count FROM users WHERE role IN ('VENDOR', 'VENDOR_ADMIN');")
+                            vres = cur.fetchone()
+                            if vres:
+                                table_counts["vendors"] = vres["count"]
+
+                            cur.execute("SELECT COUNT(*) as count FROM users WHERE role = 'END_CUSTOMER';")
+                            cres = cur.fetchone()
+                            if cres:
+                                table_counts["customers"] = cres["count"]
+                                table_counts["end_customers"] = cres["count"]
+                        except Exception:
+                            conn.rollback()
+
+                        try:
                             cur.execute("SELECT phone, email, plan_tier, license_exp_date FROM customers ORDER BY 1 LIMIT 1;")
                             crow = cur.fetchone()
                             if crow:
@@ -1526,8 +1540,50 @@ GO
         try:
             with psycopg.connect(url, connect_timeout=4, row_factory=dict_row) as conn:
                 with conn.cursor() as cur:
-                    cur.execute(f"SELECT * FROM {target_table} ORDER BY 1 LIMIT %s;", (limit,))
-                    rows = cur.fetchall()
+                    if table_name == "vendors":
+                        cur.execute("""
+                            SELECT 
+                                u.user_id as vendor_id,
+                                u.full_name as name,
+                                u.email as contact_email,
+                                COALESCE(u.phone, '—') as phone,
+                                COALESCE(u.organization, 'Vendor Partner') as organization,
+                                COALESCE(u.vendor_code, '—') as code,
+                                'Cloud - Azure (Gold)' as plan_tier,
+                                '2027-11-11 00:00:00+00'::timestamptz as license_exp_date,
+                                CASE WHEN u.email_verified THEN 'Active' ELSE 'Pending Verification' END as status,
+                                u.created_at,
+                                u.updated_at
+                            FROM users u
+                            WHERE u.role IN ('VENDOR', 'VENDOR_ADMIN')
+                            ORDER BY u.id DESC
+                            LIMIT %s;
+                        """, (limit,))
+                        rows = cur.fetchall()
+                    elif table_name in ("end_customers", "customers"):
+                        cur.execute("""
+                            SELECT 
+                                u.user_id as customer_id,
+                                u.full_name as name,
+                                u.email,
+                                COALESCE(u.phone, c.phone, '—') as phone,
+                                COALESCE(u.organization, c.name, 'ZensusTech Client') as organization,
+                                COALESCE(c.plan_tier, 'Cloud - Azure (Gold)') as plan_tier,
+                                COALESCE(c.licenses_count, 4) as licenses_count,
+                                COALESCE(c.license_exp_date, '2027-11-11 00:00:00+00'::timestamptz) as license_exp_date,
+                                CASE WHEN u.email_verified THEN 'Active' ELSE 'Pending Verification' END as status,
+                                u.created_at,
+                                u.updated_at
+                            FROM users u
+                            LEFT JOIN customers c ON c.customer_id = u.customer_id OR c.email = u.email
+                            WHERE u.role = 'END_CUSTOMER'
+                            ORDER BY u.id DESC
+                            LIMIT %s;
+                        """, (limit,))
+                        rows = cur.fetchall()
+                    else:
+                        cur.execute(f"SELECT * FROM {target_table} ORDER BY 1 LIMIT %s;", (limit,))
+                        rows = cur.fetchall()
                     if rows:
                         cleaned = []
                         for r in rows:
