@@ -637,7 +637,7 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
         LEFT JOIN user_tenants ut ON ut.user_id = u.id
         LEFT JOIN tenants t ON t.id = ut.tenant_id
         LEFT JOIN organizations o ON o.tenant_id = t.tenant_id
-        LEFT JOIN customers c ON (c.tenant_id = t.tenant_id OR LOWER(c.email) = LOWER(u.email))
+        LEFT JOIN customers c ON c.tenant_id = t.tenant_id
         LEFT JOIN email_verifications ev ON ev.user_id = u.id
         ORDER BY u.id DESC
         """
@@ -682,47 +682,57 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
         updated_dt = r.get("updated_at")
         verified_dt = r.get("verified_at")
 
-        # Prefer org phone if tenant verified
-        org_phone = r.get("org_phone")
-        display_phone = org_phone or r.get("phone") or None
-        
-        # Plan & Tier separation
-        cust_plan = r.get("customer_plan_tier") or ""
-        org_lic = r.get("org_license") or ""
-        
-        # Determine Plan & Tier
-        if "Azure" in cust_plan:
-            plan_name = "Cloud - Azure"
-        elif "AWS" in cust_plan:
-            plan_name = "Cloud - AWS"
-        elif "GCP" in cust_plan:
-            plan_name = "Cloud - GCP"
-        elif "Office 365" in cust_plan or "Microsoft 365" in org_lic or "O365" in org_lic:
-            plan_name = "Microsoft 365"
-        else:
-            plan_name = "Cloud - Azure"
+        # Check if user has connected and verified their Tenant ID
+        azure_tenant = r.get("azure_tenant_id")
+        has_tenant = bool(azure_tenant and str(azure_tenant).strip() != "")
 
-        if "Gold" in cust_plan or "Gold" in org_lic:
-            tier_name = "Gold"
-        elif "Silver" in cust_plan or "Silver" in org_lic:
-            tier_name = "Silver"
-        elif "Bronze" in cust_plan or "Bronze" in org_lic:
-            tier_name = "Bronze"
-        elif "Trial" in cust_plan or "Trial" in org_lic:
-            tier_name = "Trial"
-        else:
-            tier_name = "Gold"
+        if has_tenant:
+            # Live tenant details from linked organization
+            display_phone = r.get("org_phone") or r.get("phone") or "—"
+            display_org = r.get("org_display_name") or r.get("organization") or "—"
 
-        combined_plan_tier = f"{plan_name} ({tier_name})"
+            cust_plan = r.get("customer_plan_tier") or ""
+            org_lic = r.get("org_license") or ""
 
-        # Clean License Expiry Date (YYYY-MM-DD)
-        exp_raw = r.get("customer_license_exp_date") or r.get("org_license_exp_date")
-        if hasattr(exp_raw, "strftime"):
-            clean_exp_date = exp_raw.strftime("%Y-%m-%d")
-        elif exp_raw:
-            clean_exp_date = str(exp_raw)[:10]
+            if "Azure" in cust_plan:
+                plan_name = "Cloud - Azure"
+            elif "AWS" in cust_plan:
+                plan_name = "Cloud - AWS"
+            elif "GCP" in cust_plan:
+                plan_name = "Cloud - GCP"
+            elif "Office 365" in cust_plan or "Microsoft 365" in org_lic or "O365" in org_lic:
+                plan_name = "Microsoft 365"
+            else:
+                plan_name = "Cloud - Azure"
+
+            if "Gold" in cust_plan or "Gold" in org_lic:
+                tier_name = "Gold"
+            elif "Silver" in cust_plan or "Silver" in org_lic:
+                tier_name = "Silver"
+            elif "Bronze" in cust_plan or "Bronze" in org_lic:
+                tier_name = "Bronze"
+            elif "Trial" in cust_plan or "Trial" in org_lic:
+                tier_name = "Trial"
+            else:
+                tier_name = "Gold"
+
+            combined_plan_tier = f"{plan_name} ({tier_name})"
+
+            exp_raw = r.get("customer_license_exp_date") or r.get("org_license_exp_date")
+            if hasattr(exp_raw, "strftime"):
+                clean_exp_date = exp_raw.strftime("%Y-%m-%d")
+            elif exp_raw:
+                clean_exp_date = str(exp_raw)[:10]
+            else:
+                clean_exp_date = "2027-11-11"
         else:
-            clean_exp_date = "2027-11-11"
+            # User has NOT verified/connected a Tenant ID - do not show tenant plan/expiry
+            display_phone = r.get("phone") or "—"
+            display_org = r.get("organization") or "—"
+            plan_name = None
+            tier_name = None
+            combined_plan_tier = None
+            clean_exp_date = None
 
         users_list.append({
             "id": uid,
@@ -730,8 +740,8 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             "full_name": r.get("full_name") or "User",
             "email": r.get("email"),
             "role": role_str,
-            "phone": display_phone or "—",
-            "organization": r.get("organization") or r.get("org_display_name") or "—",
+            "phone": display_phone,
+            "organization": display_org,
             "customer": r.get("customer"),
             "vendor_code": r.get("vendor_code") or "—",
             "email_verified": is_verified,
@@ -742,28 +752,29 @@ async def get_all_users_admin(db: Any = Depends(get_db)):
             "verification_attempts": int(r.get("verification_attempts") or 0),
             "tenant_name": r.get("tenant_name"),
             "azure_tenant_id": r.get("azure_tenant_id"),
+            "has_tenant": has_tenant,
             "active_sessions_count": sessions_cnt,
             "emails_sent_count": int(r.get("emails_sent_count") or 0),
-            # Plan and Tier values in separate fields
+            # Plan, Tier, and Expiry ONLY provided if Tenant ID is verified
             "plan": plan_name,
             "tier": tier_name,
             "plan_tier": combined_plan_tier,
             "license_exp_date": clean_exp_date,
             # Organization enrichment from Azure Entra ID / tenant
-            "org_display_name": r.get("org_display_name"),
-            "org_domain": r.get("org_domain"),
-            "org_phone": r.get("org_phone"),
-            "org_email": r.get("org_email"),
-            "org_city": r.get("org_city"),
-            "org_state": r.get("org_state"),
-            "org_country": r.get("org_country"),
-            "org_street": r.get("org_street"),
-            "org_license": r.get("org_license"),
-            "org_license_exp_date": clean_exp_date if r.get("org_license_exp_date") else None,
-            "org_users_count": r.get("org_users_count") or r.get("customer_licenses_count"),
-            "org_groups_count": r.get("org_groups_count"),
-            "org_apps_count": r.get("org_apps_count"),
-            "org_devices_count": r.get("org_devices_count"),
+            "org_display_name": r.get("org_display_name") if has_tenant else None,
+            "org_domain": r.get("org_domain") if has_tenant else None,
+            "org_phone": r.get("org_phone") if has_tenant else None,
+            "org_email": r.get("org_email") if has_tenant else None,
+            "org_city": r.get("org_city") if has_tenant else None,
+            "org_state": r.get("org_state") if has_tenant else None,
+            "org_country": r.get("org_country") if has_tenant else None,
+            "org_street": r.get("org_street") if has_tenant else None,
+            "org_license": r.get("org_license") if has_tenant else None,
+            "org_license_exp_date": clean_exp_date if (has_tenant and r.get("org_license_exp_date")) else None,
+            "org_users_count": (r.get("org_users_count") or r.get("customer_licenses_count")) if has_tenant else None,
+            "org_groups_count": r.get("org_groups_count") if has_tenant else None,
+            "org_apps_count": r.get("org_apps_count") if has_tenant else None,
+            "org_devices_count": r.get("org_devices_count") if has_tenant else None,
         })
 
     return {

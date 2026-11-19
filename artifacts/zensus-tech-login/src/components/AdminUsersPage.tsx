@@ -161,10 +161,10 @@ export const AdminUsersPage: React.FC = () => {
       escapeCSV(u.phone),
       escapeCSV(u.organization),
       escapeCSV(u.email_verified ? 'VERIFIED' : 'PENDING_OTP'),
-      escapeCSV(u.plan || 'Cloud - Azure'),
-      escapeCSV(u.tier || 'Gold'),
-      escapeCSV(u.plan_tier || `${u.plan || 'Cloud - Azure'} (${u.tier || 'Gold'})`),
-      escapeCSV(u.license_exp_date || '2027-11-11'),
+      escapeCSV(u.azure_tenant_id && u.plan ? u.plan : '—'),
+      escapeCSV(u.azure_tenant_id && u.tier ? u.tier : '—'),
+      escapeCSV(u.azure_tenant_id && u.plan_tier ? u.plan_tier : '—'),
+      escapeCSV(u.azure_tenant_id && u.license_exp_date ? u.license_exp_date : '—'),
       escapeCSV(u.tenant_name || ''),
       escapeCSV(u.azure_tenant_id || ''),
       escapeCSV(u.active_sessions_count || 0),
@@ -515,8 +515,9 @@ export const AdminUsersPage: React.FC = () => {
                   const isVendor = user.role.includes('VENDOR');
                   const isSuperAdmin = user.role === 'SUPER_ADMIN';
 
-                  const planName = user.plan || 'Cloud - Azure';
-                  const tierName = user.tier || 'Gold';
+                  // Only use plan/tier if tenant is verified — no fallback defaults
+                  const planName = user.plan || '';
+                  const tierName = user.tier || '';
 
                   // Tier styling badge
                   const tierColors: Record<string, string> = {
@@ -620,31 +621,45 @@ export const AdminUsersPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* SEPARATE PLAN COLUMN */}
+                      {/* SEPARATE PLAN COLUMN - ONLY SHOWN IF TENANT VERIFIED */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-bold text-[11px] bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/60 shadow-2xs">
-                          <Cloud className="w-3 h-3 text-sky-500" />
-                          {planName}
-                        </span>
+                        {user.azure_tenant_id && user.plan ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-bold text-[11px] bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/60 shadow-2xs">
+                            <Cloud className="w-3 h-3 text-sky-500" />
+                            {user.plan}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-mono text-xs pl-2">—</span>
+                        )}
                       </td>
 
-                      {/* SEPARATE TIER COLUMN */}
+                      {/* SEPARATE TIER COLUMN - ONLY SHOWN IF TENANT VERIFIED */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[11px] border shadow-2xs ${tierBadgeClass}`}>
-                          <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500/20" />
-                          {tierName} Tier
-                        </span>
+                        {user.azure_tenant_id && user.tier ? (
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[11px] border shadow-2xs ${tierBadgeClass}`}>
+                            <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500/20" />
+                            {user.tier} Tier
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-mono text-xs pl-2">—</span>
+                        )}
                       </td>
 
-                      {/* SEPARATE LICENSE EXPIRY COLUMN */}
+                      {/* SEPARATE LICENSE EXPIRY COLUMN - ONLY SHOWN IF TENANT VERIFIED */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1 font-mono text-slate-800 dark:text-slate-200 text-[11px] font-semibold">
-                          <Calendar className="w-3 h-3 text-emerald-500" />
-                          <span>{user.license_exp_date || '2027-11-11'}</span>
-                        </div>
-                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                          Active / Live
-                        </div>
+                        {user.azure_tenant_id && user.license_exp_date ? (
+                          <>
+                            <div className="flex items-center gap-1 font-mono text-slate-800 dark:text-slate-200 text-[11px] font-semibold">
+                              <Calendar className="w-3 h-3 text-emerald-500" />
+                              <span>{user.license_exp_date}</span>
+                            </div>
+                            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                              Active / Live
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-slate-400 font-mono text-xs pl-2">—</span>
+                        )}
                       </td>
 
                       {/* Registered Date */}
@@ -781,34 +796,41 @@ export const AdminUsersPage: React.FC = () => {
                 <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
                   <BadgeCheck className="w-3.5 h-3.5 text-purple-600" /> Cloud Subscription &amp; Tier
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Cloud Plan</span>
-                    <span className="inline-flex items-center gap-1 font-bold text-sky-700 dark:text-sky-300">
-                      <Cloud className="w-3.5 h-3.5 text-sky-500" />
-                      {selectedUser.plan || 'Cloud - Azure'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Subscription Tier</span>
-                    <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      {selectedUser.tier || 'Gold'} Tier
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">License Expiration</span>
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {selectedUser.license_exp_date || '2027-11-11'} (Active)
-                    </span>
-                  </div>
-                  {selectedUser.tenant_name && (
-                    <div className="sm:col-span-3 pt-1 border-t border-slate-200 dark:border-slate-700/60">
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Connected Tenant</span>
-                      <span className="font-mono text-slate-800 dark:text-slate-200">{selectedUser.tenant_name} [{selectedUser.azure_tenant_id}]</span>
+                {selectedUser.azure_tenant_id && selectedUser.plan ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Cloud Plan</span>
+                      <span className="inline-flex items-center gap-1 font-bold text-sky-700 dark:text-sky-300">
+                        <Cloud className="w-3.5 h-3.5 text-sky-500" />
+                        {selectedUser.plan}
+                      </span>
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Subscription Tier</span>
+                      <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        {selectedUser.tier} Tier
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">License Expiration</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {selectedUser.license_exp_date} (Active)
+                      </span>
+                    </div>
+                    {selectedUser.tenant_name && (
+                      <div className="sm:col-span-3 pt-1 border-t border-slate-200 dark:border-slate-700/60">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Connected Tenant</span>
+                        <span className="font-mono text-slate-800 dark:text-slate-200">{selectedUser.tenant_name} [{selectedUser.azure_tenant_id}]</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>No Tenant ID connected yet. Cloud plan, tier, and license expiration are activated once the Azure Tenant ID is verified.</span>
+                  </div>
+                )}
               </div>
 
               {/* Linked Organization — only shown when tenant verified */}
