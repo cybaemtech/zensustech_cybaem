@@ -76,3 +76,4 @@ print("PostgreSQL organizations table successfully updated with LIVE values!")
 cur.execute("SELECT users_count, groups_count, apps_count, devices_count FROM organizations WHERE tenant_id = %s", (tid,))
 print("Updated DB row:", cur.fetchone())
 conn.close()
+

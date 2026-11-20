@@ -260,7 +260,10 @@ export const AdminUsersPage: React.FC = () => {
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                Admin User Governance &amp; Directory
+                Super Admin Governance &amp; Directory
+                <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  Super Admin
+                </span>
                 <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
                   Live PostgreSQL
                 </span>

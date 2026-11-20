@@ -64,3 +64,4 @@ live_dev = []
 if r_dev.status_code == 200:
     live_dev = r_dev.json().get('value', [])
     print(f'LIVE GRAPH DEVICES COUNT: {len(live_dev)}')
+

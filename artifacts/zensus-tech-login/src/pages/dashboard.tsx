@@ -99,7 +99,7 @@ const SIDEBAR_ITEMS = [
   { id: 'identity', label: 'Identity & Access', subLabel: 'Organization Entra ID', icon: Fingerprint, group: 'core' },
   { id: 'm365', label: 'Microsoft O365', subLabel: 'Licenses & Usage', icon: PanelsTopLeft, group: 'core' },
   { id: 'database', label: 'Database Connect', subLabel: 'Multi-DB Settings & Migration', icon: Database, group: 'core' },
-  { id: 'admin_users', label: 'Admin', subLabel: 'Sign-up Users & Details', icon: ShieldCheck, group: 'core' },
+  { id: 'admin_users', label: 'Super Admin', subLabel: 'Sign-up Users & Details', icon: ShieldCheck, group: 'core' },
   { id: 'backups', label: 'Backups & DR', subLabel: 'Azure Recovery Vaults', icon: DatabaseBackup, group: 'operations' },
   { id: 'patch', label: 'Patch Compliance', subLabel: 'Intune Managed Devices', icon: ShieldCheck, group: 'operations' },
   { id: 'asset', label: 'Cloud Inventory', subLabel: 'Apps & Service Principals', icon: Boxes, group: 'operations' },
