@@ -380,7 +380,23 @@ def _init_postgres_sync(url: str):
                         except Exception as seed_err:
                             print(f"[DB] Seed application note: {seed_err}")
 
-            conn.commit()
+            # Synchronize all SERIAL sequences so new inserts never hit duplicate key error
+            try:
+                cur.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+                """)
+                for r in cur.fetchall():
+                    tbl_name = r["table_name"] if isinstance(r, dict) else r[0]
+                    try:
+                        cur.execute(f"SELECT setval(pg_get_serial_sequence('{tbl_name}', 'id'), COALESCE((SELECT MAX(id) FROM {tbl_name}), 0) + 1, false);")
+                    except Exception:
+                        pass
+                conn.commit()
+                print("[DB] PostgreSQL sequences successfully synchronized.")
+            except Exception as seq_err:
+                print(f"[DB] Sequence sync note: {seq_err}")
 
 
 def _init_sqlite_sync():

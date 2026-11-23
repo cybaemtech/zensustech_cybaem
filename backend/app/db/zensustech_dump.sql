@@ -1,5 +1,5 @@
 -- ZensusTech PostgreSQL Complete Database Export & Seed
--- Generated: 2026-11-23T13:42:26.728537
+-- Generated: 2026-11-23T14:32:10.369849
 -- Compatible with Render PostgreSQL, Docker, and Local PostgreSQL
 
 BEGIN;
@@ -700,7 +700,7 @@ INSERT INTO email_verifications ("id", "user_id", "otp_hash", "expires_at", "att
 INSERT INTO email_verifications ("id", "user_id", "otp_hash", "expires_at", "attempts", "verified_at", "created_at") VALUES (28, 31, 'fc39c32cd6311d92053af0c9dd5f78ce0967a5f52601a0d6f3ccc72af68621ec', '2026-11-23T13:20:58.130067+05:30', 0, NULL, '2026-11-23T13:15:58.123154+05:30') ON CONFLICT DO NOTHING;
 INSERT INTO email_verifications ("id", "user_id", "otp_hash", "expires_at", "attempts", "verified_at", "created_at") VALUES (29, 32, 'b60e8268ced0a87182e0085016e0bd8dbc751f93fd25d05c4848a047c4d7d095', '2026-11-23T13:40:26.700193+05:30', 1, '2026-11-23T13:35:29.886632+05:30', '2026-11-23T13:35:26.692530+05:30') ON CONFLICT DO NOTHING;
 
--- Table: login_sessions (31 rows)
+-- Table: login_sessions (34 rows)
 -- ----------------------------------------
 INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at", "revoked_at", "created_at") VALUES (4, 22, '38a1818888f730fb0e5df371ba40784ba276c3495ae82a524307d6539db5fd69', '2026-11-13T14:01:42.698542+05:30', NULL, '2026-11-12T14:01:42.699012+05:30') ON CONFLICT DO NOTHING;
 INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at", "revoked_at", "created_at") VALUES (5, 22, 'bf9ac756669a0cf428000160cbde2c4f587305aede33a994fb1acf8852f8c017', '2026-11-13T14:12:26.937941+05:30', NULL, '2026-11-12T14:12:26.233946+05:30') ON CONFLICT DO NOTHING;
@@ -733,6 +733,9 @@ INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at",
 INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at", "revoked_at", "created_at") VALUES (34, 22, '2102e228e528beb78816be233f1bc61a7dd4f7589771a3e33318f7cdfbb99ff9', '2026-11-24T10:41:28.173382+05:30', NULL, '2026-11-23T10:41:26.434697+05:30') ON CONFLICT DO NOTHING;
 INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at", "revoked_at", "created_at") VALUES (35, 32, '03297a8469fb2f8b5d1793d27b2b469be6943ec98f6f67e3e6c6c11245d3d033', '2026-11-24T13:35:29.890339+05:30', NULL, '2026-11-23T13:35:29.890600+05:30') ON CONFLICT DO NOTHING;
 INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at", "revoked_at", "created_at") VALUES (36, 32, '64b59e36d4637444cdfe125463848f8b6d32530aa5fb0f8ef28f2ddcd2be6e88', '2026-11-24T13:35:32.408794+05:30', NULL, '2026-11-23T13:35:32.073010+05:30') ON CONFLICT DO NOTHING;
+INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at", "revoked_at", "created_at") VALUES (37, 22, 'testhash123', '2026-11-24T12:00:00+05:30', NULL, '2026-11-23T14:21:28.169087+05:30') ON CONFLICT DO NOTHING;
+INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at", "revoked_at", "created_at") VALUES (38, 22, 'e0cd131c2c812b2266fcc80eb26a79f3236bbd2c4112cc38f1c32264a93151dc', '2026-11-24T14:24:34.545782+05:30', NULL, '2026-11-23T14:24:34.553362+05:30') ON CONFLICT DO NOTHING;
+INSERT INTO login_sessions ("id", "user_id", "session_token_hash", "expires_at", "revoked_at", "created_at") VALUES (39, 22, '24842a94cd9f462bbf266a87fc05c6c0934bbe0df2539a52516aaabc6639e479', '2026-11-24T14:25:11.144491+05:30', NULL, '2026-11-23T14:25:09.548313+05:30') ON CONFLICT DO NOTHING;
 
 -- Table: m365_licenses (3 rows)
 -- ----------------------------------------
@@ -787,4 +790,23 @@ INSERT INTO users ("user_id", "email", "password_hash", "full_name", "role", "ve
 
 -- Table: vendors (0 rows)
 -- ----------------------------------------
+-- Synchronize sequences for all tables
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('audit_logs', 'id'), COALESCE((SELECT MAX(id) FROM audit_logs), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('auth_emails', 'id'), COALESCE((SELECT MAX(id) FROM auth_emails), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('azure_subscriptions', 'id'), COALESCE((SELECT MAX(id) FROM azure_subscriptions), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('customer_subscriptions', 'id'), COALESCE((SELECT MAX(id) FROM customer_subscriptions), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('customers', 'id'), COALESCE((SELECT MAX(id) FROM customers), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('db_settings', 'id'), COALESCE((SELECT MAX(id) FROM db_settings), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('email_verifications', 'id'), COALESCE((SELECT MAX(id) FROM email_verifications), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('login_sessions', 'id'), COALESCE((SELECT MAX(id) FROM login_sessions), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('m365_licenses', 'id'), COALESCE((SELECT MAX(id) FROM m365_licenses), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('organizations', 'id'), COALESCE((SELECT MAX(id) FROM organizations), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('sessions', 'id'), COALESCE((SELECT MAX(id) FROM sessions), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('subscriptions', 'id'), COALESCE((SELECT MAX(id) FROM subscriptions), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('tenant_credentials', 'id'), COALESCE((SELECT MAX(id) FROM tenant_credentials), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('tenants', 'id'), COALESCE((SELECT MAX(id) FROM tenants), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('user_tenants', 'id'), COALESCE((SELECT MAX(id) FROM user_tenants), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('vendors', 'id'), COALESCE((SELECT MAX(id) FROM vendors), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
 COMMIT;

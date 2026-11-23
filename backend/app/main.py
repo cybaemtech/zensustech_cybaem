@@ -134,6 +134,23 @@ app.add_middleware(
 app.add_middleware(LoggingMiddleware)
 
 import os
+import traceback
+import logging
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    err_trace = traceback.format_exc()
+    logging.getLogger("uvicorn.error").error(f"Global exception on {request.method} {request.url}: {err_trace}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Server error: {type(exc).__name__}: {str(exc)}"}
+    )
+
+import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 

@@ -73,6 +73,11 @@ for table in tables:
             sql_lines.append(f"INSERT INTO {table} ({cols_str}) VALUES ({vals_str}) ON CONFLICT DO NOTHING;")
         sql_lines.append("")
 
+sql_lines.append("-- Synchronize sequences for all tables")
+for table in tables:
+    sql_lines.append(f"DO $$ BEGIN PERFORM setval(pg_get_serial_sequence('{table}', 'id'), COALESCE((SELECT MAX(id) FROM {table}), 0) + 1, false); EXCEPTION WHEN OTHERS THEN NULL; END $$;")
+sql_lines.append("")
+
 sql_lines.append("COMMIT;")
 sql_lines.append("")
 
