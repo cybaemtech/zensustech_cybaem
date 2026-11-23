@@ -42,6 +42,7 @@ export interface LoginResult {
   needs_verification?: boolean;
   redirect?: string;
   session_token?: string;
+  dev_otp?: string;
   tenant?: {
     tenant_id: string;
     client_id?: string;

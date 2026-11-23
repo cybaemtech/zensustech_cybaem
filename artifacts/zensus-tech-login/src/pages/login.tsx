@@ -18,9 +18,16 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
       const res = await login(userEmail, userPassword || '');
 
       // Store basic user info for ProtectedRoute checks
+      sessionStorage.setItem('auth_email', userEmail);
       if (res.user) {
         sessionStorage.setItem('auth_user', JSON.stringify(res.user));
         sessionStorage.setItem('is_authenticated', 'true');
+      }
+      if (res.session_token) {
+        sessionStorage.setItem('zt_session', res.session_token);
+      }
+      if (res.dev_otp) {
+        sessionStorage.setItem('pending_verification_otp', res.dev_otp);
       }
 
       if (res.needs_verification) {

@@ -94,6 +94,9 @@ export function OtpVerifyPage() {
         sessionStorage.setItem('is_authenticated', 'true');
         sessionStorage.setItem('auth_email', email);
       }
+      if (res.session_token) {
+        sessionStorage.setItem('zt_session', res.session_token);
+      }
       // If user already has a tenant, skip /tent and go straight to dashboard
       if (res.has_tenant && res.tenant) {
         sessionStorage.setItem('azure_tenant_id', res.tenant.tenant_id);

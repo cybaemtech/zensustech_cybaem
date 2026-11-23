@@ -35,7 +35,6 @@ def get_pg_url() -> str:
     url = os.getenv("DATABASE_URL", "postgresql://postgres:root@localhost:5432/zensustech")
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
-    # If on Render or external cloud postgres, ensure sslmode=require
     is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID") or "render.com" in url or "dpg-" in url)
     if is_render and "localhost" not in url and "127.0.0.1" not in url and "sslmode" not in url:
         sep = "&" if "?" in url else "?"
@@ -366,6 +365,7 @@ def _init_postgres_sync(url: str):
                 print("[DB] Empty database detected on startup. Auto-seeding initial users, organizations, and tenants...")
                 dump_paths = [
                     Path(__file__).resolve().parent / "zensustech_dump.sql",
+                    Path(__file__).resolve().parents[1] / "zensustech_dump.sql",
                     Path(__file__).resolve().parents[2] / "zensustech_dump.sql",
                     Path("zensustech_dump.sql"),
                 ]
@@ -397,6 +397,8 @@ def _init_postgres_sync(url: str):
                 print("[DB] PostgreSQL sequences successfully synchronized.")
             except Exception as seq_err:
                 print(f"[DB] Sequence sync note: {seq_err}")
+
+            conn.commit()
 
 
 def _init_sqlite_sync():

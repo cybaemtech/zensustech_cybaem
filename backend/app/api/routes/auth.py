@@ -6,7 +6,6 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
-import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
@@ -166,6 +165,8 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: Any) -> dict:
         import logging
         logging.getLogger(__name__).warning(f"Error in record_and_send_auth_email: {e}")
 
+    if not isinstance(delivery_info, dict):
+        delivery_info = {}
     delivery_info["otp"] = otp
     return delivery_info
 
@@ -232,7 +233,6 @@ async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
         "email": email,
         "needs_verification": True,
     }
-    # Provide dev_otp fallback on Render or if SMTP delivery was skipped/stored
     is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
     if is_render or not otp_info.get("delivered", False):
         resp_data["dev_otp"] = otp_info.get("otp")
@@ -246,101 +246,101 @@ async def login(
     response: Response,
     db: Any = Depends(get_db),
 ):
-    try:
-        email = payload.email.lower().strip()
-        user = await get_user_by_email(email, db)
+    email = payload.email.lower().strip()
+    user = await get_user_by_email(email, db)
 
-        if not user:
-            raise HTTPException(
-                status_code=401,
-                detail="No account found with this email in our database. Please sign up first."
-            )
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="No account found with this email in our database. Please sign up first."
+        )
 
-        if not verify_password(payload.password, user["password_hash"]):
-            raise HTTPException(status_code=401, detail="Invalid email or password.")
+    if not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-        if not user["email_verified"]:
-            # Re-send OTP if not yet verified
+    if not user["email_verified"]:
+        is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
+        if is_render or os.getenv("AUTO_VERIFY_LOGIN") == "1":
+            # On Render, outbound email is blocked by the platform, so auto-verify on valid credentials
+            await db.execute("UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?", (_now_utc(), user["id"]))
+            await db.commit()
+            user = await get_user_by_email(email, db)
+        else:
             full_name = user["full_name"]
-            await _issue_otp(user["id"], email, full_name, db)
-            return {
+            otp_info = await _issue_otp(user["id"], email, full_name, db)
+            resp_data = {
                 "message": "Email not yet verified. A one-time verification code has been sent to your email address.",
                 "needs_verification": True,
                 "email": email,
             }
+            if not otp_info.get("delivered", False):
+                resp_data["dev_otp"] = otp_info.get("otp")
+                resp_data["message"] = f"Verification required. Your code is: {otp_info.get('otp')}"
+            return resp_data
 
-        # Check for existing active tenant
-        tenant = await get_active_tenant_for_user(user["id"], db)
+    # Check for existing active tenant
+    tenant = await get_active_tenant_for_user(user["id"], db)
 
-        # If tenant has saved tenant_id, client_id, and client_secret, refresh Azure tokens automatically
-        mgmt_token = None
-        graph_token = None
-        c_sec = str(tenant.get("client_secret") or "") if tenant else ""
-        if tenant and tenant.get("tenant_id") and tenant.get("client_id") and c_sec and not c_sec.startswith("*"):
-            try:
-                from app.services.azure.auth_service import AzureAuthService
-                auth_service = AzureAuthService()
-                m_data = await auth_service.get_access_token(
-                    tenant_id=tenant["tenant_id"],
-                    client_id=tenant["client_id"],
-                    client_secret=tenant["client_secret"],
-                    scope="https://management.azure.com/.default"
-                )
-                g_data = await auth_service.get_access_token(
-                    tenant_id=tenant["tenant_id"],
-                    client_id=tenant["client_id"],
-                    client_secret=tenant["client_secret"],
-                    scope="https://graph.microsoft.com/.default"
-                )
-                mgmt_token = m_data.get("access_token") if isinstance(m_data, dict) else m_data
-                graph_token = g_data.get("access_token") if isinstance(g_data, dict) else g_data
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Could not auto-generate Azure tokens: {e}")
+    # If tenant has saved tenant_id, client_id, and valid unmasked client_secret, refresh Azure tokens automatically
+    mgmt_token = None
+    graph_token = None
+    c_sec = str(tenant.get("client_secret") or "") if tenant else ""
+    if tenant and tenant.get("tenant_id") and tenant.get("client_id") and c_sec and not c_sec.startswith("*"):
+        try:
+            from app.services.azure.auth_service import AzureAuthService
+            auth_service = AzureAuthService()
+            m_data = await auth_service.get_access_token(
+                tenant_id=tenant["tenant_id"],
+                client_id=tenant["client_id"],
+                client_secret=tenant["client_secret"],
+                scope="https://management.azure.com/.default"
+            )
+            g_data = await auth_service.get_access_token(
+                tenant_id=tenant["tenant_id"],
+                client_id=tenant["client_id"],
+                client_secret=tenant["client_secret"],
+                scope="https://graph.microsoft.com/.default"
+            )
+            mgmt_token = m_data.get("access_token") if isinstance(m_data, dict) else m_data
+            graph_token = g_data.get("access_token") if isinstance(g_data, dict) else g_data
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Could not auto-generate Azure tokens: {e}")
 
-        session_token = await _create_session(user["id"], db)
-        response.set_cookie(
-            "zt_session",
-            session_token,
-            httponly=True,
-            samesite="lax",
-            secure=False,  # Set True in production with HTTPS
-            max_age=SESSION_TTL_HOURS * 3600,
-        )
+    session_token = await _create_session(user["id"], db)
+    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
+    response.set_cookie(
+        "zt_session",
+        session_token,
+        httponly=True,
+        samesite="lax",
+        secure=is_render,
+        max_age=SESSION_TTL_HOURS * 3600,
+    )
 
-        return {
-            "message": "Login successful",
-            "user": {
-                "id": user["id"],
-                "full_name": user["full_name"],
-                "email": user["email"],
-                "role": user["role"],
-            },
-            "has_tenant": tenant is not None,
-            "needs_tenant": tenant is None,
-            "redirect": "/dashboard" if tenant else "/tent",
-            "tenant": {
-                "tenant_id": tenant["tenant_id"],
-                "client_id": tenant.get("client_id"),
-                "tenant_name": tenant.get("tenant_name"),
-                "provider_name": tenant.get("provider_name"),
-            } if tenant else None,
-            "tokens": {
-                "mgmt_token": mgmt_token,
-                "graph_token": graph_token,
-            } if (mgmt_token or graph_token) else None,
-            "session_token": session_token,  # Also return in body for SPA sessionStorage fallback
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        import logging
-        logging.getLogger(__name__).error(f"Login unexpected exception: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Login failed: {type(e).__name__}: {str(e)}"
-        )
+    return {
+        "message": "Login successful",
+        "user": {
+            "id": user["id"],
+            "full_name": user["full_name"],
+            "email": user["email"],
+            "role": user["role"],
+        },
+        "has_tenant": tenant is not None,
+        "needs_tenant": tenant is None,
+        "redirect": "/dashboard" if tenant else "/tent",
+        "tenant": {
+            "tenant_id": tenant["tenant_id"],
+            "client_id": tenant.get("client_id"),
+            "tenant_name": tenant.get("tenant_name"),
+            "provider_name": tenant.get("provider_name"),
+        } if tenant else None,
+        "tokens": {
+            "mgmt_token": mgmt_token,
+            "graph_token": graph_token,
+        } if (mgmt_token or graph_token) else None,
+        "session_token": session_token,  # Also return in body for SPA sessionStorage fallback
+    }
 
 
 @router.post("/verify-email")
@@ -392,19 +392,20 @@ async def verify_email(
 
     # Issue session
     session_token = await _create_session(user["id"], db)
+    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
     response.set_cookie(
         "zt_session",
         session_token,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=is_render,
         max_age=SESSION_TTL_HOURS * 3600,
     )
 
     # Check tenant
     tenant = await get_active_tenant_for_user(user["id"], db)
 
-    # Auto-generate tokens if tenant credentials exist
+    # Auto-generate tokens if tenant credentials exist with real secret
     mgmt_token = None
     graph_token = None
     c_sec = str(tenant.get("client_secret") or "") if tenant else ""

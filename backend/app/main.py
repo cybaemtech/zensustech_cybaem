@@ -144,15 +144,11 @@ from fastapi.responses import FileResponse
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     err_trace = traceback.format_exc()
-    logging.getLogger("uvicorn.error").error(f"Global exception on {request.method} {request.url}: {err_trace}")
+    logging.getLogger('uvicorn.error').error(f'Global exception on {request.method} {request.url}: {err_trace}')
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Server error: {type(exc).__name__}: {str(exc)}"}
+        content={'detail': f'Server error: {type(exc).__name__}: {str(exc)}'}
     )
-
-import os
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
 # The governance router defines its own /governance prefix. api.main includes it
 # once, so its public paths stay aligned with the frontend's /api/v1/governance/* calls.
