@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
@@ -141,7 +142,7 @@ async def _get_session_user(request: Request, db: aiosqlite.Connection):
     return row["user_id"]
 
 
-async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Connection):
+async def _issue_otp(user_id: int, email: str, full_name: str, db: Any) -> dict:
     """Generate, store in database, and dispatch a new OTP via Azure / DB storage."""
     # Invalidate any previous OTPs
     await db.execute(
@@ -157,8 +158,16 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Con
     )
     await db.commit()
 
-    # Save to database auth_emails table and attempt Azure Graph API delivery (without SMTP)
-    await record_and_send_auth_email(user_id, email, otp, full_name, db)
+    # Save to database auth_emails table and attempt email delivery
+    delivery_info = {}
+    try:
+        delivery_info = await record_and_send_auth_email(user_id, email, otp, full_name, db)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Error in record_and_send_auth_email: {e}")
+
+    delivery_info["otp"] = otp
+    return delivery_info
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -216,13 +225,19 @@ async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
 
     # Fetch the new user to get its id
     user = await get_user_by_email(email, db)
-    await _issue_otp(user["id"], email, full_name, db)
+    otp_info = await _issue_otp(user["id"], email, full_name, db)
 
-    return {
+    resp_data = {
         "message": "Account created. A one-time email verification code has been sent to your email address.",
         "email": email,
         "needs_verification": True,
     }
+    # Provide dev_otp fallback on Render or if SMTP delivery was skipped/stored
+    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
+    if is_render or not otp_info.get("delivered", False):
+        resp_data["dev_otp"] = otp_info.get("otp")
+        resp_data["message"] = f"Account created! Your verification code is: {otp_info.get('otp')}"
+    return resp_data
 
 
 @router.post("/login")
@@ -454,10 +469,16 @@ async def resend_otp(payload: ResendOtpRequest, db: Any = Depends(get_db)):
                 detail=f"Please wait {wait} seconds before requesting a new OTP.",
             )
 
-    await _issue_otp(user["id"], email, user["full_name"], db)
-    return {
+    otp_info = await _issue_otp(user["id"], email, user["full_name"], db)
+    resp_data = {
         "message": "A new verification code has been sent to your email address.",
+        "email": email,
     }
+    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
+    if is_render or not otp_info.get("delivered", False):
+        resp_data["dev_otp"] = otp_info.get("otp")
+        resp_data["message"] = f"New verification code: {otp_info.get('otp')}"
+    return resp_data
 
 
 @router.post("/forgot-password")

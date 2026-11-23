@@ -31,6 +31,7 @@ export interface SignupResult {
   message: string;
   email: string;
   needs_verification: boolean;
+  dev_otp?: string;
 }
 
 export interface LoginResult {

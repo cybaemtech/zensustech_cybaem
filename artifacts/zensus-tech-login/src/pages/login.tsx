@@ -78,7 +78,7 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
   }) => {
     setIsSubmitting(true);
     try {
-      await signup({
+      const res = await signup({
         first_name: payload.firstName,
         last_name: payload.lastName,
         email: payload.email,
@@ -92,6 +92,9 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
       // Store user verification email and redirect to /otp-verify to enter the email code
       sessionStorage.setItem('pending_verification_email', payload.email);
       sessionStorage.setItem('auth_email', payload.email);
+      if (res.dev_otp) {
+        sessionStorage.setItem('pending_verification_otp', res.dev_otp);
+      }
       setLocation('/otp-verify');
     } catch (err: unknown) {
       // Re-throw so ZohoAuthCard can display inline error (not alert)

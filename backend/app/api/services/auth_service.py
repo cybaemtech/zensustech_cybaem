@@ -222,20 +222,17 @@ def _send_smtp_sync(
         msg.attach(MIMEText(plain_body, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        ports_to_try = []
-        for p in [smtp_port, 465, 587]:
-            if p not in ports_to_try:
-                ports_to_try.append(p)
+        ports_to_try = [smtp_port] if smtp_port in (587, 465) else [587, 465]
 
         last_error = None
         for port in ports_to_try:
             try:
                 if port == 465:
-                    with smtplib.SMTP_SSL(smtp_host, port, timeout=15) as server:
+                    with smtplib.SMTP_SSL(smtp_host, port, timeout=3) as server:
                         server.login(smtp_user, smtp_pass)
                         server.sendmail(sender_email, [to_email], msg.as_string())
                 else:
-                    with smtplib.SMTP(smtp_host, port, timeout=15) as server:
+                    with smtplib.SMTP(smtp_host, port, timeout=3) as server:
                         server.ehlo()
                         server.starttls()
                         server.ehlo()
@@ -247,8 +244,9 @@ def _send_smtp_sync(
             except Exception as exc:
                 last_error = exc
                 logger.warning(f"SMTP delivery attempt to {to_email} via {smtp_host}:{port} failed: {exc}")
+                break  # Don't keep chaining timeouts
 
-        logger.error(f"All SMTP delivery attempts to {to_email} via {smtp_host} failed: {last_error}")
+        logger.error(f"SMTP delivery to {to_email} via {smtp_host} failed: {last_error}")
         return False
     except Exception as exc:
         logger.error(f"Fatal error preparing/sending SMTP email to {to_email}: {exc}")
@@ -354,25 +352,32 @@ async def record_and_send_auth_email(
             logger.warning(f"SendGrid dispatch exception: {e}")
 
     # 2. Attempt real SMTP delivery via webmail.cybaemtech.com (works locally & on unblocked hosts)
+    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
     if delivery_status == "stored_in_db" and sender_email and smtp_pass:
-        try:
-            delivered = await asyncio.to_thread(
-                _send_smtp_sync,
-                to_email,
-                subject,
-                html_body,
-                plain_body,
-                sender_email,
-                smtp_host,
-                smtp_port,
-                sender_email,
-                smtp_pass,
-            )
-            if delivered:
-                delivery_status = "sent_via_smtp"
-                delivery_method = "smtp"
-        except Exception as e:
-            logger.warning(f"Async SMTP dispatch error: {e}")
+        if is_render and not os.getenv("ENABLE_RENDER_SMTP"):
+            logger.info(f"Running on Render (outbound SMTP ports blocked by platform) — storing OTP in DB without SMTP delay for {to_email}")
+        else:
+            try:
+                delivered = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        _send_smtp_sync,
+                        to_email,
+                        subject,
+                        html_body,
+                        plain_body,
+                        sender_email,
+                        smtp_host,
+                        smtp_port,
+                        sender_email,
+                        smtp_pass,
+                    ),
+                    timeout=4.0
+                )
+                if delivered:
+                    delivery_status = "sent_via_smtp"
+                    delivery_method = "smtp"
+            except Exception as e:
+                logger.warning(f"Async SMTP dispatch error for {to_email}: {e}")
 
     # 3. Always store in database auth_emails table for 100% persistence
     await db.execute(
