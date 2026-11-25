@@ -141,7 +141,7 @@ async def _get_session_user(request: Request, db: aiosqlite.Connection):
     return row["user_id"]
 
 
-async def _issue_otp(user_id: int, email: str, full_name: str, db: Any) -> dict:
+async def _issue_otp(user_id: int, email: str, full_name: str, db: aiosqlite.Connection):
     """Generate, store in database, and dispatch a new OTP via Azure / DB storage."""
     # Invalidate any previous OTPs
     await db.execute(
@@ -157,18 +157,8 @@ async def _issue_otp(user_id: int, email: str, full_name: str, db: Any) -> dict:
     )
     await db.commit()
 
-    # Save to database auth_emails table and attempt email delivery
-    delivery_info = {}
-    try:
-        delivery_info = await record_and_send_auth_email(user_id, email, otp, full_name, db)
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Error in record_and_send_auth_email: {e}")
-
-    if not isinstance(delivery_info, dict):
-        delivery_info = {}
-    delivery_info["otp"] = otp
-    return delivery_info
+    # Save to database auth_emails table and attempt Azure Graph API delivery (without SMTP)
+    await record_and_send_auth_email(user_id, email, otp, full_name, db)
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -226,18 +216,13 @@ async def signup(payload: SignupRequest, db: Any = Depends(get_db)):
 
     # Fetch the new user to get its id
     user = await get_user_by_email(email, db)
-    otp_info = await _issue_otp(user["id"], email, full_name, db)
+    await _issue_otp(user["id"], email, full_name, db)
 
-    resp_data = {
+    return {
         "message": "Account created. A one-time email verification code has been sent to your email address.",
         "email": email,
         "needs_verification": True,
     }
-    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
-    if is_render or not otp_info.get("delivered", False):
-        resp_data["dev_otp"] = otp_info.get("otp")
-        resp_data["message"] = f"Account created! Your verification code is: {otp_info.get('otp')}"
-    return resp_data
 
 
 @router.post("/login")
@@ -259,33 +244,22 @@ async def login(
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     if not user["email_verified"]:
-        is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
-        if is_render or os.getenv("AUTO_VERIFY_LOGIN") == "1":
-            # On Render, outbound email is blocked by the platform, so auto-verify on valid credentials
-            await db.execute("UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?", (_now_utc(), user["id"]))
-            await db.commit()
-            user = await get_user_by_email(email, db)
-        else:
-            full_name = user["full_name"]
-            otp_info = await _issue_otp(user["id"], email, full_name, db)
-            resp_data = {
-                "message": "Email not yet verified. A one-time verification code has been sent to your email address.",
-                "needs_verification": True,
-                "email": email,
-            }
-            if not otp_info.get("delivered", False):
-                resp_data["dev_otp"] = otp_info.get("otp")
-                resp_data["message"] = f"Verification required. Your code is: {otp_info.get('otp')}"
-            return resp_data
+        # Re-send OTP if not yet verified
+        full_name = user["full_name"]
+        await _issue_otp(user["id"], email, full_name, db)
+        return {
+            "message": "Email not yet verified. A one-time verification code has been sent to your email address.",
+            "needs_verification": True,
+            "email": email,
+        }
 
     # Check for existing active tenant
     tenant = await get_active_tenant_for_user(user["id"], db)
 
-    # If tenant has saved tenant_id, client_id, and valid unmasked client_secret, refresh Azure tokens automatically
+    # If tenant has saved tenant_id, client_id, and client_secret, refresh Azure tokens automatically
     mgmt_token = None
     graph_token = None
-    c_sec = str(tenant.get("client_secret") or "") if tenant else ""
-    if tenant and tenant.get("tenant_id") and tenant.get("client_id") and c_sec and not c_sec.startswith("*"):
+    if tenant and tenant.get("tenant_id") and tenant.get("client_id") and tenant.get("client_secret"):
         try:
             from app.services.azure.auth_service import AzureAuthService
             auth_service = AzureAuthService()
@@ -308,13 +282,12 @@ async def login(
             logging.getLogger(__name__).warning(f"Could not auto-generate Azure tokens: {e}")
 
     session_token = await _create_session(user["id"], db)
-    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
     response.set_cookie(
         "zt_session",
         session_token,
         httponly=True,
         samesite="lax",
-        secure=is_render,
+        secure=False,  # Set True in production with HTTPS
         max_age=SESSION_TTL_HOURS * 3600,
     )
 
@@ -392,24 +365,22 @@ async def verify_email(
 
     # Issue session
     session_token = await _create_session(user["id"], db)
-    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
     response.set_cookie(
         "zt_session",
         session_token,
         httponly=True,
         samesite="lax",
-        secure=is_render,
+        secure=False,
         max_age=SESSION_TTL_HOURS * 3600,
     )
 
     # Check tenant
     tenant = await get_active_tenant_for_user(user["id"], db)
 
-    # Auto-generate tokens if tenant credentials exist with real secret
+    # Auto-generate tokens if tenant credentials exist
     mgmt_token = None
     graph_token = None
-    c_sec = str(tenant.get("client_secret") or "") if tenant else ""
-    if tenant and tenant.get("tenant_id") and tenant.get("client_id") and c_sec and not c_sec.startswith("*"):
+    if tenant and tenant.get("tenant_id") and tenant.get("client_id") and tenant.get("client_secret"):
         try:
             from app.services.azure.auth_service import AzureAuthService
             auth_service = AzureAuthService()
@@ -483,16 +454,10 @@ async def resend_otp(payload: ResendOtpRequest, db: Any = Depends(get_db)):
                 detail=f"Please wait {wait} seconds before requesting a new OTP.",
             )
 
-    otp_info = await _issue_otp(user["id"], email, user["full_name"], db)
-    resp_data = {
+    await _issue_otp(user["id"], email, user["full_name"], db)
+    return {
         "message": "A new verification code has been sent to your email address.",
-        "email": email,
     }
-    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
-    if is_render or not otp_info.get("delivered", False):
-        resp_data["dev_otp"] = otp_info.get("otp")
-        resp_data["message"] = f"New verification code: {otp_info.get('otp')}"
-    return resp_data
 
 
 @router.post("/forgot-password")

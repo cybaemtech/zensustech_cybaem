@@ -41,10 +41,6 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    if not plain or not hashed:
-        return False
-    if plain == hashed:
-        return True
     try:
         pw_bytes = plain.encode("utf-8")[:72]
         return bcrypt.checkpw(pw_bytes, hashed.encode("utf-8"))
@@ -358,32 +354,25 @@ async def record_and_send_auth_email(
             logger.warning(f"SendGrid dispatch exception: {e}")
 
     # 2. Attempt real SMTP delivery via webmail.cybaemtech.com (works locally & on unblocked hosts)
-    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
     if delivery_status == "stored_in_db" and sender_email and smtp_pass:
-        if is_render and not os.getenv("ENABLE_RENDER_SMTP"):
-            logger.info(f"Running on Render (outbound SMTP blocked by platform) — storing OTP in DB without SMTP delay for {to_email}")
-        else:
-            try:
-                delivered = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        _send_smtp_sync,
-                        to_email,
-                        subject,
-                        html_body,
-                        plain_body,
-                        sender_email,
-                        smtp_host,
-                        smtp_port,
-                        sender_email,
-                        smtp_pass,
-                    ),
-                    timeout=5.0
-                )
-                if delivered:
-                    delivery_status = "sent_via_smtp"
-                    delivery_method = "smtp"
-            except Exception as e:
-                logger.warning(f"Async SMTP dispatch error: {e}")
+        try:
+            delivered = await asyncio.to_thread(
+                _send_smtp_sync,
+                to_email,
+                subject,
+                html_body,
+                plain_body,
+                sender_email,
+                smtp_host,
+                smtp_port,
+                sender_email,
+                smtp_pass,
+            )
+            if delivered:
+                delivery_status = "sent_via_smtp"
+                delivery_method = "smtp"
+        except Exception as e:
+            logger.warning(f"Async SMTP dispatch error: {e}")
 
     # 3. Always store in database auth_emails table for 100% persistence
     await db.execute(

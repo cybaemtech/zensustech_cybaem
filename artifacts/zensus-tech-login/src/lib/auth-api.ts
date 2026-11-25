@@ -31,7 +31,6 @@ export interface SignupResult {
   message: string;
   email: string;
   needs_verification: boolean;
-  dev_otp?: string;
 }
 
 export interface LoginResult {
@@ -42,7 +41,6 @@ export interface LoginResult {
   needs_verification?: boolean;
   redirect?: string;
   session_token?: string;
-  dev_otp?: string;
   tenant?: {
     tenant_id: string;
     client_id?: string;

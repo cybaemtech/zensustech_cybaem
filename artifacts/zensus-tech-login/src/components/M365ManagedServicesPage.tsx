@@ -164,14 +164,17 @@ export function M365ManagedServicesPage({
     const utilPct  = totalLic > 0 ? Math.round((totalCon/totalLic)*100) : 0;
     const guestCnt = users.filter((u:any) => u.userType==='Guest'||(u.userPrincipalName||'').includes('#EXT#')).length;
     const disCnt   = users.filter((u:any) => u.accountEnabled===false).length;
+    const licensedUsers = users.filter((u:any) => u.isLicensed || (u.license && u.license !== 'Unlicensed'));
+    const inactive15 = licensedUsers.filter((u:any) => typeof u.inactiveDays === 'number' && u.inactiveDays >= 15).length;
+    const inactive30 = licensedUsers.filter((u:any) => typeof u.inactiveDays === 'number' && u.inactiveDays >= 30).length;
     setChecks(CHECKS_DEF.map(c => {
       let status: CheckResult['status'] = 'ok', value: string|number = '—', detail = '';
       switch(c.id) {
         case 'license_inventory':     value=skuList.length; detail=`${skuList.length} SKU(s) subscribed`; break;
         case 'assigned_available':    value=`${totalCon}/${totalLic}`; detail=`${totalUnu} seats available`; status=totalUnu<0?'error':totalUnu<5?'warning':'ok'; break;
         case 'unassigned_report':     value=totalUnu; detail=totalUnu>0?`${totalUnu} unassigned seats`:'All seats assigned'; status=totalUnu>20?'warning':'ok'; break;
-        case 'user_license_map':      value=totalUsers; detail=`${totalUsers} users mapped`; break;
-        case 'inactive_users':        value='—'; detail='Sign-in activity required'; status='idle'; break;
+        case 'user_license_map':      value=`${licensedUsers.length}/${totalUsers}`; detail=`${licensedUsers.length} licensed · ${Math.max(0, totalUsers - licensedUsers.length)} unlicensed`; break;
+        case 'inactive_users':        value=inactive15; detail=inactive15>0?`${inactive15} inactive 15+d (${inactive30} are 30+d)`:'No inactive licensed users (15+d)'; status=inactive30>0?'error':inactive15>0?'warning':'ok'; break;
         case 'license_utilization':   value=`${utilPct}%`; detail=`${utilPct}% utilization`; status=utilPct<60?'warning':'ok'; break;
         case 'admin_privileged':      value=adminCount; detail=`${adminCount} privileged accounts`; status=adminCount>10?'warning':'ok'; break;
         case 'mfa_coverage':          value=mfaEnabled; detail=`${mfaDisabled} without MFA`; status=mfaDisabled>0?'warning':'ok'; break;

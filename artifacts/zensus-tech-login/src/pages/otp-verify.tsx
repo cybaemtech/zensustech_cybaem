@@ -13,7 +13,6 @@ export function OtpVerifyPage() {
   const [isResending, setIsResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [devOtp, setDevOtp] = useState(() => sessionStorage.getItem('pending_verification_otp') || '');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -88,14 +87,10 @@ export function OtpVerifyPage() {
       const res = await verifyOtp(email, otpCode);
       setSuccess('Email verified! Redirecting...');
       sessionStorage.removeItem('pending_verification_email');
-      sessionStorage.removeItem('pending_verification_otp');
       if (res.user) {
         sessionStorage.setItem('auth_user', JSON.stringify(res.user));
         sessionStorage.setItem('is_authenticated', 'true');
         sessionStorage.setItem('auth_email', email);
-      }
-      if (res.session_token) {
-        sessionStorage.setItem('zt_session', res.session_token);
       }
       // If user already has a tenant, skip /tent and go straight to dashboard
       if (res.has_tenant && res.tenant) {
@@ -128,14 +123,10 @@ export function OtpVerifyPage() {
     setIsResending(true);
     setError('');
     try {
-      const res = await resendOtp(email);
+      await resendOtp(email);
       setTimeLeft(300);
       setResendCooldown(60);
       setOtp(Array(6).fill(''));
-      if ((res as any)?.dev_otp) {
-        sessionStorage.setItem('pending_verification_otp', (res as any).dev_otp);
-        setDevOtp((res as any).dev_otp);
-      }
       inputRefs.current[0]?.focus();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
@@ -185,25 +176,6 @@ export function OtpVerifyPage() {
             <div className="mt-2 text-[11px] text-amber-800 bg-amber-50 rounded-lg p-2 border border-amber-200/80">
               📌 <strong>Important:</strong> If not visible in your Primary Inbox, please check your <strong>Spam / Junk</strong> folder.
             </div>
-            {devOtp && (
-              <div className="mt-2.5 text-xs text-sky-900 bg-sky-50 rounded-xl p-2.5 border border-sky-200/90 flex items-center justify-between shadow-xs">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <ShieldCheck className="w-4 h-4 text-sky-600" />
-                  Code: <strong className="font-mono text-sm tracking-widest text-sky-700">{devOtp}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const digits = devOtp.trim().split('').slice(0, 6);
-                    setOtp(digits);
-                    handleVerify(devOtp.trim());
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition shadow-xs cursor-pointer"
-                >
-                  Auto-fill Code
-                </button>
-              </div>
-            )}
           </div>
           {/* Success message */}
           {success && (

@@ -3,7 +3,7 @@ Response models for API endpoints.
 """
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 class AzureApplication(BaseModel):
     id: str
@@ -18,13 +18,26 @@ class ApplicationsResponse(BaseModel):
     
 class UserResponse(BaseModel):
     """User response model."""
+    model_config = ConfigDict(extra="allow")
 
+    id: Optional[str] = None
     user: str
+    displayName: Optional[str] = None
+    email: Optional[str] = None
+    userPrincipalName: Optional[str] = None
     principalType: Optional[str] = None
     role: str
+    roles: Optional[List[str]] = None
     subscription: Optional[str] = None
+    license: Optional[str] = "Unlicensed"
+    licenses: Optional[List[str]] = None
+    isLicensed: Optional[bool] = False
     mfa: str
+    mfaEnabled: Optional[bool] = None
     lastLogin: Optional[str] = None
+    lastActivityDate: Optional[str] = None
+    inactiveDays: Optional[int] = None
+    inactiveSeverity: Optional[str] = "none"
     status: str
     risk: str
 
@@ -43,10 +56,13 @@ class User(BaseModel):
 
 class UsersResponse(BaseModel):
     """Response model for users endpoint."""
+    model_config = ConfigDict(extra="allow")
 
     users: List[UserResponse]
     foreignGroupsCount: Optional[int] = None
     servicePrincipalsCount: Optional[int] = None
+    liveData: Optional[bool] = True
+    source: Optional[str] = "graph"
 
 
 class LicenseUsageData(BaseModel):

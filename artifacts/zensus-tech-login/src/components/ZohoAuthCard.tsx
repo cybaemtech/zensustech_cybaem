@@ -234,10 +234,6 @@ export function ZohoAuthCard({
           email: signUpEmail.trim(),
           password: signUpPassword,
           role: accountType,
-          phone: phone.trim(),
-          organization: orgName.trim(),
-          customer: customer.trim(),
-          vendorCode: vendorCode,
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';

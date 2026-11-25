@@ -20,10 +20,6 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    if not plain_password or not hashed_password:
-        return False
-    if plain_password == hashed_password:
-        return True
     try:
         pw_bytes = plain_password.encode("utf-8")[:72]
         return bcrypt.checkpw(pw_bytes, hashed_password.encode("utf-8"))

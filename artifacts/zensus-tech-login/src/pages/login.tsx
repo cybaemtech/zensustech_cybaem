@@ -18,16 +18,9 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
       const res = await login(userEmail, userPassword || '');
 
       // Store basic user info for ProtectedRoute checks
-      sessionStorage.setItem('auth_email', userEmail);
       if (res.user) {
         sessionStorage.setItem('auth_user', JSON.stringify(res.user));
         sessionStorage.setItem('is_authenticated', 'true');
-      }
-      if (res.session_token) {
-        sessionStorage.setItem('zt_session', res.session_token);
-      }
-      if (res.dev_otp) {
-        sessionStorage.setItem('pending_verification_otp', res.dev_otp);
       }
 
       if (res.needs_verification) {
@@ -85,7 +78,7 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
   }) => {
     setIsSubmitting(true);
     try {
-      const res = await signup({
+      await signup({
         first_name: payload.firstName,
         last_name: payload.lastName,
         email: payload.email,
@@ -99,9 +92,6 @@ export function LoginPage({ initialMode: propMode }: { initialMode?: 'signin' | 
       // Store user verification email and redirect to /otp-verify to enter the email code
       sessionStorage.setItem('pending_verification_email', payload.email);
       sessionStorage.setItem('auth_email', payload.email);
-      if (res.dev_otp) {
-        sessionStorage.setItem('pending_verification_otp', res.dev_otp);
-      }
       setLocation('/otp-verify');
     } catch (err: unknown) {
       // Re-throw so ZohoAuthCard can display inline error (not alert)

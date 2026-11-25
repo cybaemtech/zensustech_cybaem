@@ -35,10 +35,6 @@ def get_pg_url() -> str:
     url = os.getenv("DATABASE_URL", "postgresql://postgres:root@localhost:5432/zensustech")
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
-    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID") or "render.com" in url or "dpg-" in url)
-    if is_render and "localhost" not in url and "127.0.0.1" not in url and "sslmode" not in url:
-        sep = "&" if "?" in url else "?"
-        url = f"{url}{sep}sslmode=require"
     return url
 
 
@@ -54,22 +50,17 @@ def check_postgres() -> bool:
         USE_POSTGRES = False
         return False
     url = get_pg_url()
-    timeout = 10 if (os.getenv("RENDER") or "render.com" in url or "dpg-" in url) else 5
-    for attempt in range(2):
-        try:
-            with psycopg.connect(url, connect_timeout=timeout) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT 1")
-                    USE_POSTGRES = True
-                    return True
-        except Exception as e:
-            safe_url = url.split("@")[-1] if "@" in url else url
-            print(f"[DB] PostgreSQL check attempt {attempt + 1} note ({safe_url}): {e}")
-            if attempt == 0:
-                import time
-                time.sleep(1.0)
-    USE_POSTGRES = False
-    return False
+    try:
+        with psycopg.connect(url, connect_timeout=3) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                USE_POSTGRES = True
+                return True
+    except Exception as e:
+        safe_url = url.split("@")[-1] if "@" in url else url
+        print(f"[DB] PostgreSQL check failed ({safe_url}): {e}")
+        USE_POSTGRES = False
+        return False
 
 
 def is_postgres() -> bool:
@@ -356,47 +347,6 @@ def _init_postgres_sync(url: str):
             cur.execute("CREATE INDEX IF NOT EXISTS idx_ut_user_id ON user_tenants(user_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(session_token_hash);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_auth_emails_recipient ON auth_emails(recipient_email);")
-
-            # Check if database is empty/fresh (e.g. newly deployed on Render)
-            cur.execute("SELECT COUNT(*) AS cnt FROM users;")
-            count_res = cur.fetchone()
-            u_count = count_res.get("cnt", 0) if isinstance(count_res, dict) else (count_res[0] if count_res else 0)
-            if u_count == 0:
-                print("[DB] Empty database detected on startup. Auto-seeding initial users, organizations, and tenants...")
-                dump_paths = [
-                    Path(__file__).resolve().parent / "zensustech_dump.sql",
-                    Path(__file__).resolve().parents[1] / "zensustech_dump.sql",
-                    Path(__file__).resolve().parents[2] / "zensustech_dump.sql",
-                    Path("zensustech_dump.sql"),
-                ]
-                for dp in dump_paths:
-                    if dp.is_file():
-                        try:
-                            sql_commands = dp.read_text(encoding="utf-8")
-                            cur.execute(sql_commands)
-                            conn.commit()
-                            print(f"[DB] Initial seed data successfully applied from {dp.name}")
-                            break
-                        except Exception as seed_err:
-                            print(f"[DB] Seed application note: {seed_err}")
-
-            # Synchronize all SERIAL sequences so new inserts never hit duplicate key error
-            try:
-                cur.execute("""
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-                """)
-                for r in cur.fetchall():
-                    tbl_name = r["table_name"] if isinstance(r, dict) else r[0]
-                    try:
-                        cur.execute(f"SELECT setval(pg_get_serial_sequence('{tbl_name}', 'id'), COALESCE((SELECT MAX(id) FROM {tbl_name}), 0) + 1, false);")
-                    except Exception:
-                        pass
-                conn.commit()
-                print("[DB] PostgreSQL sequences successfully synchronized.")
-            except Exception as seq_err:
-                print(f"[DB] Sequence sync note: {seq_err}")
 
             conn.commit()
 

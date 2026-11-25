@@ -2,7 +2,8 @@
 Azure user service for user management and role assignment operations.
 """
 import httpx
-from typing import Dict, List, Set
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Set
 
 from app.core.config import settings
 from app.core.exceptions import AzureAPIError
@@ -185,23 +186,96 @@ class UserService:
                 "foreignGroupsCount": fg_count,
             }
 
+    _SKU_FRIENDLY_NAMES: Dict[str, str] = {
+        "O365_BUSINESS_ESSENTIALS": "Microsoft 365 Business Basic",
+        "O365_BUSINESS_PREMIUM": "Microsoft 365 Business Standard",
+        "SMB_BUSINESS_PREMIUM": "Microsoft 365 Business Standard",
+        "SPB": "Microsoft 365 Business Premium",
+        "O365_BUSINESS": "Microsoft 365 Apps for Business",
+        "POWER_BI_STANDARD": "Power BI Standard (Free)",
+        "POWER_BI_PRO": "Power BI Pro",
+        "FLOW_FREE": "Microsoft Power Automate Free",
+        "STANDARDPACK": "Office 365 E1",
+        "ENTERPRISEPACK": "Office 365 E3",
+        "ENTERPRISEPREMIUM": "Office 365 E5",
+        "EXCHANGESTANDARD": "Exchange Online (Plan 1)",
+        "EXCHANGEENTERPRISE": "Exchange Online (Plan 2)",
+        "AAD_PREMIUM": "Microsoft Entra ID P1",
+        "AAD_PREMIUM_P2": "Microsoft Entra ID P2",
+        "TEAMS_EXPLORATORY": "Microsoft Teams Exploratory",
+    }
+
+    @staticmethod
+    def _parse_iso_dt(val: Optional[str]) -> Optional[datetime]:
+        if not val:
+            return None
+        try:
+            return datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+        except Exception:
+            return None
+
     async def get_tenant_users(self) -> List[Dict]:
         """
-        Get all users from the tenant with their roles and MFA status.
+        Get all users from the tenant with their roles, MFA status, assigned licenses,
+        and last activity / inactivity days.
 
         Returns:
             List of user dictionaries
         """
         try:
-    # 1. Fetch initial user list
-            all_users = await self.graph_service.get_users(
-                select_fields=["id", "displayName", "userPrincipalName", "userType", "accountEnabled"]
-            )
+            # 0. Build SKU ID -> Friendly Name map from subscribedSkus
+            sku_map: Dict[str, str] = {}
+            try:
+                skus = await self.graph_service.get_license_and_usage()
+                for sku in skus or []:
+                    sid = sku.get("skuId")
+                    part = sku.get("skuPartNumber") or ""
+                    if sid:
+                        sku_map[sid] = self._SKU_FRIENDLY_NAMES.get(
+                            part, part.replace("_", " ").title() if part else sid
+                        )
+            except Exception as sku_err:
+                logger.warning("Could not fetch subscribedSkus for license mapping: %s", sku_err)
+
+            # 1. Fetch initial user list (try with signInActivity first; non-premium tenants return 403)
+            base_fields = [
+                "id",
+                "displayName",
+                "userPrincipalName",
+                "userType",
+                "accountEnabled",
+                "assignedLicenses",
+                "createdDateTime",
+                "lastPasswordChangeDateTime",
+                "refreshTokensValidFromDateTime",
+            ]
+            try:
+                all_users = await self.graph_service.get_users(
+                    select_fields=base_fields + ["signInActivity"]
+                )
+            except AzureAPIError:
+                all_users = await self.graph_service.get_users(select_fields=base_fields)
 
             if not all_users:
                 logger.warning("No users found in the tenant.")
                 return []
 
+            # Fetch recent directory audits to enrich user activity dates if available
+            audit_activity_map: Dict[str, datetime] = {}
+            try:
+                audits = await self.graph_service.get_audit_logs()
+                for log in audits or []:
+                    dt = self._parse_iso_dt(log.get("activityDateTime"))
+                    if not dt:
+                        continue
+                    init_user = (log.get("initiatedBy") or {}).get("user") or {}
+                    uid = init_user.get("id")
+                    if uid and (uid not in audit_activity_map or dt > audit_activity_map[uid]):
+                        audit_activity_map[uid] = dt
+            except Exception:
+                pass
+
+            now_utc = datetime.now(timezone.utc)
             final_report = []
 
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -233,7 +307,6 @@ class UserService:
                         batch_result = {}
                     
                     # 3. Standardize the Map
-                    # Based on your logs, batch_result is already the keyed dictionary
                     batch_map = batch_result if isinstance(batch_result, dict) else {}
 
                     # 4. Process each user in the chunk
@@ -242,7 +315,6 @@ class UserService:
                         display_name = user.get("displayName", "Unknown")
                         
                         # --- ROLE DATA EXTRACTION ---
-                        # Path: batch_map -> roles-id -> body -> value
                         role_res = batch_map.get(f"roles-{uid}", {})
                         role_body = role_res.get("body", {})
                         member_of_data = role_body.get("value", [])
@@ -267,17 +339,61 @@ class UserService:
                             roles_string = priv_roles_list[0]
 
                         # --- MFA DATA EXTRACTION ---
-                        # Path: batch_map -> mfa-id -> body -> value
                         mfa_res = batch_map.get(f"mfa-{uid}", {})
                         mfa_body = mfa_res.get("body", {})
-                        # Handle cases where body might be a list or a dict containing 'value'
                         mfa_data = mfa_body.get("value", []) if isinstance(mfa_body, dict) else []
                         
-                        # 3. Improved logic: Check for valid MFA methods
                         mfa_enabled = any(
                             "passwordauthenticationmethod" not in str(m.get("@odata.type", "")).lower()
                             for m in mfa_data
                         )
+
+                        # --- LICENSE MAPPING ---
+                        assigned_raw = user.get("assignedLicenses") or []
+                        mapped_licenses: List[str] = []
+                        for lic in assigned_raw:
+                            sid = lic.get("skuId")
+                            if sid:
+                                mapped_licenses.append(sku_map.get(sid, sid))
+
+                        # Sort so paid M365 suites appear before "(Free)" add-ons
+                        mapped_licenses.sort(key=lambda name: (1 if "(Free)" in name else 0, name))
+                        is_licensed = len(mapped_licenses) > 0
+                        license_display = ", ".join(mapped_licenses) if is_licensed else "Unlicensed"
+
+                        # --- LAST ACTIVITY & INACTIVITY DAYS (Sysdate - Last Activity Date) ---
+                        sign_in_activity = user.get("signInActivity") or {}
+                        candidate_dates = [
+                            self._parse_iso_dt(sign_in_activity.get("lastSignInDateTime")),
+                            self._parse_iso_dt(sign_in_activity.get("lastNonInteractiveSignInDateTime")),
+                            audit_activity_map.get(uid),
+                            self._parse_iso_dt(user.get("refreshTokensValidFromDateTime")),
+                            self._parse_iso_dt(user.get("lastPasswordChangeDateTime")),
+                            self._parse_iso_dt(user.get("createdDateTime")),
+                        ]
+                        valid_dates = [d for d in candidate_dates if d is not None]
+                        last_act_dt = max(valid_dates) if valid_dates else None
+
+                        if last_act_dt is not None:
+                            inactive_days = max(0, (now_utc.date() - last_act_dt.astimezone(timezone.utc).date()).days)
+                            last_activity_date = last_act_dt.strftime("%Y-%m-%d")
+                            last_login_display = (
+                                f"{last_activity_date} (Today)"
+                                if inactive_days == 0
+                                else f"{last_activity_date} ({inactive_days}d ago)"
+                            )
+                        else:
+                            inactive_days = None
+                            last_activity_date = None
+                            last_login_display = "Unknown"
+
+                        # Highlighting rule: License != Unlicensed AND inactive >= 15 / >= 30 days
+                        if is_licensed and inactive_days is not None and inactive_days >= 30:
+                            inactive_severity = "critical"
+                        elif is_licensed and inactive_days is not None and inactive_days >= 15:
+                            inactive_severity = "warning"
+                        else:
+                            inactive_severity = "none"
 
                         # --- REPORT ASSEMBLY ---
                         account_enabled = user.get("accountEnabled", True)
@@ -290,6 +406,7 @@ class UserService:
                             risk = "High" if not account_enabled else "Medium"
 
                         final_report.append({
+                            "id": uid,
                             "user": display_name,
                             "displayName": display_name,
                             "email": user.get("userPrincipalName") or "N/A",
@@ -302,6 +419,13 @@ class UserService:
                             "risk": risk,
                             "principalType": user.get("userType", "Member"),
                             "subscription": "Microsoft 365",
+                            "license": license_display,
+                            "licenses": mapped_licenses,
+                            "isLicensed": is_licensed,
+                            "lastActivityDate": last_activity_date,
+                            "inactiveDays": inactive_days,
+                            "inactiveSeverity": inactive_severity,
+                            "lastLogin": last_login_display,
                         })
 
             logger.info(f"Successfully processed {len(final_report)} users.")

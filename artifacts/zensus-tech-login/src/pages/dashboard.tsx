@@ -1764,6 +1764,27 @@ export default function Dashboard() {
 
                   {showUsersTable && (
                     <div className="overflow-x-auto">
+                      {/* Inactive Licensed Users Legend */}
+                      <div className="px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[0.7rem]">
+                        <div className="flex flex-wrap items-center gap-4">
+                          <span className="font-semibold text-slate-600">License Inactivity Policy:</span>
+                          <span className="inline-flex items-center gap-1.5 text-slate-700">
+                            <span className="w-3 h-3 rounded bg-lime-100 border border-lime-400 inline-block" />
+                            <span>Licensed &amp; Inactive 15–29 Days</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 text-slate-700">
+                            <span className="w-3 h-3 rounded bg-red-100 border border-red-400 inline-block" />
+                            <span>Licensed &amp; Inactive 30+ Days</span>
+                          </span>
+                        </div>
+                        <span className="text-slate-500 font-medium">
+                          {filteredUsers.filter((u: any) => {
+                            const lic = u.license && u.license !== 'Unlicensed';
+                            const d = typeof u.inactiveDays === 'number' ? u.inactiveDays : null;
+                            return lic && d !== null && d >= 15;
+                          }).length} licensed inactive user(s)
+                        </span>
+                      </div>
                       <table className="w-full text-left text-xs">
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase text-[0.65rem] tracking-wider font-semibold">
@@ -1776,8 +1797,26 @@ export default function Dashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {filteredUsers.map((user, idx) => (
-                            <tr key={user.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                          {filteredUsers.map((user, idx) => {
+                            const licenseLabel = user.license || 'Unlicensed';
+                            const isLicensed = licenseLabel !== 'Unlicensed';
+                            const rawDate = user.lastActivityDate || user.createdDateTime;
+                            const inactiveDays: number | null =
+                              typeof user.inactiveDays === 'number'
+                                ? user.inactiveDays
+                                : rawDate && !Number.isNaN(Date.parse(rawDate))
+                                ? Math.max(0, Math.floor((Date.now() - Date.parse(rawDate)) / 86400000))
+                                : null;
+                            const isCriticalInactive = isLicensed && inactiveDays !== null && inactiveDays >= 30;
+                            const isWarningInactive = isLicensed && inactiveDays !== null && inactiveDays >= 15 && inactiveDays < 30;
+                            const rowHighlightClass = isCriticalInactive
+                              ? 'bg-red-50/90 hover:bg-red-100/80 border-l-4 border-l-red-400'
+                              : isWarningInactive
+                              ? 'bg-lime-50/90 hover:bg-lime-100/80 border-l-4 border-l-lime-400'
+                              : 'hover:bg-slate-50/80';
+
+                            return (
+                            <tr key={user.id || idx} className={`${rowHighlightClass} transition-colors`}>
                               <td className="py-3.5 px-5">
                                 <div className="flex items-center gap-3">
                                   <div className={`h-8 w-8 rounded-full text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm ${
@@ -1794,12 +1833,12 @@ export default function Dashboard() {
                                 </div>
                               </td>
                               <td className="py-3.5 px-5">
-                                <span className={`px-2.5 py-1 rounded-md text-[0.7rem] font-medium border ${
-                                  (user.license || '').includes('Business Basic')
+                                <span className={`inline-block px-2.5 py-1 rounded-md text-[0.7rem] font-medium border ${
+                                  isLicensed
                                     ? 'bg-blue-50 text-blue-700 border-blue-200 font-semibold'
                                     : 'bg-slate-50 text-slate-500 border-slate-200'
                                 }`}>
-                                  {user.license || 'Unlicensed'}
+                                  {licenseLabel}
                                 </span>
                               </td>
                               <td className="py-3.5 px-5">
@@ -1830,11 +1869,25 @@ export default function Dashboard() {
                                   {user.mfa === 'Disabled' || user.mfaEnabled === false ? 'Disabled' : 'Enabled'}
                                 </span>
                               </td>
-                              <td className="py-3.5 px-5 text-slate-500 text-[0.75rem]">
-                                {user.lastLogin || 'Recent'}
+                              <td className="py-3.5 px-5 text-slate-600 text-[0.75rem]">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span>{user.lastActivityDate || user.lastLogin || 'Unknown'}</span>
+                                  {inactiveDays !== null && (
+                                    <span className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
+                                      isCriticalInactive
+                                        ? 'bg-red-100 text-red-700 border border-red-300'
+                                        : isWarningInactive
+                                        ? 'bg-lime-200 text-lime-900 border border-lime-400'
+                                        : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                      {inactiveDays === 0 ? 'Today' : `${inactiveDays}d inactive`}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
