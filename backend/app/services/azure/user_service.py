@@ -275,6 +275,41 @@ class UserService:
             except Exception:
                 pass
 
+            # Fetch devices with approximateLastSignInDateTime and map to owner UPNs.
+            # This is the most reliable activity signal for non-P1/P2 tenants (which return 403 on /signInActivity).
+            device_activity_map: Dict[str, datetime] = {}  # upn.lower() -> last sign-in datetime
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as dev_client:
+                    dev_res = await dev_client.get(
+                        "https://graph.microsoft.com/v1.0/devices?$top=999&$select=id,displayName,approximateLastSignInDateTime",
+                        headers=self.headers,
+                    )
+                    if dev_res.status_code == 200:
+                        for dev in dev_res.json().get("value", []):
+                            dev_dt_str = dev.get("approximateLastSignInDateTime")
+                            if not dev_dt_str:
+                                continue
+                            dev_dt = self._parse_iso_dt(dev_dt_str)
+                            if not dev_dt:
+                                continue
+                            did = dev.get("id")
+                            if not did:
+                                continue
+                            ow_res = await dev_client.get(
+                                f"https://graph.microsoft.com/v1.0/devices/{did}/registeredOwners?$select=id,userPrincipalName",
+                                headers=self.headers,
+                                timeout=10.0,
+                            )
+                            if ow_res.status_code == 200:
+                                for ow in ow_res.json().get("value", []):
+                                    owner_upn = (ow.get("userPrincipalName") or "").lower()
+                                    if owner_upn:
+                                        existing = device_activity_map.get(owner_upn)
+                                        if existing is None or dev_dt > existing:
+                                            device_activity_map[owner_upn] = dev_dt
+            except Exception as dev_err:
+                logger.warning("Device sign-in enrichment failed (non-critical): %s", dev_err)
+
             now_utc = datetime.now(timezone.utc)
             final_report = []
 
@@ -363,13 +398,15 @@ class UserService:
 
                         # --- LAST ACTIVITY & INACTIVITY DAYS (Sysdate - Last Activity Date) ---
                         sign_in_activity = user.get("signInActivity") or {}
+                        upn_lower = (user.get("userPrincipalName") or "").lower()
                         candidate_dates = [
+                            # Priority 1: Device approximateLastSignInDateTime (most accurate for non-P1/P2 tenants)
+                            device_activity_map.get(upn_lower),
                             self._parse_iso_dt(sign_in_activity.get("lastSignInDateTime")),
                             self._parse_iso_dt(sign_in_activity.get("lastNonInteractiveSignInDateTime")),
                             audit_activity_map.get(uid),
-                            self._parse_iso_dt(user.get("refreshTokensValidFromDateTime")),
-                            self._parse_iso_dt(user.get("lastPasswordChangeDateTime")),
-                            self._parse_iso_dt(user.get("createdDateTime")),
+                            # NOTE: refreshTokens/lastPasswordChange/createdDateTime are fallback only
+                            # and are intentionally NOT included as they are not real sign-in signals.
                         ]
                         valid_dates = [d for d in candidate_dates if d is not None]
                         last_act_dt = max(valid_dates) if valid_dates else None

@@ -131,9 +131,35 @@ class M365SyncService:
             groups_res = await client.get("https://graph.microsoft.com/v1.0/groups?$top=999&$select=id,displayName")
             groups_count = len(groups_res.json().get("value", [])) if groups_res.status_code == 200 else 9
 
-            devices_res = await client.get("https://graph.microsoft.com/v1.0/devices?$top=999&$select=id,displayName,isCompliant,isManaged")
+            # Devices with approximateLastSignInDateTime for user activity enrichment
+            devices_res = await client.get("https://graph.microsoft.com/v1.0/devices?$top=999&$select=id,displayName,approximateLastSignInDateTime,isCompliant,isManaged")
             devices = devices_res.json().get("value", []) if devices_res.status_code == 200 else []
             devices_count = len(devices)
+
+            # Build device-owner activity map: upn.lower() -> approximateLastSignInDateTime ISO string
+            # This provides real sign-in dates for non-P1/P2 tenants that return 403 on /signInActivity
+            device_activity_map: Dict[str, str] = {}
+            for dev in devices:
+                dev_dt = dev.get("approximateLastSignInDateTime")
+                if not dev_dt:
+                    continue
+                did = dev.get("id")
+                if not did:
+                    continue
+                try:
+                    ow_res = await client.get(
+                        f"https://graph.microsoft.com/v1.0/devices/{did}/registeredOwners?$select=id,userPrincipalName",
+                        timeout=10.0,
+                    )
+                    if ow_res.status_code == 200:
+                        for ow in ow_res.json().get("value", []):
+                            owner_upn = (ow.get("userPrincipalName") or "").lower()
+                            if owner_upn:
+                                existing = device_activity_map.get(owner_upn)
+                                if not existing or dev_dt > existing:
+                                    device_activity_map[owner_upn] = dev_dt
+                except Exception:
+                    pass
 
             apps_res = await client.get("https://graph.microsoft.com/v1.0/applications?$top=999&$select=id,displayName,appId")
             apps_count = len(apps_res.json().get("value", [])) if apps_res.status_code == 200 else 5
@@ -229,18 +255,24 @@ class M365SyncService:
                         licensed_users_count += 1
                     lic_str = ", ".join(assigned_names) if assigned_names else "Unlicensed"
 
-                    created_str = u.get("createdDateTime")
                     upn_lower = upn.lower()
-                    act_str = audit_dates.get(upn_lower) or created_str
-                    inactive_days = 0
-                    act_dt = None
-                    if act_str:
-                        try:
-                            clean_str = act_str.replace("Z", "+00:00")
-                            act_dt = datetime.fromisoformat(clean_str)
-                            inactive_days = max(0, (now - act_dt).days)
-                        except Exception:
-                            pass
+                    # Priority order: device sign-in (most accurate for non-P1/P2 tenants) > audit > created
+                    candidate_strs = [
+                        device_activity_map.get(upn_lower),
+                        audit_dates.get(upn_lower),
+                        u.get("refreshTokensValidFromDateTime"),
+                        u.get("lastPasswordChangeDateTime"),
+                        u.get("createdDateTime"),
+                    ]
+                    candidate_dts = []
+                    for s in candidate_strs:
+                        if s:
+                            try:
+                                candidate_dts.append(datetime.fromisoformat(s.replace("Z", "+00:00")))
+                            except Exception:
+                                pass
+                    act_dt = max(candidate_dts) if candidate_dts else None
+                    inactive_days = max(0, (now - act_dt).days) if act_dt else 0
 
                     severity = "none"
                     if is_lic and inactive_days >= 30:

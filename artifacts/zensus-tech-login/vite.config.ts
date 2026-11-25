@@ -491,11 +491,12 @@ function azureVerificationPlugin() {
               const rawList = Array.isArray(usersData?.value) ? usersData.value : [];
               if (rawList.length > 0) {
                 // Fetch directory roles, subscribedSkus, and recent directoryAudits in parallel
-                const [rolesRes, defsRes, skusRes, auditsRes] = await Promise.all([
+                const [rolesRes, defsRes, skusRes, auditsRes, devicesRes] = await Promise.all([
                   graphGet(graphToken, '/roleManagement/directory/roleAssignments'),
                   graphGet(graphToken, '/roleManagement/directory/roleDefinitions'),
                   graphGet(graphToken, '/subscribedSkus').catch(() => ({ value: [] })),
                   graphGet(graphToken, '/auditLogs/directoryAudits?$top=50').catch(() => ({ value: [] })),
+                  graphGet(graphToken, '/devices?$top=999&$select=id,displayName,approximateLastSignInDateTime').catch(() => ({ value: [] })),
                 ]);
                 const skuMap: Record<string, string> = {};
                 for (const s of (skusRes?.value || [])) {
@@ -512,6 +513,31 @@ function azureVerificationPlugin() {
                     auditActMap[uid] = ts;
                   }
                 }
+
+                // Build device activity map: upn.lower() -> epoch ms (most accurate for non-P1/P2 tenants)
+                const deviceActMap: Record<string, number> = {};
+                try {
+                  for (const dev of (devicesRes?.value || [])) {
+                    const devDtStr = dev?.approximateLastSignInDateTime;
+                    if (!devDtStr) continue;
+                    const devTs = Date.parse(devDtStr);
+                    if (Number.isNaN(devTs)) continue;
+                    const devId = dev?.id;
+                    if (!devId) continue;
+                    const owRes = await fetch(`https://graph.microsoft.com/v1.0/devices/${devId}/registeredOwners?$select=id,userPrincipalName`, {
+                      headers: { Authorization: `Bearer ${graphToken}` }
+                    });
+                    if (owRes.ok) {
+                      const owData = await owRes.json();
+                      for (const ow of (owData?.value || [])) {
+                        const owUpn = (ow?.userPrincipalName || '').toLowerCase();
+                        if (owUpn && (!deviceActMap[owUpn] || devTs > deviceActMap[owUpn])) {
+                          deviceActMap[owUpn] = devTs;
+                        }
+                      }
+                    }
+                  }
+                } catch {}
                 const defMap: Record<string, string> = {};
                 for (const d of (defsRes?.value || [])) {
                   if (d.id && d.displayName) defMap[d.id] = d.displayName;
@@ -580,13 +606,15 @@ function azureVerificationPlugin() {
 
                   // Last activity & inactivity days (Sysdate - Last Activity Date)
                   const sa = u.signInActivity || {};
+                  const upnLower = (u.userPrincipalName || '').toLowerCase();
                   const candidates = [
+                    // Priority 1: device sign-in (most reliable for non-P1/P2 tenants)
+                    deviceActMap[upnLower] ?? NaN,
                     sa.lastSignInDateTime ? Date.parse(sa.lastSignInDateTime) : NaN,
                     sa.lastNonInteractiveSignInDateTime ? Date.parse(sa.lastNonInteractiveSignInDateTime) : NaN,
                     auditActMap[u.id] ?? NaN,
-                    u.refreshTokensValidFromDateTime ? Date.parse(u.refreshTokensValidFromDateTime) : NaN,
-                    u.lastPasswordChangeDateTime ? Date.parse(u.lastPasswordChangeDateTime) : NaN,
-                    u.createdDateTime ? Date.parse(u.createdDateTime) : NaN,
+                    // NOTE: refreshTokens/lastPasswordChange/createdDateTime deliberately excluded
+                    // as they are not real sign-in signals and produce wildly wrong inactivity counts.
                   ].filter((t) => !Number.isNaN(t));
                   const lastActMs = candidates.length > 0 ? Math.max(...candidates) : null;
                   const lastActivityDate = lastActMs !== null ? new Date(lastActMs).toISOString().slice(0, 10) : null;
