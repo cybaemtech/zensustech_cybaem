@@ -456,19 +456,62 @@ function azureVerificationPlugin() {
           try {
             const graphToken = await getAzureToken(creds.tenantId, creds.clientId, creds.clientSecret, 'https://graph.microsoft.com/.default');
             console.log('[tenant/users] TIER 1: Trying Microsoft Graph /users...');
-            const graphRes = await fetch(
-              'https://graph.microsoft.com/v1.0/users?$select=id,displayName,userPrincipalName,userType,accountEnabled,createdDateTime&$top=999',
+            const SKU_NAMES: Record<string, string> = {
+              O365_BUSINESS_ESSENTIALS: 'Microsoft 365 Business Basic',
+              O365_BUSINESS_PREMIUM: 'Microsoft 365 Business Standard',
+              SMB_BUSINESS_PREMIUM: 'Microsoft 365 Business Standard',
+              SPB: 'Microsoft 365 Business Premium',
+              O365_BUSINESS: 'Microsoft 365 Apps for Business',
+              POWER_BI_STANDARD: 'Microsoft Fabric (Free)',
+              POWER_BI_PRO: 'Power BI Pro',
+              FLOW_FREE: 'Microsoft Power Automate Free',
+              STANDARDPACK: 'Office 365 E1',
+              ENTERPRISEPACK: 'Office 365 E3',
+              ENTERPRISEPREMIUM: 'Office 365 E5',
+              EXCHANGESTANDARD: 'Exchange Online (Plan 1)',
+              EXCHANGEENTERPRISE: 'Exchange Online (Plan 2)',
+              AAD_PREMIUM: 'Microsoft Entra ID P1',
+              AAD_PREMIUM_P2: 'Microsoft Entra ID P2',
+              TEAMS_EXPLORATORY: 'Microsoft Teams Exploratory',
+            };
+
+            const baseSelect = 'id,displayName,userPrincipalName,userType,accountEnabled,assignedLicenses,createdDateTime,lastPasswordChangeDateTime,refreshTokensValidFromDateTime';
+            let graphRes = await fetch(
+              `https://graph.microsoft.com/v1.0/users?$select=${baseSelect},signInActivity&$top=999`,
               { headers: { Authorization: `Bearer ${graphToken}` } }
             );
+            if (!graphRes.ok) {
+              graphRes = await fetch(
+                `https://graph.microsoft.com/v1.0/users?$select=${baseSelect}&$top=999`,
+                { headers: { Authorization: `Bearer ${graphToken}` } }
+              );
+            }
             if (graphRes.ok) {
               const usersData = await graphRes.json();
               const rawList = Array.isArray(usersData?.value) ? usersData.value : [];
               if (rawList.length > 0) {
-                // Fetch directory roles via Entra roleManagement API
-                const [rolesRes, defsRes] = await Promise.all([
+                // Fetch directory roles, subscribedSkus, and recent directoryAudits in parallel
+                const [rolesRes, defsRes, skusRes, auditsRes] = await Promise.all([
                   graphGet(graphToken, '/roleManagement/directory/roleAssignments'),
-                  graphGet(graphToken, '/roleManagement/directory/roleDefinitions')
+                  graphGet(graphToken, '/roleManagement/directory/roleDefinitions'),
+                  graphGet(graphToken, '/subscribedSkus').catch(() => ({ value: [] })),
+                  graphGet(graphToken, '/auditLogs/directoryAudits?$top=50').catch(() => ({ value: [] })),
                 ]);
+                const skuMap: Record<string, string> = {};
+                for (const s of (skusRes?.value || [])) {
+                  if (s.skuId) {
+                    const part = s.skuPartNumber || '';
+                    skuMap[s.skuId] = SKU_NAMES[part] || (part ? part.replace(/_/g, ' ') : s.skuId);
+                  }
+                }
+                const auditActMap: Record<string, number> = {};
+                for (const a of (auditsRes?.value || [])) {
+                  const ts = a?.activityDateTime ? Date.parse(a.activityDateTime) : NaN;
+                  const uid = a?.initiatedBy?.user?.id;
+                  if (uid && !Number.isNaN(ts) && (!auditActMap[uid] || ts > auditActMap[uid])) {
+                    auditActMap[uid] = ts;
+                  }
+                }
                 const defMap: Record<string, string> = {};
                 for (const d of (defsRes?.value || [])) {
                   if (d.id && d.displayName) defMap[d.id] = d.displayName;
@@ -502,6 +545,7 @@ function azureVerificationPlugin() {
                   })
                 );
 
+                const nowMs = Date.now();
                 const processed = rawList.map((u: any) => {
                   const assignedRoles = roleMap[u.id] || [];
                   const isGuest = Boolean(u.userPrincipalName?.includes('#EXT#'));
@@ -522,6 +566,41 @@ function azureVerificationPlugin() {
                     primaryRole = userRoles[0];
                   }
 
+                  // License mapping from assignedLicenses
+                  const mappedLicenses: string[] = (u.assignedLicenses || [])
+                    .map((l: any) => (l?.skuId ? (skuMap[l.skuId] || l.skuId) : null))
+                    .filter(Boolean)
+                    .sort((a: string, b: string) => {
+                      const af = a.includes('(Free)') ? 1 : 0;
+                      const bf = b.includes('(Free)') ? 1 : 0;
+                      return af !== bf ? af - bf : a.localeCompare(b);
+                    });
+                  const isLicensed = mappedLicenses.length > 0;
+                  const licenseDisplay = isLicensed ? mappedLicenses.join(', ') : 'Unlicensed';
+
+                  // Last activity & inactivity days (Sysdate - Last Activity Date)
+                  const sa = u.signInActivity || {};
+                  const candidates = [
+                    sa.lastSignInDateTime ? Date.parse(sa.lastSignInDateTime) : NaN,
+                    sa.lastNonInteractiveSignInDateTime ? Date.parse(sa.lastNonInteractiveSignInDateTime) : NaN,
+                    auditActMap[u.id] ?? NaN,
+                    u.refreshTokensValidFromDateTime ? Date.parse(u.refreshTokensValidFromDateTime) : NaN,
+                    u.lastPasswordChangeDateTime ? Date.parse(u.lastPasswordChangeDateTime) : NaN,
+                    u.createdDateTime ? Date.parse(u.createdDateTime) : NaN,
+                  ].filter((t) => !Number.isNaN(t));
+                  const lastActMs = candidates.length > 0 ? Math.max(...candidates) : null;
+                  const lastActivityDate = lastActMs !== null ? new Date(lastActMs).toISOString().slice(0, 10) : null;
+                  const inactiveDays = lastActMs !== null ? Math.max(0, Math.floor((nowMs - lastActMs) / 86400000)) : null;
+                  const lastLoginDisplay = lastActivityDate
+                    ? (inactiveDays === 0 ? `${lastActivityDate} (Today)` : `${lastActivityDate} (${inactiveDays}d ago)`)
+                    : 'Unknown';
+                  const inactiveSeverity =
+                    isLicensed && inactiveDays !== null && inactiveDays >= 30
+                      ? 'critical'
+                      : isLicensed && inactiveDays !== null && inactiveDays >= 15
+                      ? 'warning'
+                      : 'none';
+
                   return {
                     id: u.id,
                     displayName: u.displayName || u.userPrincipalName?.split('@')[0] || 'User',
@@ -529,7 +608,10 @@ function azureVerificationPlugin() {
                     email: u.userPrincipalName || '',
                     accountEnabled: u.accountEnabled ?? true,
                     createdDateTime: u.createdDateTime || null,
-                    lastLogin: 'Active',
+                    lastActivityDate,
+                    inactiveDays,
+                    inactiveSeverity,
+                    lastLogin: lastLoginDisplay,
                     roles: userRoles,
                     mfaEnabled,
                     status: u.accountEnabled !== false ? 'Active' : 'Inactive',
@@ -538,6 +620,9 @@ function azureVerificationPlugin() {
                     role: primaryRole,
                     mfa: mfaEnabled ? 'Enabled' : 'Disabled',
                     subscription: 'Microsoft 365',
+                    license: licenseDisplay,
+                    licenses: mappedLicenses,
+                    isLicensed,
                     principalType: u.userType || (isGuest ? 'Guest' : 'Member'),
                     source: 'graph'
                   };

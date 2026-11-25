@@ -192,7 +192,7 @@ class UserService:
         "SMB_BUSINESS_PREMIUM": "Microsoft 365 Business Standard",
         "SPB": "Microsoft 365 Business Premium",
         "O365_BUSINESS": "Microsoft 365 Apps for Business",
-        "POWER_BI_STANDARD": "Power BI Standard (Free)",
+        "POWER_BI_STANDARD": "Microsoft Fabric (Free)",
         "POWER_BI_PRO": "Power BI Pro",
         "FLOW_FREE": "Microsoft Power Automate Free",
         "STANDARDPACK": "Office 365 E1",
