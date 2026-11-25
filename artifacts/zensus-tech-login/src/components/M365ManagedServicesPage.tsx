@@ -62,7 +62,9 @@ function friendlySkuName(s: string): string {
     SPE_E3:'Microsoft 365 E3', SPE_E5:'Microsoft 365 E5',
     OFFICESUBSCRIPTION:'Microsoft 365 Apps for Enterprise', AAD_PREMIUM:'Azure AD Premium P1',
     AAD_PREMIUM_P2:'Azure AD Premium P2', INTUNE_A:'Microsoft Intune',
-    POWER_BI_PRO:'Power BI Pro', EXCHANGESTANDARD:'Exchange Online Plan 1',
+    POWER_BI_STANDARD:'Microsoft Fabric (Free)', POWER_BI_PRO:'Power BI Pro',
+    FLOW_FREE:'Microsoft Power Automate Free',
+    EXCHANGESTANDARD:'Exchange Online Plan 1',
     EXCHANGEENTERPRISE:'Exchange Online Plan 2',
   };
   return MAP[s] || s.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -138,10 +140,66 @@ export function M365ManagedServicesPage({
     setLastRefreshed(new Date());
   }, []);
 
-  const fetchLiveSkus = useCallback(async () => {
+  const fetchDbChecksAndSkus = useCallback(async (forceSync = false) => {
     setLoading(true);
     try {
       const hdrs = getLiveApiHeaders();
+
+      if (forceSync) {
+        try {
+          await fetch(`${LIVE_API_BASE}/microsoft0365/sync`, { method: 'POST', headers: hdrs });
+        } catch (se) {
+          console.warn('[M365Page] Sync trigger error:', se);
+        }
+      }
+
+      // 1. Fetch live checks from database API
+      let loadedDbChecks = false;
+      try {
+        const checksRes = await fetch(`${LIVE_API_BASE}/microsoft0365/checks`, { headers: hdrs });
+        if (checksRes.ok) {
+          const cJson = await checksRes.json();
+          if (cJson.checks && cJson.checks.length > 0) {
+            setChecks(cJson.checks.map((ck: any) => ({
+              id: ck.id,
+              num: ck.num,
+              label: ck.label,
+              api: ck.api,
+              status: ck.status || 'ok',
+              value: ck.value,
+              detail: ck.detail
+            })));
+            loadedDbChecks = true;
+          }
+        }
+      } catch (ce) {
+        console.warn('[M365Page] Checks fetch failed:', ce);
+      }
+
+      // 2. Fetch live SKUs from database API
+      try {
+        const licRes = await fetch(`${LIVE_API_BASE}/microsoft0365/licenses`, { headers: hdrs });
+        if (licRes.ok) {
+          const lJson = await licRes.json();
+          if (lJson.licenses && lJson.licenses.length > 0) {
+            setSkus(lJson.licenses.map((lic: any) => ({
+              skuId: lic.skuId,
+              skuPartNumber: lic.skuPartNumber,
+              productName: lic.productName || friendlySkuName(lic.skuPartNumber),
+              consumed: lic.consumed,
+              purchased: lic.purchased,
+              available: lic.available,
+              family: (lic.family as LicenseFamily) || classifySku(lic.skuPartNumber)
+            })));
+            setLastRefreshed(new Date());
+            return;
+          }
+        }
+      } catch (le) {
+        console.warn('[M365Page] Licenses fetch failed:', le);
+      }
+
+      // 3. Fallback to Graph /subscribedSkus if DB endpoint not ready
       const res = await fetch(`${LIVE_API_BASE}/subscribedSkus`, { headers: hdrs });
       if (res.ok) {
         const json = await res.json();
@@ -156,6 +214,14 @@ export function M365ManagedServicesPage({
     } catch (e) { console.warn('[M365Page] SKU fetch failed:', e); }
     finally { setLoading(false); }
   }, []);
+
+  const fetchLiveSkus = useCallback(async () => {
+    await fetchDbChecksAndSkus(false);
+  }, [fetchDbChecksAndSkus]);
+
+  const handleForceRefresh = useCallback(async () => {
+    await fetchDbChecksAndSkus(true);
+  }, [fetchDbChecksAndSkus]);
 
   const computeChecks = useCallback((skuList: SkuEntry[], users: any[]) => {
     const totalLic = skuList.reduce((s,x) => s+x.purchased, 0);
@@ -254,10 +320,10 @@ export function M365ManagedServicesPage({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {lastRefreshed && <span className="text-[0.65rem] text-slate-400 hidden sm:block">Updated {lastRefreshed.toLocaleTimeString()}</span>}
-          <button onClick={fetchLiveSkus} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-xs disabled:opacity-50">
+          <button onClick={handleForceRefresh} disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-xs disabled:opacity-50 cursor-pointer">
             <RefreshCw className={`h-3.5 w-3.5 text-slate-500 ${loading?'animate-spin':''}`} />
-            <span>Refresh</span>
+            <span>{loading ? 'Syncing...' : 'Sync Live'}</span>
           </button>
         </div>
       </div>

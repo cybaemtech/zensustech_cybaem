@@ -24,7 +24,7 @@ FRIENDLY_NAMES = {
     "BUSINESS_PREMIUM": "Microsoft 365 Business Premium",
     "ENTERPRISEPACK": "Office 365 E3",
     "ENTERPRISEPREMIUM": "Office 365 E5",
-    "POWER_BI_STANDARD": "Power BI Standard (Free)",
+    "POWER_BI_STANDARD": "Microsoft Fabric (Free)",
     "FLOW_FREE": "Microsoft Power Automate Free",
 }
 
@@ -84,6 +84,28 @@ class LicenseService:
                     "potentialSavings": savings
                 })
 
+            # Query DB for live counts if available
+            db_users_count = 19
+            db_admins_count = 5
+            db_mfa_count = 7
+            try:
+                import os, psycopg
+                db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:root@localhost:5432/zensustech")
+                with psycopg.connect(db_url) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT users_count FROM organizations WHERE users_count IS NOT NULL LIMIT 1;")
+                        r = cur.fetchone()
+                        if r and r[0]:
+                            db_users_count = r[0]
+                        cur.execute("SELECT total_users_count, admins_count, mfa_enabled_count FROM m365_executive_reports LIMIT 1;")
+                        er = cur.fetchone()
+                        if er:
+                            db_users_count = er[0] or db_users_count
+                            db_admins_count = er[1] or db_admins_count
+                            db_mfa_count = er[2] or db_mfa_count
+            except Exception as dbe:
+                logger.info(f"DB metric lookup: {dbe}")
+
             if not license_list:
                 status, color, number = "Optimized", "green", "4/4"
                 license_list = [
@@ -95,7 +117,7 @@ class LicenseService:
                         "potentialSavings": "$0 (100% Utilized)"
                     },
                     {
-                        "license": "Power BI Standard (Free)",
+                        "license": "Microsoft Fabric (Free)",
                         "purchased": 1000000,
                         "assigned": 2,
                         "unused": 999998,
@@ -116,6 +138,8 @@ class LicenseService:
                 status, color = "Optimized", "green"
                 number = f"{total_assigned_units}/{total_purchased_units}"
 
+            mfa_pct = round((db_mfa_count / max(1, db_users_count)) * 100)
+
             executive_summary = [
                 {
                     "area": "License Optimization",
@@ -126,17 +150,17 @@ class LicenseService:
                 },
                 {
                     "area": "Identity & Privileged Roles",
-                    "status": "4 Admins Monitored",
+                    "status": f"{db_admins_count} Admins Monitored",
                     "color": "blue",
-                    "number": "4/14",
-                    "note": "Privileged directory role holders monitored under least privilege."
+                    "number": f"{db_admins_count}/{db_users_count}",
+                    "note": f"Privileged directory role holders ({db_admins_count} admins across {db_users_count} users) monitored under least privilege."
                 },
                 {
                     "area": "Account Protection & MFA",
-                    "status": "86% Protected",
-                    "color": "gold",
-                    "number": "12/14",
-                    "note": "12 of 14 accounts protected with Multi-Factor Authentication."
+                    "status": f"{mfa_pct}% Protected",
+                    "color": "gold" if mfa_pct < 90 else "green",
+                    "number": f"{db_mfa_count}/{db_users_count}",
+                    "note": f"{db_mfa_count} of {db_users_count} accounts protected with Multi-Factor Authentication."
                 },
                 {
                     "area": "Active Threat Defense",

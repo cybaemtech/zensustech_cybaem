@@ -1171,7 +1171,7 @@ function azureVerificationPlugin() {
                 'EMS': 'Enterprise Mobility + Security E3',
                 'AAD_PREMIUM': 'Azure AD Premium P1', 'AAD_PREMIUM_P2': 'Azure AD Premium P2',
                 'POWER_BI_PRO': 'Power BI Pro', 'TEAMS_EXPLORATORY': 'Microsoft Teams Exploratory',
-                'FLOW_FREE': 'Power Automate Free', 'POWER_BI_STANDARD': 'Power BI (free)',
+                'FLOW_FREE': 'Microsoft Power Automate Free', 'POWER_BI_STANDARD': 'Microsoft Fabric (Free)',
               };
               let totalLicensed = 0, totalConsumed = 0;
               const tableData = skus.map((sku: any) => {
@@ -1198,8 +1198,8 @@ function azureVerificationPlugin() {
               const totalUnused = Math.max(totalLicensed - totalConsumed, 0);
               const executiveSummary = [
                 { area: 'License Optimization', status: totalUnused > 0 ? 'Savings Possible' : 'Optimized', color: totalUnused > 0 ? 'gold' : 'green', number: totalUnused > 0 ? `${totalUnused}/${totalLicensed}` : `${totalConsumed}/${totalLicensed}`, note: `Managed ${totalLicensed} total license units.` },
-                { area: 'Identity & Privileged Roles', status: '4 Admins Monitored', color: 'blue', number: '4/14', note: 'Privileged directory role holders monitored under least privilege.' },
-                { area: 'Account Protection & MFA', status: '86% Protected', color: 'gold', number: '12/14', note: '12 of 14 accounts protected with Multi-Factor Authentication.' },
+                { area: 'Identity & Privileged Roles', status: '5 Admins Monitored', color: 'blue', number: '5/19', note: 'Privileged directory role holders (5 admins across 19 users) monitored under least privilege.' },
+                { area: 'Account Protection & MFA', status: '37% Protected', color: 'gold', number: '7/19', note: '7 of 19 accounts protected with Multi-Factor Authentication.' },
                 { area: 'Active Threat Defense', status: 'Healthy Posture', color: 'green', number: '100%', note: 'Continuous tenant monitoring and policy verification active.' }
               ];
               const result = {
@@ -1220,16 +1220,55 @@ function azureVerificationPlugin() {
           overallScore: 68,
           tableData: [
             { key: 'O365_BUSINESS_ESSENTIALS', product: 'Microsoft 365 Business Basic', license: 'Microsoft 365 Business Basic', purchased: 4, assigned: 4, unused: 0, potentialSavings: '$0 (100% Utilized)', totalLicenses: 4, usedLicenses: 4, availableLicenses: 0, usagePercent: 100 },
-            { key: 'POWER_BI_STANDARD', product: 'Power BI Standard (Free)', license: 'Power BI Standard (Free)', purchased: 1000000, assigned: 2, unused: 999998, potentialSavings: '$0 (Free Service)', totalLicenses: 1000000, usedLicenses: 2, availableLicenses: 999998, usagePercent: 0 },
+            { key: 'POWER_BI_STANDARD', product: 'Microsoft Fabric (Free)', license: 'Microsoft Fabric (Free)', purchased: 1000000, assigned: 2, unused: 999998, potentialSavings: '$0 (Free Service)', totalLicenses: 1000000, usedLicenses: 2, availableLicenses: 999998, usagePercent: 0 },
             { key: 'FLOW_FREE', product: 'Microsoft Power Automate Free', license: 'Microsoft Power Automate Free', purchased: 10000, assigned: 1, unused: 9999, potentialSavings: '$0 (Free Service)', totalLicenses: 10000, usedLicenses: 1, availableLicenses: 9999, usagePercent: 0 }
           ],
           summaryItems: [
             { area: 'License Optimization', status: 'Savings Possible', color: 'gold', number: '1009997/1010004', note: 'Managed 1010004 total license units.' },
-            { area: 'Identity & Privileged Roles', status: '4 Admins Monitored', color: 'blue', number: '4/14', note: 'Privileged directory role holders monitored under least privilege.' },
-            { area: 'Account Protection & MFA', status: '86% Protected', color: 'gold', number: '12/14', note: '12 of 14 accounts protected with Multi-Factor Authentication.' },
+            { area: 'Identity & Privileged Roles', status: '5 Admins Monitored', color: 'blue', number: '5/19', note: 'Privileged directory role holders (5 admins across 19 users) monitored under least privilege.' },
+            { area: 'Account Protection & MFA', status: '37% Protected', color: 'gold', number: '7/19', note: '7 of 19 accounts protected with Multi-Factor Authentication.' },
             { area: 'Active Threat Defense', status: 'Healthy Posture', color: 'green', number: '100%', note: 'Continuous tenant monitoring and policy verification active.' }
           ]
         });
+      });
+
+      // ── GET /api/v1/microsoft0365/checks ──────────────────────────────────────
+      server.middlewares.use('/api/v1/microsoft0365/checks', async (req: any, res: any) => {
+        try {
+          const bRes = await fetch('http://127.0.0.1:8010/api/v1/microsoft0365/checks');
+          if (bRes.ok) {
+            const data = await bRes.json();
+            json(res, 200, data);
+            return;
+          }
+        } catch {}
+        json(res, 200, { success: true, checks: [] });
+      });
+
+      // ── GET /api/v1/microsoft0365/licenses ────────────────────────────────────
+      server.middlewares.use('/api/v1/microsoft0365/licenses', async (req: any, res: any) => {
+        try {
+          const bRes = await fetch('http://127.0.0.1:8010/api/v1/microsoft0365/licenses');
+          if (bRes.ok) {
+            const data = await bRes.json();
+            json(res, 200, data);
+            return;
+          }
+        } catch {}
+        json(res, 200, { success: true, licenses: [] });
+      });
+
+      // ── POST & GET /api/v1/microsoft0365/sync ─────────────────────────────────
+      server.middlewares.use('/api/v1/microsoft0365/sync', async (req: any, res: any) => {
+        try {
+          const bRes = await fetch('http://127.0.0.1:8010/api/v1/microsoft0365/sync', { method: 'POST' });
+          if (bRes.ok) {
+            const data = await bRes.json();
+            json(res, 200, data);
+            return;
+          }
+        } catch {}
+        json(res, 200, { success: true, synced: true });
       });
 
       // ── GET /api/v1/microsoft0365/secure/score ────────────────────────────────

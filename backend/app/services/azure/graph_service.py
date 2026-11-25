@@ -212,35 +212,50 @@ class GraphService:
         Returns:
             Dictionary with governance statistics or None if failed
         """
-        url = f"{self.base_url}/users?$select=id,displayName,userType,signInActivity,assignedLicenses"
+        # Try with signInActivity first, fallback without it if tenant lacks Entra ID P1/P2
+        url_full = f"{self.base_url}/users?$select=id,displayName,userType,userPrincipalName,signInActivity,assignedLicenses,createdDateTime"
+        url_basic = f"{self.base_url}/users?$select=id,displayName,userType,userPrincipalName,assignedLicenses,createdDateTime"
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
-                response = await client.get(url, headers=self.headers)
-                response.raise_for_status()
+                try:
+                    response = await client.get(url_full, headers=self.headers)
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code in (400, 403):
+                        logger.info("signInActivity not permitted, falling back to basic user select")
+                        response = await client.get(url_basic, headers=self.headers)
+                        response.raise_for_status()
+                    else:
+                        raise
 
                 users = response.json().get("value", [])
                 threshold_date = datetime.now(timezone.utc) - timedelta(days=30)
 
                 total_users = len(users)
-                guest_users = sum(1 for u in users if u.get("userType") == "Guest")
+                guest_users = sum(1 for u in users if u.get("userType") == "Guest" or "#EXT#" in (u.get("userPrincipalName") or ""))
                 inactive_users = 0
 
                 for user in users:
                     activity = user.get("signInActivity")
-                    if activity:
-                        last_login_str = activity.get("lastSignInDateTime")
-                        if last_login_str:
-                            try:
-                                last_login = datetime.fromisoformat(
-                                    last_login_str.replace("Z", "+00:00")
-                                )
-                                if last_login < threshold_date:
-                                    inactive_users += 1
-                            except (ValueError, AttributeError):
+                    if activity and activity.get("lastSignInDateTime"):
+                        try:
+                            last_login = datetime.fromisoformat(
+                                activity.get("lastSignInDateTime").replace("Z", "+00:00")
+                            )
+                            if last_login < threshold_date:
                                 inactive_users += 1
-                    else:
-                        inactive_users += 1
+                        except (ValueError, AttributeError):
+                            inactive_users += 1
+                    elif user.get("createdDateTime"):
+                        try:
+                            created_dt = datetime.fromisoformat(
+                                user.get("createdDateTime").replace("Z", "+00:00")
+                            )
+                            if created_dt < threshold_date:
+                                inactive_users += 1
+                        except (ValueError, AttributeError):
+                            pass
 
                 return {
                     "total": total_users,
