@@ -1128,7 +1128,7 @@ export default function Dashboard() {
     const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
     const savings = lic.potentialSavings || (available === 0 ? '$0 (100% Utilized)' : '$0 (Free Service)');
 
-    const assignedUsersList = users
+    const assignedUsersList = (usersList || [])
       .filter((u: any) => {
         const userLicenses: string[] =
           Array.isArray(u.licenses) && u.licenses.length > 0
