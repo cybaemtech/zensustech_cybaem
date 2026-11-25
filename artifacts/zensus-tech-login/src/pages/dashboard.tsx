@@ -2355,6 +2355,56 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Card: License Optimization & Cost Management (Shown on Top) */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs">
+                  <div className="text-slate-800 font-bold text-sm mb-4">
+                    License Optimization &amp; Cost Management
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold">
+                          <th className="py-3 px-4">License Type</th>
+                          <th className="py-3 px-4">Purchased</th>
+                          <th className="py-3 px-4">Assigned</th>
+                          <th className="py-3 px-4">Available</th>
+                          <th className="py-3 px-4">Potential Savings</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs">
+                        {displayLicenseData.map((lic: any, idx: number) => {
+                          const purchased = lic.purchased ?? lic.totalLicenses ?? 0;
+                          const assigned = lic.assigned ?? lic.usedLicenses ?? 0;
+                          const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
+                          const savings = lic.potentialSavings || (available === 0 ? '$0 (100% Utilized)' : '$0 (Free Service)');
+                          return (
+                            <tr
+                              key={lic.key || lic.license || lic.product || idx}
+                              onClick={() => handleLicenseClick(lic)}
+                              className="hover:bg-indigo-50/50 cursor-pointer transition-colors group"
+                              title={`Click to inspect ${lic.product || lic.license || lic.key} allocation`}
+                            >
+                              <td className="py-3.5 px-4 font-bold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                <span>{lic.product || lic.license || lic.key}</span>
+                                <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all" />
+                              </td>
+                              <td className="py-3.5 px-4 font-semibold text-slate-700">{purchased.toLocaleString()}</td>
+                              <td className="py-3.5 px-4 font-semibold text-slate-700">{assigned.toLocaleString()}</td>
+                              <td className="py-3.5 px-4 font-semibold text-slate-700">{available.toLocaleString()}</td>
+                              <td className="py-3.5 px-4 font-bold text-[#52c41a]">{savings}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex justify-end items-center gap-1.5 mt-4 pt-2">
+                    <button className="h-6 w-6 rounded border border-slate-200 text-slate-400 flex items-center justify-center text-xs hover:bg-slate-50">&lt;</button>
+                    <button className="h-6 w-6 rounded border border-blue-500 bg-white text-blue-600 font-semibold flex items-center justify-center text-xs shadow-xs">1</button>
+                    <button className="h-6 w-6 rounded border border-slate-200 text-slate-400 flex items-center justify-center text-xs hover:bg-slate-50">&gt;</button>
+                  </div>
+                </div>
+
                 {/* Benchmark and Threat Defense Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                   {/* Industry Benchmark */}
@@ -2515,56 +2565,6 @@ export default function Dashboard() {
                             </td>
                           </tr>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex justify-end items-center gap-1.5 mt-4 pt-2">
-                    <button className="h-6 w-6 rounded border border-slate-200 text-slate-400 flex items-center justify-center text-xs hover:bg-slate-50">&lt;</button>
-                    <button className="h-6 w-6 rounded border border-blue-500 bg-white text-blue-600 font-semibold flex items-center justify-center text-xs shadow-xs">1</button>
-                    <button className="h-6 w-6 rounded border border-slate-200 text-slate-400 flex items-center justify-center text-xs hover:bg-slate-50">&gt;</button>
-                  </div>
-                </div>
-
-                {/* Card 3: License Optimization & Cost Management */}
-                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs">
-                  <div className="text-slate-800 font-bold text-sm mb-4">
-                    License Optimization &amp; Cost Management
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b border-slate-100 text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold">
-                          <th className="py-3 px-4">License Type</th>
-                          <th className="py-3 px-4">Purchased</th>
-                          <th className="py-3 px-4">Assigned</th>
-                          <th className="py-3 px-4">Available</th>
-                          <th className="py-3 px-4">Potential Savings</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-xs">
-                        {displayLicenseData.map((lic: any, idx: number) => {
-                          const purchased = lic.purchased ?? lic.totalLicenses ?? 0;
-                          const assigned = lic.assigned ?? lic.usedLicenses ?? 0;
-                          const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
-                          const savings = lic.potentialSavings || (available === 0 ? '$0 (100% Utilized)' : '$0 (Free Service)');
-                          return (
-                            <tr
-                              key={lic.key || lic.license || lic.product || idx}
-                              onClick={() => handleLicenseClick(lic)}
-                              className="hover:bg-indigo-50/50 cursor-pointer transition-colors group"
-                              title={`Click to inspect ${lic.product || lic.license || lic.key} allocation`}
-                            >
-                              <td className="py-3.5 px-4 font-bold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
-                                <span>{lic.product || lic.license || lic.key}</span>
-                                <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all" />
-                              </td>
-                              <td className="py-3.5 px-4 font-semibold text-slate-700">{purchased.toLocaleString()}</td>
-                              <td className="py-3.5 px-4 font-semibold text-slate-700">{assigned.toLocaleString()}</td>
-                              <td className="py-3.5 px-4 font-semibold text-slate-700">{available.toLocaleString()}</td>
-                              <td className="py-3.5 px-4 font-bold text-[#52c41a]">{savings}</td>
-                            </tr>
-                          );
-                        })}
                       </tbody>
                     </table>
                   </div>
