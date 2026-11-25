@@ -1473,14 +1473,14 @@ export default function Dashboard() {
             {/* TAB 1: IDENTITY & ACCESS (Primary View) */}
             {activeTab === 'identity' && (
               <>
-                {/* Primary Metric KPI Cards - Original UI/UX Preserved with Proper Data Values */}
+                {/* Primary Metric KPI Cards: Total Users -> Compliant Users -> High Risk -> Cloud Resources */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
-                  {/* KPI 1: Total Users - Proper Role-Wise Breakdown (Not Combined) */}
+                  {/* KPI 1: Total Users - Proper Role-Wise Breakdown */}
                   <div
                     onClick={() => openDrilldownModal('all-users')}
                     className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-sky-300 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
-                    title="Click to view all 14 users in popup"
+                    title={`Click to view all ${totalUsersCount} users in popup`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -1493,8 +1493,6 @@ export default function Dashboard() {
                         {totalUsersCount}
                       </div>
                     </div>
-
-                    {/* Role-wise distinct items - each role separate with its proper count */}
                     <div className="space-y-1 pt-2 border-t border-slate-100">
                       {roleBreakdown.map((r) => (
                         <div
@@ -1512,81 +1510,96 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* KPI 2: High Risk Accounts (MFA Disabled) */}
+                  {/* KPI 2: Compliant Users (swapped with High Risk) */}
                   <div
-                    onClick={() => openDrilldownModal('mfa-disabled')}
-                    className="bg-gradient-to-b from-rose-50/50 to-white rounded-2xl p-5 border border-rose-200/90 shadow-[0_4px_16px_-4px_rgba(244,63,94,0.12)] relative overflow-hidden group hover:border-rose-400 hover:shadow-md transition-all cursor-pointer"
-                    title="Click to view 2 High Risk (MFA Disabled) accounts"
+                    onClick={() => openDrilldownModal('mfa-compliant')}
+                    className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+                    title={`Click to view ${mfaEnabledCount} Compliant (MFA Protected) users`}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <ShieldAlert className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
-                        High Risk
-                      </span>
-                      <div className="h-9 w-9 rounded-xl bg-rose-100/70 text-rose-600 flex items-center justify-center">
-                        <ShieldAlert className="h-4.5 w-4.5" />
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Compliant Users</span>
+                        <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                          <CheckCircle2 className="h-4.5 w-4.5" />
+                        </div>
+                      </div>
+                      <div className="text-3xl font-black text-emerald-600 tracking-tight leading-none mb-3 group-hover:text-emerald-700 transition-colors">
+                        {mfaEnabledCount}
                       </div>
                     </div>
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-3xl font-black text-rose-600 tracking-tight leading-none group-hover:text-rose-700 transition-colors">
-                        {mfaDisabledCount}
-                      </span>
-                      <span className="text-xs font-bold text-rose-800">MFA Disabled</span>
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-emerald-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span>{mfaCoveragePercent}% MFA Protection Rate</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${mfaCoveragePercent}%` }} />
+                      </div>
+                      <div className="flex justify-between text-[0.65rem] text-slate-400">
+                        <span>{mfaEnabledCount} protected</span>
+                        <span>{mfaDisabledCount} unprotected</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between mt-3">
+                  </div>
+
+                  {/* KPI 3: High Risk Accounts (MFA Disabled) */}
+                  <div
+                    onClick={() => openDrilldownModal('mfa-disabled')}
+                    className="bg-gradient-to-b from-rose-50/50 to-white rounded-2xl p-5 border border-rose-200/90 shadow-[0_4px_16px_-4px_rgba(244,63,94,0.12)] relative overflow-hidden group hover:border-rose-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+                    title={`Click to view ${mfaDisabledCount} High Risk (MFA Disabled) accounts`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
+                          <ShieldAlert className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
+                          High Risk
+                        </span>
+                        <div className="h-9 w-9 rounded-xl bg-rose-100/70 text-rose-600 flex items-center justify-center">
+                          <ShieldAlert className="h-4.5 w-4.5" />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-2 mb-2">
+                        <span className="text-3xl font-black text-rose-600 tracking-tight leading-none group-hover:text-rose-700 transition-colors">
+                          {mfaDisabledCount}
+                        </span>
+                        <span className="text-xs font-bold text-rose-800">MFA Disabled</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-rose-100">
                       <span className="text-[0.7rem] text-rose-700 font-medium">{highRiskCount} accounts at risk</span>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); openDrilldownModal('mfa-disabled'); }}
                         className="text-[0.7rem] font-bold text-rose-700 bg-rose-100 hover:bg-rose-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                        title="Review 2 accounts missing MFA"
+                        title={`Review ${mfaDisabledCount} accounts missing MFA`}
                       >
                         Review <ChevronRight className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
 
-                  {/* KPI 3: Compliant Accounts */}
-                  <div
-                    onClick={() => openDrilldownModal('mfa-compliant')}
-                    className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer"
-                    title="Click to view 12 Compliant (MFA Protected) users"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Compliant Users</span>
-                      <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                        <CheckCircle2 className="h-4.5 w-4.5" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-black text-emerald-600 tracking-tight leading-none mb-3 group-hover:text-emerald-700 transition-colors">
-                      {mfaEnabledCount}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-emerald-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      <span>{mfaCoveragePercent}% MFA Protection Rate</span>
-                    </div>
-                  </div>
-
-                  {/* KPI 4: Connected Assets */}
+                  {/* KPI 4: Cloud Resources */}
                   <div
                     onClick={() => openDrilldownModal('cloud-resources')}
-                    className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
+                    className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden group hover:border-blue-300 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
                     title="Click to view all Cloud Resources in popup"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cloud Resources</span>
-                      <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                        <Boxes className="h-4.5 w-4.5" />
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cloud Resources</span>
+                        <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                          <Boxes className="h-4.5 w-4.5" />
+                        </div>
+                      </div>
+                      <div className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3 group-hover:text-blue-600 transition-colors">
+                        {(stats.totalApps || org.appsCount) + (stats.totalDevices || org.devicesCount)}
                       </div>
                     </div>
-                    <div className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3 group-hover:text-blue-600 transition-colors">
-                      {(stats.totalApps || org.appsCount) + (stats.totalDevices || org.devicesCount)}
-                    </div>
-                    <div className="flex items-center flex-nowrap gap-1 text-[0.67rem] font-semibold text-slate-600 whitespace-nowrap overflow-hidden">
+                    <div className="flex items-center flex-nowrap gap-1 text-[0.67rem] font-semibold text-slate-600 whitespace-nowrap overflow-hidden pt-2 border-t border-slate-100">
                       <span
                         onClick={(e) => { e.stopPropagation(); openDrilldownModal('apps'); }}
                         className="hover:bg-blue-50 hover:text-blue-700 px-1 py-0.5 rounded transition-colors cursor-pointer shrink-0"
-                        title="Click to view 5 Registered Apps"
+                        title={`Click to view ${stats.totalApps || org.appsCount} Registered Apps`}
                       >
                         {stats.totalApps || org.appsCount} Apps
                       </span>
@@ -1594,7 +1607,7 @@ export default function Dashboard() {
                       <span
                         onClick={(e) => { e.stopPropagation(); openDrilldownModal('groups'); }}
                         className="hover:bg-blue-50 hover:text-blue-700 px-1 py-0.5 rounded transition-colors cursor-pointer shrink-0"
-                        title="Click to view 9 Directory Groups"
+                        title={`Click to view ${stats.totalGroups || org.groupsCount} Directory Groups`}
                       >
                         {stats.totalGroups || org.groupsCount} Groups
                       </span>
@@ -1602,12 +1615,13 @@ export default function Dashboard() {
                       <span
                         onClick={(e) => { e.stopPropagation(); openDrilldownModal('devices'); }}
                         className="hover:bg-blue-50 hover:text-blue-700 px-1 py-0.5 rounded transition-colors cursor-pointer shrink-0"
-                        title="Click to view 6 Managed Devices"
+                        title={`Click to view ${stats.totalDevices || org.devicesCount} Managed Devices`}
                       >
                         {stats.totalDevices || org.devicesCount} Devices
                       </span>
                     </div>
                   </div>
+
                 </div>
 
                 {/* Analytics & Gauge Row: Interactive MFA Security Gauge + User Security Distribution */}
