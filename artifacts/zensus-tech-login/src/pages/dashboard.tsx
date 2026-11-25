@@ -308,6 +308,7 @@ export default function Dashboard() {
   const [investigationFilter, setInvestigationFilter] = useState<'All'|'Auth'|'User'|'Application'|'Role'>('All');
   const [investigationTime, setInvestigationTime] = useState<'24H'|'7D'|'30D'>('24H');
   const [showUsersTable, setShowUsersTable] = useState(false);
+  const [userInactivityFilter, setUserInactivityFilter] = useState<'ALL' | 'ACTIVE' | '15_29' | '30_PLUS' | 'ALL_INACTIVE'>('ALL');
 
   const filteredApps = useMemo(() => {
     if (!appSearch.trim()) return applications;
@@ -677,15 +678,56 @@ export default function Dashboard() {
   const currentTab = SIDEBAR_ITEMS.find(i => i.id === activeTab) || SIDEBAR_ITEMS[0];
   const CurrentIcon = currentTab.icon;
 
-  const filteredUsers = usersList.filter(u => {
-    if (!userSearch.trim()) return true;
-    const q = userSearch.toLowerCase();
-    return (
-      (u.displayName && u.displayName.toLowerCase().includes(q)) ||
-      (u.userPrincipalName && u.userPrincipalName.toLowerCase().includes(q)) ||
-      (u.role && u.role.toLowerCase().includes(q))
-    );
-  });
+  const usersWithInactivity = useMemo(() => {
+    return usersList.map((u: any) => {
+      const licenseLabel = u.license || 'Unlicensed';
+      const isLicensed = licenseLabel !== 'Unlicensed';
+      const rawDate = u.lastActivityDate || u.createdDateTime;
+      const inactiveDays: number | null =
+        typeof u.inactiveDays === 'number'
+          ? u.inactiveDays
+          : rawDate && !Number.isNaN(Date.parse(rawDate))
+          ? Math.max(0, Math.floor((Date.now() - Date.parse(rawDate)) / 86400000))
+          : null;
+      const is30Plus = isLicensed && inactiveDays !== null && inactiveDays >= 30;
+      const is15to29 = isLicensed && inactiveDays !== null && inactiveDays >= 15 && inactiveDays < 30;
+      const isInactive = is30Plus || is15to29;
+      return {
+        ...u,
+        _isLicensed: isLicensed,
+        _inactiveDays: inactiveDays,
+        _is30Plus: is30Plus,
+        _is15to29: is15to29,
+        _isInactive: isInactive,
+        _isActive: !isInactive,
+      };
+    });
+  }, [usersList]);
+
+  const count15to29 = useMemo(() => usersWithInactivity.filter(u => u._is15to29).length, [usersWithInactivity]);
+  const count30Plus = useMemo(() => usersWithInactivity.filter(u => u._is30Plus).length, [usersWithInactivity]);
+  const countActive = useMemo(() => usersWithInactivity.filter(u => u._isActive).length, [usersWithInactivity]);
+  const countAllInactive = useMemo(() => usersWithInactivity.filter(u => u._isInactive).length, [usersWithInactivity]);
+
+  const filteredUsers = useMemo(() => {
+    return usersWithInactivity.filter((u: any) => {
+      // 1. Inactivity policy filter
+      if (userInactivityFilter === '15_29' && !u._is15to29) return false;
+      if (userInactivityFilter === '30_PLUS' && !u._is30Plus) return false;
+      if (userInactivityFilter === 'ALL_INACTIVE' && !u._isInactive) return false;
+      if (userInactivityFilter === 'ACTIVE' && !u._isActive) return false;
+
+      // 2. Search query filter
+      if (!userSearch.trim()) return true;
+      const q = userSearch.toLowerCase();
+      return (
+        (u.displayName && u.displayName.toLowerCase().includes(q)) ||
+        (u.userPrincipalName && u.userPrincipalName.toLowerCase().includes(q)) ||
+        (u.role && u.role.toLowerCase().includes(q)) ||
+        (u.license && u.license.toLowerCase().includes(q))
+      );
+    });
+  }, [usersWithInactivity, userInactivityFilter, userSearch]);
 
   const totalUsersCount = usersList.length;
   const mfaEnabledCount = usersList.filter(u => u.mfa === 'Enabled' || u.mfaEnabled === true).length;
@@ -1764,26 +1806,118 @@ export default function Dashboard() {
 
                   {showUsersTable && (
                     <div className="overflow-x-auto">
-                      {/* Inactive Licensed Users Legend */}
-                      <div className="px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[0.7rem]">
-                        <div className="flex flex-wrap items-center gap-4">
-                          <span className="font-semibold text-slate-600">License Inactivity Policy:</span>
-                          <span className="inline-flex items-center gap-1.5 text-slate-700">
-                            <span className="w-3 h-3 rounded bg-lime-100 border border-lime-400 inline-block" />
+                      {/* Interactive Inactive Licensed Users Policy Tabs */}
+                      <div className="px-5 py-2.5 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-bold text-slate-700 mr-1 text-[11px] uppercase tracking-wider">
+                            License Inactivity Policy:
+                          </span>
+
+                          {/* All Users Tab */}
+                          <button
+                            type="button"
+                            onClick={() => setUserInactivityFilter('ALL')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                              userInactivityFilter === 'ALL'
+                                ? 'bg-slate-900 text-white shadow-xs ring-2 ring-slate-900/30'
+                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            }`}
+                            title="Show all users"
+                          >
+                            <span>All Users</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              userInactivityFilter === 'ALL' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {usersWithInactivity.length}
+                            </span>
+                          </button>
+
+                          {/* Active Users Tab */}
+                          <button
+                            type="button"
+                            onClick={() => setUserInactivityFilter(prev => prev === 'ACTIVE' ? 'ALL' : 'ACTIVE')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                              userInactivityFilter === 'ACTIVE'
+                                ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-400'
+                                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                            }`}
+                            title="Filter active users (< 15 days inactive)"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                            <span>Active</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              userInactivityFilter === 'ACTIVE' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800'
+                            }`}>
+                              {countActive}
+                            </span>
+                          </button>
+
+                          {/* 15-29 Days Tab */}
+                          <button
+                            type="button"
+                            onClick={() => setUserInactivityFilter(prev => prev === '15_29' ? 'ALL' : '15_29')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                              userInactivityFilter === '15_29'
+                                ? 'bg-lime-600 text-white shadow-xs ring-2 ring-lime-400'
+                                : 'bg-lime-50 text-lime-900 hover:bg-lime-100 border border-lime-300'
+                            }`}
+                            title="Filter users licensed & inactive 15–29 days"
+                          >
+                            <span className="w-2.5 h-2.5 rounded bg-lime-400 border border-lime-600 inline-block" />
                             <span>Licensed &amp; Inactive 15–29 Days</span>
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 text-slate-700">
-                            <span className="w-3 h-3 rounded bg-red-100 border border-red-400 inline-block" />
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              userInactivityFilter === '15_29' ? 'bg-lime-700 text-white' : 'bg-lime-200 text-lime-900'
+                            }`}>
+                              {count15to29}
+                            </span>
+                          </button>
+
+                          {/* 30+ Days Tab */}
+                          <button
+                            type="button"
+                            onClick={() => setUserInactivityFilter(prev => prev === '30_PLUS' ? 'ALL' : '30_PLUS')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                              userInactivityFilter === '30_PLUS'
+                                ? 'bg-red-600 text-white shadow-xs ring-2 ring-red-400'
+                                : 'bg-red-50 text-red-900 hover:bg-red-100 border border-red-300'
+                            }`}
+                            title="Filter users licensed & inactive 30+ days"
+                          >
+                            <span className="w-2.5 h-2.5 rounded bg-red-400 border border-red-600 inline-block" />
                             <span>Licensed &amp; Inactive 30+ Days</span>
-                          </span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              userInactivityFilter === '30_PLUS' ? 'bg-red-700 text-white' : 'bg-red-200 text-red-900'
+                            }`}>
+                              {count30Plus}
+                            </span>
+                          </button>
+
+                          {/* Clear Filter Button */}
+                          {userInactivityFilter !== 'ALL' && (
+                            <button
+                              type="button"
+                              onClick={() => setUserInactivityFilter('ALL')}
+                              className="px-2 py-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 underline transition cursor-pointer"
+                            >
+                              Clear Filter
+                            </button>
+                          )}
                         </div>
-                        <span className="text-slate-500 font-medium">
-                          {filteredUsers.filter((u: any) => {
-                            const lic = u.license && u.license !== 'Unlicensed';
-                            const d = typeof u.inactiveDays === 'number' ? u.inactiveDays : null;
-                            return lic && d !== null && d >= 15;
-                          }).length} licensed inactive user(s)
-                        </span>
+
+                        {/* Right Summary Pill: Total Inactive (Clickable) */}
+                        <button
+                          type="button"
+                          onClick={() => setUserInactivityFilter(prev => prev === 'ALL_INACTIVE' ? 'ALL' : 'ALL_INACTIVE')}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            userInactivityFilter === 'ALL_INACTIVE'
+                              ? 'bg-amber-600 text-white ring-2 ring-amber-400 shadow-xs'
+                              : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                          }`}
+                          title="Click to toggle filter for all inactive licensed users (15+ days)"
+                        >
+                          <TriangleAlert className="w-3.5 h-3.5 text-amber-500" />
+                          <span>{countAllInactive} licensed inactive user(s)</span>
+                        </button>
                       </div>
                       <table className="w-full text-left text-xs">
                         <thead>
@@ -1797,7 +1931,33 @@ export default function Dashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {filteredUsers.map((user, idx) => {
+                          {filteredUsers.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="py-12 text-center text-slate-400">
+                                <div className="flex flex-col items-center justify-center gap-2">
+                                  <UserX className="h-8 w-8 text-slate-300" />
+                                  <p className="text-sm font-bold text-slate-700">No users match the selected filter</p>
+                                  <p className="text-xs text-slate-400 max-w-sm">
+                                    {userInactivityFilter === '15_29'
+                                      ? 'There are currently 0 licensed users inactive between 15 and 29 days.'
+                                      : userInactivityFilter === '30_PLUS'
+                                      ? 'There are currently 0 licensed users inactive for 30+ days.'
+                                      : userInactivityFilter === 'ACTIVE'
+                                      ? 'No active users found matching your search query.'
+                                      : 'No users found.'}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setUserInactivityFilter('ALL'); setUserSearch(''); }}
+                                    className="mt-1 px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 font-bold text-xs transition cursor-pointer"
+                                  >
+                                    Reset Filters &amp; Show All Users
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                          filteredUsers.map((user, idx) => {
                             const licenseLabel = user.license || 'Unlicensed';
                             const isLicensed = licenseLabel !== 'Unlicensed';
                             const rawDate = user.lastActivityDate || user.createdDateTime;
@@ -1887,7 +2047,8 @@ export default function Dashboard() {
                               </td>
                             </tr>
                             );
-                          })}
+                          })
+                        )}
                         </tbody>
                       </table>
                     </div>

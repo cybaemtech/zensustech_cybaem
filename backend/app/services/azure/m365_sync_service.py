@@ -395,3 +395,4 @@ class M365SyncService:
             "apps_count": apps_count,
             "checks_count": len(checks)
         }
+
