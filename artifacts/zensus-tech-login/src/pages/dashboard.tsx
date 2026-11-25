@@ -281,7 +281,18 @@ export default function Dashboard() {
     technicalRemediation: string;
     expectedResult: string;
     additionalDetails?: { label: string; value: string }[];
-    usersList?: { displayName: string; userPrincipalName: string; mfaStatus: boolean }[];
+    usersList?: {
+      displayName: string;
+      userPrincipalName: string;
+      mfaStatus: boolean;
+      role?: string;
+      license?: string;
+      accountEnabled?: boolean;
+      inactiveDays?: number | null;
+      lastActivityDate?: string | null;
+      risk?: string;
+      principalType?: string;
+    }[];
   } | null>(null);
 
   useEffect(() => {
@@ -1074,9 +1085,16 @@ export default function Dashboard() {
 
   const handleRoleClick = (item: any) => {
     const usersList = (item.users || []).map((u: any) => ({
-      displayName: u.displayName || u.userPrincipalName || 'User',
-      userPrincipalName: u.userPrincipalName || '',
+      displayName: u.displayName || u.user || u.userPrincipalName || 'User',
+      userPrincipalName: u.userPrincipalName || u.email || '',
       mfaStatus: u.mfa !== 'Disabled' && u.mfaEnabled !== false,
+      role: u.role || (u.roles && u.roles[0]) || item.role || 'Standard User',
+      license: u.license || 'Unlicensed',
+      accountEnabled: u.accountEnabled !== false,
+      inactiveDays: typeof u.inactiveDays === 'number' ? u.inactiveDays : null,
+      lastActivityDate: u.lastActivityDate || null,
+      risk: u.risk || 'Low',
+      principalType: u.principalType || 'Member',
     }));
     setRemediationDrawerItem({
       badge: 'Role-Based Access Control (RBAC)',
@@ -1104,14 +1122,44 @@ export default function Dashboard() {
 
   const handleLicenseClick = (lic: any) => {
     const name = lic.product || lic.license || lic.key || 'License SKU';
+    const nameLower = name.toLowerCase();
     const purchased = lic.purchased ?? lic.totalLicenses ?? 0;
     const assigned = lic.assigned ?? lic.usedLicenses ?? 0;
     const available = lic.available ?? lic.unused ?? lic.availableLicenses ?? 0;
     const savings = lic.potentialSavings || (available === 0 ? '$0 (100% Utilized)' : '$0 (Free Service)');
+
+    const assignedUsersList = users
+      .filter((u: any) => {
+        const userLicenses: string[] =
+          Array.isArray(u.licenses) && u.licenses.length > 0
+            ? u.licenses
+            : u.license && u.license !== 'Unlicensed'
+            ? String(u.license).split(',').map((s: string) => s.trim())
+            : [];
+        return userLicenses.some((ul: string) => {
+          const ulLower = ul.toLowerCase();
+          if (ulLower === nameLower || ulLower.includes(nameLower) || nameLower.includes(ulLower)) return true;
+          if ((nameLower.includes('power bi') || nameLower.includes('fabric')) && (ulLower.includes('power bi') || ulLower.includes('fabric'))) return true;
+          return false;
+        });
+      })
+      .map((u: any) => ({
+        displayName: u.displayName || u.user || u.userPrincipalName || 'User',
+        userPrincipalName: u.userPrincipalName || u.email || '',
+        mfaStatus: u.mfa !== 'Disabled' && u.mfaEnabled !== false,
+        role: u.role || (u.roles && u.roles[0]) || 'Standard User',
+        license: u.license || name,
+        accountEnabled: u.accountEnabled !== false,
+        inactiveDays: typeof u.inactiveDays === 'number' ? u.inactiveDays : null,
+        lastActivityDate: u.lastActivityDate || null,
+        risk: u.risk || 'Low',
+        principalType: u.principalType || 'Member',
+      }));
+
     setRemediationDrawerItem({
       badge: 'License Optimization & Cost Management',
       title: `${name} SKU Detail`,
-      description: `License consumption, seat availability, and cost optimization telemetry for ${name}.`,
+      description: `License consumption, seat availability, assigned users (${assignedUsersList.length}), and cost optimization telemetry for ${name}.`,
       technicalRemediation: available > 0 && !savings.includes('Free')
         ? `Navigate to Microsoft 365 Admin Center > Billing > Licenses. Reduce purchased license quota from ${purchased} to ${assigned} seats to eliminate unused capacity.`
         : `Navigate to Microsoft 365 Admin Center > Billing > Licenses to manage user assignments and evaluate subscription utilization.`,
@@ -1123,7 +1171,8 @@ export default function Dashboard() {
         { label: 'Assigned Seats', value: assigned.toLocaleString() },
         { label: 'Available Seats', value: available.toLocaleString() },
         { label: 'Potential Savings', value: savings }
-      ]
+      ],
+      usersList: assignedUsersList,
     });
   };
 
@@ -1989,7 +2038,50 @@ export default function Dashboard() {
                               : 'hover:bg-slate-50/80';
 
                             return (
-                            <tr key={user.id || idx} className={`${rowHighlightClass} transition-colors`}>
+                            <tr
+                              key={user.id || idx}
+                              onClick={() => {
+                                const mfaOk = user.mfa !== 'Disabled' && user.mfaEnabled !== false;
+                                const isDisabled = user.accountEnabled === false;
+                                setRemediationDrawerItem({
+                                  badge: 'Identity & Access · User Deep Detail',
+                                  title: user.displayName || user.user || 'User Account',
+                                  description: `${user.userPrincipalName || user.email || 'N/A'} · ${user.principalType || 'Member'} account in Microsoft Entra ID.`,
+                                  technicalRemediation: !mfaOk
+                                    ? `MFA is currently disabled for ${user.displayName || user.user}. Require Microsoft Authenticator or FIDO2 registration via Entra Conditional Access.`
+                                    : isCriticalInactive
+                                    ? `User holds an active license (${licenseLabel}) but has been inactive for ${inactiveDays} days. Review seat reclamation in Microsoft 365 Admin Center.`
+                                    : `Account is compliant and properly governed with ${mfaOk ? 'MFA enabled' : 'active controls'}.`,
+                                  expectedResult: !mfaOk
+                                    ? 'Eliminates single-factor credential compromise risk.'
+                                    : isCriticalInactive
+                                    ? 'Reclaims dormant Microsoft 365 license capacity.'
+                                    : 'Maintains Zero Trust posture for this identity.',
+                                  additionalDetails: [
+                                    { label: 'Assigned License', value: licenseLabel },
+                                    { label: 'Assigned Role', value: user.role || (user.roles && user.roles[0]) || 'Standard User' },
+                                    { label: 'Account Status', value: isDisabled ? 'Disabled' : inactiveDays === 0 ? 'Active · Today' : inactiveDays !== null ? `${isCriticalInactive || isWarningInactive ? 'Inactive' : 'Active'} · ${inactiveDays}d` : 'Active' },
+                                    { label: 'MFA State', value: mfaOk ? 'Enabled' : 'Disabled' },
+                                    { label: 'Last Sign-In Date', value: user.lastActivityDate || user.lastLogin || 'Unknown' },
+                                    { label: 'Risk Level', value: user.risk || 'Low' },
+                                  ],
+                                  usersList: [{
+                                    displayName: user.displayName || user.user || 'User',
+                                    userPrincipalName: user.userPrincipalName || user.email || '',
+                                    mfaStatus: mfaOk,
+                                    role: user.role || (user.roles && user.roles[0]) || 'Standard User',
+                                    license: licenseLabel,
+                                    accountEnabled: user.accountEnabled !== false,
+                                    inactiveDays,
+                                    lastActivityDate: user.lastActivityDate || null,
+                                    risk: user.risk || 'Low',
+                                    principalType: user.principalType || 'Member',
+                                  }],
+                                });
+                              }}
+                              className={`${rowHighlightClass} transition-colors cursor-pointer`}
+                              title="Click to view deep user details"
+                            >
                               <td className="py-3.5 px-5">
                                 <div className="flex items-center gap-3">
                                   <div className={`h-8 w-8 rounded-full text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm ${
@@ -2563,7 +2655,16 @@ export default function Dashboard() {
                                 <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all" />
                               </td>
                               <td className="py-3.5 px-4 font-semibold text-slate-700">{purchased.toLocaleString()}</td>
-                              <td className="py-3.5 px-4 font-semibold text-slate-700">{assigned.toLocaleString()}</td>
+                              <td className="py-3.5 px-4 font-semibold text-slate-700">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span>{assigned.toLocaleString()}</span>
+                                  {assigned > 0 && (
+                                    <span className="text-[0.65rem] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded group-hover:bg-indigo-100 transition-colors">
+                                      View users
+                                    </span>
+                                  )}
+                                </span>
+                              </td>
                               <td className="py-3.5 px-4 font-semibold text-slate-700">{available.toLocaleString()}</td>
                               <td className="py-3.5 px-4 font-bold text-[#52c41a]">{savings}</td>
                             </tr>
@@ -2841,29 +2942,85 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Assigned Users list if available */}
+              {/* Assigned Users list with deep details */}
               {remediationDrawerItem.usersList && remediationDrawerItem.usersList.length > 0 && (
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                    <span>Assigned Accounts</span>
-                    <span className="text-slate-400 font-normal">{remediationDrawerItem.usersList.length} total</span>
+                    <span>Assigned Accounts &amp; Deep Details</span>
+                    <span className="text-slate-400 font-normal">{remediationDrawerItem.usersList.length} user(s)</span>
                   </div>
-                  <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-100 border border-slate-200/80 rounded-xl p-2 bg-slate-50/50">
-                    {remediationDrawerItem.usersList.map((u, i) => (
-                      <div key={i} className="pt-1.5 pb-1.5 px-2 flex items-center justify-between text-xs first:pt-1">
-                        <div className="min-w-0 pr-2">
-                          <div className="font-bold text-slate-800 truncate">{u.displayName}</div>
-                          <div className="text-[0.68rem] text-slate-400 font-mono truncate">{u.userPrincipalName}</div>
+                  <div className="max-h-72 overflow-y-auto space-y-2 pr-1 border border-slate-200/80 rounded-xl p-2.5 bg-slate-50/50">
+                    {remediationDrawerItem.usersList.map((u, i) => {
+                      const isDisabled = u.accountEnabled === false;
+                      const isInactive30 = typeof u.inactiveDays === 'number' && u.inactiveDays >= 30;
+                      const isInactive15 = typeof u.inactiveDays === 'number' && u.inactiveDays >= 15 && u.inactiveDays < 30;
+                      return (
+                        <div key={i} className="bg-white rounded-lg border border-slate-200/80 p-3 space-y-2 shadow-2xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="font-bold text-slate-800 text-xs truncate">{u.displayName}</div>
+                              <div className="text-[0.68rem] text-slate-400 font-mono truncate">{u.userPrincipalName}</div>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[0.65rem] font-bold shrink-0 ${
+                              u.mfaStatus
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}>
+                              {u.mfaStatus ? 'MFA Enabled' : 'MFA Required'}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem]">
+                            {u.role && (
+                              <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
+                                {u.role}
+                              </span>
+                            )}
+                            {u.accountEnabled !== undefined && (
+                              <span className={`px-2 py-0.5 rounded border font-semibold ${
+                                isDisabled
+                                  ? 'bg-slate-100 text-slate-500 border-slate-200'
+                                  : isInactive30
+                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  : isInactive15
+                                  ? 'bg-lime-50 text-lime-800 border-lime-300'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}>
+                                {isDisabled
+                                  ? 'Disabled'
+                                  : isInactive30 || isInactive15
+                                  ? `Inactive · ${u.inactiveDays}d`
+                                  : u.inactiveDays === 0
+                                  ? 'Active · Today'
+                                  : typeof u.inactiveDays === 'number'
+                                  ? `Active · ${u.inactiveDays}d`
+                                  : 'Active'}
+                              </span>
+                            )}
+                            {u.lastActivityDate && (
+                              <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono">
+                                Last Sign-In: {u.lastActivityDate}
+                              </span>
+                            )}
+                            {u.risk && (
+                              <span className={`px-2 py-0.5 rounded border font-semibold ${
+                                u.risk === 'High'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : u.risk === 'Medium'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}>
+                                Risk: {u.risk}
+                              </span>
+                            )}
+                          </div>
+                          {u.license && (
+                            <div className="text-[0.65rem] text-slate-500 truncate" title={u.license}>
+                              <span className="font-semibold text-slate-600">Licenses:</span> {u.license}
+                            </div>
+                          )}
                         </div>
-                        <span className={`px-2 py-0.5 rounded text-[0.65rem] font-bold shrink-0 ${
-                          u.mfaStatus
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200'
-                        }`}>
-                          {u.mfaStatus ? 'MFA Enabled' : 'MFA Required'}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
