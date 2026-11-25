@@ -1927,13 +1927,12 @@ export default function Dashboard() {
                             <th className="py-3 px-5">Assigned Role</th>
                             <th className="py-3 px-5">Account Status</th>
                             <th className="py-3 px-5">MFA State</th>
-                            <th className="py-3 px-5">Last Activity</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {filteredUsers.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="py-12 text-center text-slate-400">
+                              <td colSpan={5} className="py-12 text-center text-slate-400">
                                 <div className="flex flex-col items-center justify-center gap-2">
                                   <UserX className="h-8 w-8 text-slate-300" />
                                   <p className="text-sm font-bold text-slate-700">No users match the selected filter</p>
@@ -2044,22 +2043,6 @@ export default function Dashboard() {
                                 }`}>
                                   {user.mfa === 'Disabled' || user.mfaEnabled === false ? 'Disabled' : 'Enabled'}
                                 </span>
-                              </td>
-                              <td className="py-3.5 px-5 text-slate-600 text-[0.75rem]">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span>{user.lastActivityDate || user.lastLogin || 'Unknown'}</span>
-                                  {inactiveDays !== null && (
-                                    <span className={`px-2 py-0.5 rounded-full text-[0.65rem] font-bold ${
-                                      isCriticalInactive
-                                        ? 'bg-red-100 text-red-700 border border-red-300'
-                                        : isWarningInactive
-                                        ? 'bg-lime-200 text-lime-900 border border-lime-400'
-                                        : 'bg-slate-100 text-slate-500'
-                                    }`}>
-                                      {inactiveDays === 0 ? 'Today' : `${inactiveDays}d inactive`}
-                                    </span>
-                                  )}
-                                </div>
                               </td>
                             </tr>
                             );
